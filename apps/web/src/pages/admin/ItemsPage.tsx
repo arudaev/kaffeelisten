@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
@@ -53,6 +53,11 @@ interface Props {
 export default function ItemsPage({ onToast }: Props) {
   const [items, setItems] = useState<ItemRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterName, setFilterName] = useState<string>('')
+  const [filterCategory, setFilterCategory] = useState<string>('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+  const [sortKey, setSortKey] = useState<'name' | 'price' | 'category'>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editId, setEditId] = useState<string | null>(null)
@@ -117,6 +122,24 @@ export default function ItemsPage({ onToast }: Props) {
       fetchItems()
     }
   }
+
+  const displayed = useMemo(() => {
+    let rows = items
+    if (filterStatus !== 'all') rows = rows.filter(r => r.active === (filterStatus === 'active'))
+    if (filterCategory) rows = rows.filter(r => r.category === filterCategory)
+    if (filterName.trim()) {
+      const q = filterName.trim().toLowerCase()
+      rows = rows.filter(r => r.name.toLowerCase().includes(q))
+    }
+    return [...rows].sort((a, b) => {
+      let av: string | number, bv: string | number
+      if (sortKey === 'price') { av = a.price_cents; bv = b.price_cents }
+      else if (sortKey === 'category') { av = a.category; bv = b.category }
+      else { av = a.name; bv = b.name }
+      if (typeof av === 'number') return sortDir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number)
+      return sortDir === 'asc' ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string)
+    })
+  }, [items, filterStatus, filterCategory, filterName, sortKey, sortDir])
 
   const toggleActive = async (item: ItemRow) => {
     const { error } = await supabase
@@ -206,13 +229,71 @@ export default function ItemsPage({ onToast }: Props) {
           </AdminButton>
         }
       />
-      <div className="p-8">
+      <div className="p-8 flex flex-col gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+              <AdminIcon name="search" size={16} strokeWidth={1.5} />
+            </span>
+            <input
+              className="h-9 pl-8 pr-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors w-44"
+              placeholder="Item suchen…"
+              value={filterName}
+              onChange={e => setFilterName(e.target.value)}
+            />
+          </div>
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+          >
+            <option value="">Alle Kategorien</option>
+            {(Object.entries(CATEGORY_LABELS) as [ItemCategory, string][]).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+          >
+            <option value="all">Alle Status</option>
+            <option value="active">Aktiv</option>
+            <option value="inactive">Inaktiv</option>
+          </select>
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={`${sortKey}-${sortDir}`}
+            onChange={e => {
+              const [k, d] = e.target.value.split('-') as ['name' | 'price' | 'category', 'asc' | 'desc']
+              setSortKey(k); setSortDir(d)
+            }}
+          >
+            <option value="name-asc">Name A→Z</option>
+            <option value="name-desc">Name Z→A</option>
+            <option value="price-asc">Preis ↑</option>
+            <option value="price-desc">Preis ↓</option>
+            <option value="category-asc">Kategorie A→Z</option>
+          </select>
+          {(filterCategory || filterStatus !== 'all' || filterName) && (
+            <button
+              type="button"
+              onClick={() => { setFilterCategory(''); setFilterStatus('all'); setFilterName('') }}
+              className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              Filter zurücksetzen
+            </button>
+          )}
+          <span className="ml-auto text-sm text-stone-500">
+            {displayed.length} {displayed.length === 1 ? 'Item' : 'Items'}
+          </span>
+        </div>
         {loading ? (
           <div className="h-48 bg-stone-100 rounded-xl animate-pulse" />
         ) : (
           <DataTable
             columns={columns}
-            rows={items}
+            rows={displayed}
             empty={{
               title: 'Noch keine Items.',
               body: 'Füge das erste Item hinzu.',
