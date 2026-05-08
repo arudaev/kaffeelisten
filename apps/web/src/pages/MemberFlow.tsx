@@ -30,20 +30,28 @@ function formatPrice(priceCents: number): string {
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
 }
 
-// Build a standardized "Vorname N." display name that is unique within existingNames.
-function standardizeName(firstName: string, lastName: string, existingNames: string[]): string {
-  const first = firstName.trim()
-  const last = lastName.trim()
+// Compute the shortest unique abbreviated display name for a stored full name.
+// e.g. getDisplayName("Anna Müller", ["Anna Müller", "Anna Maier"]) → "Anna Mü."
+function getDisplayName(fullName: string, allNames: string[]): string {
+  const parts = fullName.trim().split(/\s+/)
+  const first = parts[0]
+  const last = parts.slice(1).join(' ')
   if (!last) return first
+  const others = allNames.filter(n => n !== fullName)
   for (let n = 1; n <= last.length; n++) {
     const abbrev = last.charAt(0).toUpperCase() + last.slice(1, n)
     const candidate = `${first} ${abbrev}.`
-    if (!existingNames.some(name => name.toLowerCase() === candidate.toLowerCase())) {
-      return candidate
-    }
+    const conflict = others.some(other => {
+      const op = other.trim().split(/\s+/)
+      const of_ = op[0]
+      const ol = op.slice(1).join(' ')
+      if (!ol || of_.toLowerCase() !== first.toLowerCase()) return false
+      const oa = ol.charAt(0).toUpperCase() + ol.slice(1, n)
+      return `${of_} ${oa}.`.toLowerCase() === candidate.toLowerCase()
+    })
+    if (!conflict) return candidate
   }
-  // All abbreviations taken — fall back to full last name (extremely rare)
-  return `${first} ${last.charAt(0).toUpperCase() + last.slice(1)}`
+  return fullName
 }
 
 export default function MemberFlow() {
@@ -184,10 +192,10 @@ export default function MemberFlow() {
     if (!selectedCompany) return
     setAddingMember(true)
     setAddSelfError(null)
-    const displayName = standardizeName(first, last, members.map(m => m.name))
+    const storedName = last ? `${first} ${last}` : first
     const { data, error: err } = await supabase
       .from('members')
-      .insert({ company_id: selectedCompany.id, name: displayName, active: true })
+      .insert({ company_id: selectedCompany.id, name: storedName, active: true })
       .select()
       .single()
     setAddingMember(false)
@@ -204,7 +212,7 @@ export default function MemberFlow() {
   const stepIndex = { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
 
   const successSummary = selectedMember && selectedCompany
-    ? [selectedMember.name, selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
+    ? [getDisplayName(selectedMember.name, members.map(x => x.name)), selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
     : ''
 
   if (step === 'success') {
@@ -290,8 +298,11 @@ export default function MemberFlow() {
 
   if (step === 'member') {
     const twoCol = members.length > 4
-    const previewName = selfFirstName.trim()
-      ? standardizeName(selfFirstName, selfLastName, members.map(m => m.name))
+    const previewFullName = selfFirstName.trim()
+      ? (selfLastName.trim() ? `${selfFirstName.trim()} ${selfLastName.trim()}` : selfFirstName.trim())
+      : ''
+    const previewName = previewFullName
+      ? getDisplayName(previewFullName, members.map(m => m.name))
       : ''
 
     return (
@@ -326,7 +337,7 @@ export default function MemberFlow() {
                 {members.map(m => (
                   <Tile
                     key={m.id}
-                    label={m.name}
+                    label={getDisplayName(m.name, members.map(x => x.name))}
                     onClick={() => {
                       setSelectedMember(m)
                       setCart(new Map())
@@ -449,7 +460,7 @@ export default function MemberFlow() {
         header={
           <>
             <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
-              {selectedMember?.name} · {selectedCompany?.name}
+              {selectedMember ? getDisplayName(selectedMember.name, members.map(x => x.name)) : ''} · {selectedCompany?.name}
             </p>
             <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Was hast du genommen?</h1>
           </>
@@ -539,7 +550,7 @@ export default function MemberFlow() {
         <div className="bg-white border border-stone-200 rounded-2xl p-7 shadow-sm flex flex-col gap-4">
           <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
             <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Person</span>
-            <span className="text-xl font-semibold text-stone-900">{selectedMember.name}</span>
+            <span className="text-xl font-semibold text-stone-900">{getDisplayName(selectedMember.name, members.map(x => x.name))}</span>
           </div>
           <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
             <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Unternehmen</span>
