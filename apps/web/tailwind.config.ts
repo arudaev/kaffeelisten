@@ -18,6 +18,21 @@ export default {
         xl: '12px',
         '2xl': '16px',
       },
+      keyframes: {
+        pop: {
+          from: { transform: 'scale(0.85)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-6px)' },
+          '75%': { transform: 'translateX(6px)' },
+        },
+      },
+      animation: {
+        pop: 'pop 280ms cubic-bezier(0.2, 0, 0, 1)',
+        shake: 'shake 300ms ease-in-out',
+      },
     },
   },
   plugins: [],
