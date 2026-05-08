@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/admin-crud
+
+### Added
+- Admin Items page: full table (name, category, unit, price, status badge) with add/edit modal and toggle-active per row
+- Admin Companies page: full table with add/edit modal and toggle-active per row
+- Admin Members page: full table with company join, company filter dropdown, add/edit modal, and toggle-active per row
+- Log page: client-side filter bar — company dropdown + name search input; results count shown live
+- Log page: CSV export — downloads filtered transactions as UTF-8 BOM CSV (semicolon-delimited, German decimal)
+- Dashboard: CSV export button now exports current month's full transaction list
+- Sidebar: distinct icons for Unternehmen (building) and Mitarbeitende (users) — previously both used the report icon
+- Supabase migration 005: anon `INSERT`/`UPDATE` grants and RLS policies for companies, members, items (admin writes via anon key; hardened in Phase 1)
+
+---
+
 ## [Unreleased] — feat/implement-design (PR #4)
 
 ### Added
