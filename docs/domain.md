@@ -25,8 +25,9 @@ A person who works at a company on campus.
 |---|---|---|
 | `id` | uuid | Primary key |
 | `company_id` | uuid | FK → companies |
-| `name` | text | Display name |
-| `active` | boolean | Soft delete — inactive members are hidden from member flow |
+| `name` | text | Display name (standardised format: "Vorname N.") |
+| `email` | text \| null | Work email — **Phase 1 addition** (migration required). Collected during self-registration and admin edit. **Never rendered** in the member flow tile, transaction log, or summary cards. Visible only in the admin Mitarbeitende edit form. Included in the monthly report CSV/email for billing cross-reference. |
+| `active` | boolean | Soft delete — inactive members hidden from member flow; auto-deactivated after 90 days of inactivity (Phase 2) |
 | `created_at` | timestamptz | — |
 
 ### Item
@@ -98,7 +99,11 @@ items     1 ──< transactions
 
 6. **Inactive filtering** — the member flow only shows active companies and members. Items marked inactive do not appear in the item selection screen.
 
-7. **Quantity** — currently one item per log event. The P0 flow does not support multi-item carts. Quantity field is included for P1 expansion.
+7. **Multi-item sessions** — a member can select multiple different items in one session, each with its own quantity. Each item produces a separate `transactions` row on submit (batch insert). The `quantity` field on each row reflects how many units of that specific item were taken.
+
+8. **Member inactivity auto-deactivation** (Phase 2) — a monthly cron job soft-deletes any member with zero transactions in the past 90 days (`MEMBER_INACTIVITY_DAYS` env var, default `90`). Deactivated members are hidden from the member flow but remain in the admin Members list for manual reactivation.
+
+9. **Archive retention** (Phase 2) — records in `transactions_archive` older than 90 days are purged after each monthly report is sent (`ARCHIVE_RETENTION_DAYS` env var, default `90`). The live `transactions` table is cleared monthly as part of the normal report cycle, not on this schedule.
 
 ---
 
@@ -136,34 +141,28 @@ on failure: abort — do not archive, alert admin
 
 ## API surface (Vercel serverless functions)
 
+Most data operations go directly through the Supabase REST API (anon key + RLS). The serverless functions below handle operations that require server-side secrets.
+
 | Route | Method | Auth | Description |
 |---|---|---|---|
-| `/api/log` | POST | None | Create a transaction |
-| `/api/admin/verify-pin` | POST | None | Validate PIN, return session token |
-| `/api/admin/transactions` | GET | Admin token | List current-month transactions |
-| `/api/admin/summary` | GET | Admin token | Company-level summary |
-| `/api/admin/send-report` | POST | Admin token | Trigger report email + archive |
-| `/api/admin/companies` | GET/POST | Admin token | List / create companies |
-| `/api/admin/companies/:id` | PATCH/DELETE | Admin token | Update / deactivate company |
-| `/api/admin/members` | GET/POST | Admin token | List / create members |
-| `/api/admin/members/:id` | PATCH/DELETE | Admin token | Update / deactivate member |
-| `/api/admin/items` | GET/POST | Admin token | List / create items |
-| `/api/admin/items/:id` | PATCH/DELETE | Admin token | Update / deactivate item |
-| `/api/cron/monthly-report` | POST | Cron secret | Called by Vercel Cron (same as send-report) |
+| `/api/admin/verify-pin` | POST | None | Validate PIN against `ADMIN_PIN` env var |
+| `/api/send-report` | POST | Admin cookie or `CRON_SECRET` header | Compute monthly summary, send email via Resend, archive + clear transactions |
+
+The member logging flow (batch insert into `transactions`) and all admin CRUD use the Supabase client with the anon key and RLS policies. The service-role key is used only inside `/api/send-report` for the archive operation.
 
 ---
 
 ## Supabase RLS policy intent
 
-The client (browser) has read-only access to:
-- `companies` (active only)
-- `members` (active only)
-- `items` (active only)
+The client (browser, anon key) can:
+- **SELECT** `companies` (active only)
+- **SELECT** `members` (active only, per company)
+- **SELECT** `items` (active only)
+- **SELECT** `transactions` (admin dashboard reads via anon key — migration 003)
+- **INSERT** `transactions` (member logging — migration 001)
+- **INSERT** `members` (member self-registration — migration 004)
 
-The client can insert into:
-- `transactions`
-
-All admin reads, writes, and the archive operation run through Vercel serverless functions using the Supabase service-role key, which is never exposed to the browser.
+All admin writes, the archive operation, and the monthly report email run through Vercel serverless functions using the Supabase service-role key, which is never exposed to the browser.
 
 ---
 

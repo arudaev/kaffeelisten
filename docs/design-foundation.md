@@ -92,10 +92,11 @@ All member-facing and admin-facing copy is German. English only in code comments
 | Screen | Description |
 |---|---|
 | Home / company select | Large company tiles, clean list |
-| Member select | Member list filtered by selected company |
-| Item select | Available items grid with name and price |
-| Confirmation | Review before submit |
-| Success | Logged confirmation, auto-reset in 3s |
+| Member select | Member list filtered by selected company; "Ich bin noch nicht dabei" opens self-registration modal |
+| Self-registration modal | Vorname + Nachname inputs; live preview of standardised display name ("Vorname N.") |
+| Item select | Items grid by category tab; each card has inline −/+ quantity controls when selected; multi-item cart |
+| Confirmation | All selected items with quantities, subtotals, and grand total |
+| Success | "Gespeichert." confirmation, auto-reset in 3s; undo button |
 
 ### Admin-facing
 
@@ -155,9 +156,11 @@ Define the following design tokens and apply them through the Tailwind config:
 Member flow:
 - Company tile (large tap target, company name, optional logo placeholder)
 - Member tile (large tap target, name)
-- Item card (name, unit label, price, tap to select)
-- Quantity control (+ / - buttons)
-- Confirmation row (item, quantity, price)
+- Self-registration modal (Vorname + Nachname inputs, live name preview, Hinzufügen button)
+- Item card (name, unit label, price; tap to add; when selected: amber highlight + inline −/qty/+ controls)
+- Category tab strip (filter items by coffee / drink / snack / food / other)
+- Cart footer (total count, grand total, "Auswahl löschen" + "Weiter" buttons — appears when cart non-empty)
+- Confirmation rows (one row per item: name, quantity, subtotal; grand total row)
 - Primary action button (large, full-width on mobile)
 - Success animation / confirmation state
 
