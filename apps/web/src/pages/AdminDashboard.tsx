@@ -233,10 +233,10 @@ export default function AdminDashboard() {
   }, [transactions])
 
   return (
-    <div className="flex min-h-screen font-sans">
+    <div className="flex h-screen overflow-hidden font-sans">
       <Sidebar active={activePage} onNavigate={setActivePage} onSendReport={() => setReportOpen(true)} />
 
-      <main className="flex-1 min-w-0 bg-stone-50">
+      <main className="flex-1 min-w-0 bg-stone-50 overflow-y-auto">
 
         {/* ── Dashboard ── */}
         {activePage === 'dashboard' && (

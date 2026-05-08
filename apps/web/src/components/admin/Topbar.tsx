@@ -9,7 +9,7 @@ interface TopbarProps {
 
 export function Topbar({ title, eyebrow, right }: TopbarProps) {
   return (
-    <div className="flex items-end justify-between px-8 py-6 pb-5 border-b border-stone-200 bg-stone-50 gap-6">
+    <div className="sticky top-0 z-10 flex items-end justify-between px-8 py-6 pb-5 border-b border-stone-200 bg-stone-50 gap-6">
       <div>
         {eyebrow && (
           <p className="text-xs font-medium text-stone-500 uppercase tracking-[0.06em] mb-1.5">

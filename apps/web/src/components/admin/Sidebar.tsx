@@ -27,7 +27,7 @@ interface SidebarProps {
 
 export default function Sidebar({ active, onNavigate, onSendReport }: SidebarProps) {
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-stone-200 flex flex-col shrink-0">
+    <aside className="w-60 h-full bg-white border-r border-stone-200 flex flex-col shrink-0">
       {/* Header */}
       <div className="px-5 py-6 border-b border-stone-200">
         <div className="flex items-center gap-2.5">
