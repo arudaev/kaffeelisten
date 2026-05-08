@@ -89,21 +89,21 @@ The ITC1 campus CEO or an assigned manager. They receive the monthly report and 
 
 - [x] A separate `/admin` route is protected by a simple numeric PIN (configurable in environment variables)
 - [x] Admin can view all transactions for the current month in a table: date, member name, company, item, quantity
-- [x] Admin can manually trigger the monthly report email
-- [x] Admin can add, edit, or deactivate companies, members, and items
+- [ ] Admin can manually trigger the monthly report email — UI exists; `/api/send-report.ts` not yet implemented
+- [ ] Admin can add, edit, or deactivate companies, members, and items — UI shells exist; CRUD logic not wired
 - [x] Admin can view a company-level summary (total per company) for the current month
 
 **Monthly Report Email**
 
-- [x] On trigger (manual or cron), the system computes the full month's transactions
-- [x] Email is sent to the configured admin email address via Resend
-- [x] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total
-- [x] After the email is confirmed sent, the current month's records are archived (moved to a history table) and the live table is cleared
+- [ ] On trigger (manual or cron), the system computes the full month's transactions — `/api/send-report.ts` missing
+- [ ] Email is sent to the configured admin email address via Resend — blocked on above
+- [ ] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total — blocked on above
+- [ ] After the email is confirmed sent, the current month's records are archived and the live table is cleared — blocked on above
 
 **PWA Baseline**
 
 - [x] The app is installable as a PWA (manifest, service worker, icon set, `lang: "de"`)
-- [x] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling
+- [ ] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling — iPad OK; phone portrait broken
 - [x] The app loads and is interactive in under 3 seconds on a standard WiFi connection
 
 ---
