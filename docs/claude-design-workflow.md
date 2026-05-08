@@ -1,10 +1,53 @@
 # Claude Design Workflow — Kaffeelisten
 
-Use this workflow when generating or iterating on the Kaffeelisten UI with Claude Design. It ensures every session produces consistent, pitch-ready output.
+Use this workflow when generating or iterating on the Kaffeelisten UI with Claude Design.
 
 ---
 
-## Before you start
+## When to run this
+
+**Block 1 of the hackathon sprint — in parallel with infra setup (14:00–16:00, Fri May 8).**
+
+Do not wait until after the member flow is built. The design system needs to exist before components are written, so the output directly informs the Tailwind config and component structure. One person sets up Supabase/Vercel while the other runs this session.
+
+---
+
+## Claude Design setup form
+
+URL: `https://claude.ai/design` → "Set up your design system"
+
+**Company name and blurb:**
+```
+Kaffeelisten — digital coffee and snack consumption logger for ITC1 Deggendorf 
+campus. A PWA used on a wall-mounted iPad and any browser. Two surfaces: 
+(1) member logging flow — company → member → item → confirm, completed in under 
+15 seconds, zero friction; (2) admin panel — monthly transaction report, PIN-
+protected, professional internal tool. Warm, minimal, readable. Bavarian Wald 
+and campus atmosphere. German-first UI copy. Coffee as a playful motif.
+```
+
+**Link code on GitHub:**
+```
+https://github.com/arudaev/kaffeelisten
+```
+Add this. Claude Design will read `docs/design-foundation.md`, `docs/design-system.md`, `tailwind.config.ts`, and the page stubs to understand the codebase.
+
+**Upload a .fig file:** Skip — none exists yet.
+
+**Add fonts, logos and assets:** Skip for now unless you have the Inter font file locally.
+
+**Any other notes:**
+```
+Design tokens are pre-specified in docs/design-system.md — use those as the 
+starting point. Stone/amber/white palette. Inter font. Member flow needs large 
+tap targets (min 44px) and min 18px text for wall-mount readability. Admin panel 
+uses standard product text sizes. One-line SVG illustrations for spot art. 
+Custom coffee icons. No emojis. All UI copy in German.
+```
+
+---
+
+## Before you start the generation session
 
 Read in this order:
 1. `docs/design-foundation.md` — creative brief, screen inventory, principles
