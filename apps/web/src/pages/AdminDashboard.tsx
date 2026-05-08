@@ -40,6 +40,13 @@ function formatPrice(cents: number): string {
   return '€ ' + (cents / 100).toFixed(2).replace('.', ',')
 }
 
+function abbreviateName(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length < 2) return name
+  const last = parts[parts.length - 1]
+  return `${parts.slice(0, -1).join(' ')} ${last.charAt(0).toUpperCase()}.`
+}
+
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
   return (
@@ -204,7 +211,7 @@ export default function AdminDashboard() {
       key: 'logged_at', label: 'Zeitpunkt', mono: true, muted: true,
       render: r => formatDateTime(r.logged_at),
     },
-    { key: 'member_name', label: 'Person' },
+    { key: 'member_name', label: 'Person', render: r => abbreviateName(r.member_name) },
     { key: 'company_name', label: 'Unternehmen', muted: true },
     { key: 'item_name', label: 'Item' },
     { key: 'quantity', label: 'Menge', align: 'right', mono: true },
