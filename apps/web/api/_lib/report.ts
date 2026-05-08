@@ -263,7 +263,7 @@ export async function sendEmail(
         <strong>PDF</strong> – Formatierter Bericht für Ablage und Weitergabe.<br>
         <strong>Excel</strong> – Alle Rohdaten für Auswertungen.
       </p>
-      <p style="color:#78716C;font-size:12px;margin:12px 0 0;">Die Datenbank wurde nach dem Versand archiviert und zurückgesetzt.</p>
+      <p style="color:#78716C;font-size:12px;margin:12px 0 0;">Die Einträge wurden nach dem Versand archiviert. Die Originaldaten bleiben erhalten.</p>
     </div>
     <div style="background:#FAFAF9;padding:14px 32px;border-top:1px solid #E7E5E4;">
       <p style="color:#A8A29E;font-size:11px;margin:0;">Kaffeelisten · B4Y3RW4LD Hackathon · ITC1 Deggendorf</p>
@@ -288,7 +288,7 @@ export async function sendEmail(
 
 // ─── Archive and reset ────────────────────────────────────────────────────────
 
-export async function archiveAndReset(
+export async function archiveTransactions(
   transactions: EnrichedTransaction[],
   reportMonth: string,
 ): Promise<void> {
@@ -310,14 +310,6 @@ export async function archiveAndReset(
     })))
 
   if (archErr) throw new Error(`Archive insert failed: ${archErr.message}`)
-
-  // Delete only the exact rows we archived — safe against concurrent inserts
-  const { error: delErr } = await supabase
-    .from('transactions')
-    .delete()
-    .in('id', transactions.map(t => t.id))
-
-  if (delErr) throw new Error(`Transaction delete failed: ${delErr.message}`)
 }
 
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
@@ -330,5 +322,5 @@ export async function runMonthlyReport(): Promise<void> {
     Promise.resolve(generateExcel(summaries, transactions)),
   ])
   await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth)
-  await archiveAndReset(transactions, reportMonth)
+  await archiveTransactions(transactions, reportMonth)
 }
