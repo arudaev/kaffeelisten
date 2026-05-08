@@ -78,32 +78,33 @@ The ITC1 campus CEO or an assigned manager. They receive the monthly report and 
 
 **Member Logging Flow**
 
-- [ ] The app presents a list of campus members grouped by company; the member selects their name
-- [ ] The app presents a list of available items (espresso, cappuccino, beer, snack, etc.) with price or unit label; the member selects one or more
-- [ ] On confirmation, the transaction is written to the database with: timestamp (UTC), member ID, company ID, item ID, quantity
-- [ ] A success screen is shown for 2–3 seconds, then the app resets to the start screen automatically
-- [ ] The flow works entirely without login or account creation
+- [x] The app presents a list of campus members grouped by company; the member selects their name
+- [x] Members not yet in the list can add themselves via a self-registration modal (name standardised as "Vorname N." with automatic disambiguation)
+- [x] The app presents a list of available items with price and category tabs; the member selects one or more (multi-item cart with per-card quantity controls)
+- [x] On confirmation, transactions are batch-inserted with: timestamp (UTC), member ID, company ID, item ID, quantity
+- [x] A success screen is shown for 3 seconds, then the app resets to the start screen automatically
+- [x] The flow works entirely without login or account creation
 
 **Admin Panel**
 
-- [ ] A separate `/admin` route is protected by a simple numeric PIN (configurable in environment variables)
-- [ ] Admin can view all transactions for the current month in a table: date, member name, company, item, quantity
-- [ ] Admin can manually trigger the monthly report email
-- [ ] Admin can add, edit, or deactivate companies, members, and items
-- [ ] Admin can view a company-level summary (total per company) for the current month
+- [x] A separate `/admin` route is protected by a simple numeric PIN (configurable in environment variables)
+- [x] Admin can view all transactions for the current month in a table: date, member name, company, item, quantity
+- [x] Admin can manually trigger the monthly report email
+- [x] Admin can add, edit, or deactivate companies, members, and items
+- [x] Admin can view a company-level summary (total per company) for the current month
 
 **Monthly Report Email**
 
-- [ ] On trigger (manual or cron), the system computes the full month's transactions
-- [ ] Email is sent to the configured admin email address via Resend
-- [ ] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total
-- [ ] After the email is confirmed sent, the current month's records are archived (moved to a history table) and the live table is cleared
+- [x] On trigger (manual or cron), the system computes the full month's transactions
+- [x] Email is sent to the configured admin email address via Resend
+- [x] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total
+- [x] After the email is confirmed sent, the current month's records are archived (moved to a history table) and the live table is cleared
 
 **PWA Baseline**
 
-- [ ] The app is installable as a PWA (manifest, service worker, icon set)
-- [ ] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling
-- [ ] The app loads and is interactive in under 3 seconds on a standard WiFi connection
+- [x] The app is installable as a PWA (manifest, service worker, icon set, `lang: "de"`)
+- [x] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling
+- [x] The app loads and is interactive in under 3 seconds on a standard WiFi connection
 
 ---
 
@@ -122,7 +123,8 @@ The ITC1 campus CEO or an assigned manager. They receive the monthly report and 
 ### P2 — Future Considerations
 
 - Company self-service portal: each company gets a read-only view of their own consumption
-- Member self-registration without admin involvement
+- ~~Member self-registration without admin involvement~~ — **Shipped in v0.1** (modal in member flow, name standardisation, migration 004)
+- Admin approval flow for self-registered members (currently auto-approved)
 - Item photo next to each item to reduce selection errors
 - Multi-campus support: extend the data model for multiple locations
 - Read-only API so companies can pull their own data into internal tools
