@@ -48,9 +48,10 @@ function priceLabel(cents: number): string {
 
 interface Props {
   onToast: (msg: string) => void
+  onMenuClick: () => void
 }
 
-export default function ItemsPage({ onToast }: Props) {
+export default function ItemsPage({ onToast, onMenuClick }: Props) {
   const [items, setItems] = useState<ItemRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterName, setFilterName] = useState<string>('')
@@ -219,6 +220,7 @@ export default function ItemsPage({ onToast }: Props) {
     <>
       <Topbar
         title="Items"
+        onMenuClick={onMenuClick}
         right={
           <AdminButton
             variant="primary"
@@ -229,7 +231,7 @@ export default function ItemsPage({ onToast }: Props) {
           </AdminButton>
         }
       />
-      <div className="p-8 flex flex-col gap-4">
+      <div className="p-4 md:p-8 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">

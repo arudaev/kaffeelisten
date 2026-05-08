@@ -56,6 +56,7 @@ function currentMonthLabel(): string {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [activePage, setActivePage] = useState<PageId>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [transactions, setTransactions] = useState<TransactionRow[]>([])
   const [companies, setCompanies] = useState<CompanySummaryRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -245,7 +246,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex h-screen overflow-hidden font-sans">
-      <Sidebar active={activePage} onNavigate={setActivePage} onSendReport={() => setReportOpen(true)} />
+      <Sidebar
+        active={activePage}
+        onNavigate={setActivePage}
+        onSendReport={() => setReportOpen(true)}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <main className="flex-1 min-w-0 bg-stone-50 overflow-y-auto">
 
@@ -255,6 +262,7 @@ export default function AdminDashboard() {
             <Topbar
               title="Übersicht"
               eyebrow={monthLabel}
+              onMenuClick={() => setSidebarOpen(true)}
               right={
                 <>
                   <MonthSelector value={monthLabel} onChange={() => {}} />
@@ -275,15 +283,15 @@ export default function AdminDashboard() {
                 </>
               }
             />
-            <div className="p-8 flex flex-col gap-6">
+            <div className="p-4 md:p-8 flex flex-col gap-6">
               {loading ? (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="h-28 rounded-xl bg-stone-100 animate-pulse" />
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-4 xl:grid-cols-4 lg:grid-cols-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <SummaryCard label="Einträge diesen Monat" metric={transactions.length} sub="Alle Unternehmen" />
                   <SummaryCard
                     label="Umsatz diesen Monat"
@@ -327,6 +335,7 @@ export default function AdminDashboard() {
             <Topbar
               title="Einträge"
               eyebrow={monthLabel}
+              onMenuClick={() => setSidebarOpen(true)}
               right={
                 <>
                   <MonthSelector value={monthLabel} onChange={() => {}} />
@@ -340,7 +349,7 @@ export default function AdminDashboard() {
                 </>
               }
             />
-            <div className="p-8 flex flex-col gap-4">
+            <div className="p-4 md:p-8 flex flex-col gap-4">
               {/* Filter bar */}
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative">
@@ -405,15 +414,15 @@ export default function AdminDashboard() {
         )}
 
         {/* ── CRUD pages ── */}
-        {activePage === 'companies' && <CompaniesPage onToast={showToast} />}
-        {activePage === 'members' && <MembersPage onToast={showToast} />}
-        {activePage === 'items' && <ItemsPage onToast={showToast} />}
+        {activePage === 'companies' && <CompaniesPage onToast={showToast} onMenuClick={() => setSidebarOpen(true)} />}
+        {activePage === 'members' && <MembersPage onToast={showToast} onMenuClick={() => setSidebarOpen(true)} />}
+        {activePage === 'items' && <ItemsPage onToast={showToast} onMenuClick={() => setSidebarOpen(true)} />}
 
         {/* ── Settings ── */}
         {activePage === 'settings' && (
           <>
-            <Topbar title="Einstellungen" />
-            <div className="p-8">
+            <Topbar title="Einstellungen" onMenuClick={() => setSidebarOpen(true)} />
+            <div className="p-4 md:p-8">
               <DataTable
                 columns={[{ key: 'k', label: '' }]}
                 rows={[]}
