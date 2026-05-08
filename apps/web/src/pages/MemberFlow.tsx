@@ -30,6 +30,11 @@ function formatPrice(priceCents: number): string {
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
 }
 
+// Capitalize first letter of each word, lowercase the rest ("anna müller" → "Anna Müller").
+function capitalizeName(s: string): string {
+  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+}
+
 // Compute the shortest unique abbreviated display name for a stored full name.
 // e.g. getDisplayName("Anna Müller", ["Anna Müller", "Anna Maier"]) → "Anna Mü."
 function getDisplayName(fullName: string, allNames: string[]): string {
@@ -192,7 +197,7 @@ export default function MemberFlow() {
     if (!selectedCompany) return
     setAddingMember(true)
     setAddSelfError(null)
-    const storedName = last ? `${first} ${last}` : first
+    const storedName = last ? `${capitalizeName(first)} ${capitalizeName(last)}` : capitalizeName(first)
     const { data, error: err } = await supabase
       .from('members')
       .insert({ company_id: selectedCompany.id, name: storedName, active: true })
