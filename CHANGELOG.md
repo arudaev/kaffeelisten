@@ -10,14 +10,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased] — feat/admin-crud
 
 ### Added
-- Admin Items page: full table (name, category, unit, price, status badge) with add/edit modal and toggle-active per row
-- Admin Companies page: full table with add/edit modal and toggle-active per row
-- Admin Members page: full table with company join, company filter dropdown, add/edit modal, and toggle-active per row
-- Log page: client-side filter bar — company dropdown + name search input; results count shown live
+- Admin Items page: full table (name, category, unit, price, status badge) with add/edit modal and toggle-active per row; name search, category filter, status filter, sort by name/price/category
+- Admin Companies page: full table with add/edit modal and toggle-active per row; status filter, name A→Z/Z→A sort
+- Admin Members page: full table with company join, add/edit modal, and toggle-active per row; name search, company filter, status filter, sort by name or company
+- Log page: client-side filter bar — company dropdown, name search, item dropdown, date sort direction toggle; results count shown live
 - Log page: CSV export — downloads filtered transactions as UTF-8 BOM CSV (semicolon-delimited, German decimal)
 - Dashboard: CSV export button now exports current month's full transaction list
 - Sidebar: distinct icons for Unternehmen (building) and Mitarbeitende (users) — previously both used the report icon
 - Supabase migration 005: anon `INSERT`/`UPDATE` grants and RLS policies for companies, members, items (admin writes via anon key; hardened in Phase 1)
+
+### Fixed
+- Admin layout: left sidebar is now fixed/non-scrolling; each content area scrolls independently; topbar stays sticky at the top of the content pane
+- Member self-registration now stores the full name (e.g. "Anna Müller") in the database; the abbreviated "Anna M." form is computed on-the-fly for display only, ensuring uniqueness per company roster
 
 ---
 
