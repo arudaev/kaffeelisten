@@ -125,9 +125,10 @@ chore(deps): bump vite to 5.3
 1. **Read first** — always read `CLAUDE.md` and the relevant source files before editing.
 2. **Branch** — create a branch with the right prefix before any code change.
 3. **Small commits** — one logical change per commit; commit as soon as a unit of work is done.
-4. **Check CI** — after pushing, use the GitHub PAT (see `.env`) to poll `GET /repos/arudaev/kaffeelisten/actions/runs` and inspect failures before declaring the task done.
-5. **No direct `main` pushes** — open a PR; the CI gate must pass.
-6. **No generated secrets in commits** — `.env` is gitignored; secrets live there only.
+4. **Update CHANGELOG** — before the final commit on every `feat/*`, `fix/*`, or `hotfix/*` branch, add an entry to `CHANGELOG.md` under `[Unreleased]`. List every user-visible addition, fix, or breaking change introduced on that branch. Do not document internal refactors or CI tweaks unless they affect behaviour.
+5. **Check CI** — after pushing, use the GitHub PAT (see `.env`) to poll `GET /repos/arudaev/kaffeelisten/actions/runs` and inspect failures before declaring the task done.
+6. **No direct `main` pushes** — open a PR; the CI gate must pass.
+7. **No generated secrets in commits** — `.env` is gitignored; secrets live there only.
 
 > **Monorepo note:** This is an npm workspaces repo. Run `npm install` / `npm ci` from the **repo root**, not from `apps/web`. The root `package.json` proxies all scripts (`dev`, `build`, `lint`, `typecheck`) to the workspace. `package-lock.json` lives at the root.
 

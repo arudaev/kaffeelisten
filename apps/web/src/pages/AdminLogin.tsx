@@ -2,13 +2,38 @@
 // PIN is validated server-side via /api/admin/verify-pin
 // Never expose ADMIN_PIN in the client bundle
 
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import PinKeypad from '../components/admin/PinKeypad'
+
 export default function AdminLogin() {
+  const navigate = useNavigate()
+  const [error, setError] = useState(false)
+
+  const handleSubmit = async (pin: string) => {
+    setError(false)
+    try {
+      const res = await fetch('/api/admin/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      })
+      if (res.ok) {
+        sessionStorage.setItem('adminSession', 'true')
+        navigate('/admin/dashboard')
+      } else {
+        setError(true)
+      }
+    } catch {
+      setError(true)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-stone-900 mb-2">Administration</h1>
-        <p className="text-stone-600">PIN eingeben</p>
-      </div>
-    </div>
+    <PinKeypad
+      onSubmit={handleSubmit}
+      error={error}
+      onErrorAnimEnd={() => setError(false)}
+    />
   )
 }

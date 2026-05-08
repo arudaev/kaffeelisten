@@ -12,6 +12,7 @@ export default defineConfig({
         name: 'Kaffeelisten',
         short_name: 'Kaffeelisten',
         description: 'Kaffee- und Snack-Verbrauch digital erfassen',
+        lang: 'de',
         theme_color: '#D97706',
         background_color: '#FAFAF9',
         display: 'standalone',
