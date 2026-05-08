@@ -26,17 +26,31 @@ Product phases from hackathon MVP to production-ready service.
 
 ---
 
-### Block 1 — Infrastructure (14:00–16:00, Fri)
+### Block 1 — Infrastructure + Claude Design (14:00–16:00, Fri) — RUN IN PARALLEL
 
-Get the plumbing live before writing a single UI component.
+**Two tracks. Split the work.**
 
+**Track A — Infrastructure** (one person)
 - [ ] Create Supabase project, run migration, load seed data
 - [ ] Create Vercel project, connect GitHub repo, set all env vars
 - [ ] Confirm first deploy succeeds (scaffold renders at live URL)
 - [ ] Confirm Supabase anon read works from the browser (console check)
 - [ ] Set `ADMIN_PIN`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `CRON_SECRET` in Vercel
 
-**Exit condition:** `https://kaffeelisten.vercel.app` loads. Supabase returns companies.
+**Track B — Claude Design system generation** (other person) ← DO THIS NOW
+- [ ] Open `claude.ai/design` → "Set up your design system"
+- [ ] Fill in the setup form (see `docs/claude-design-workflow.md` → "Claude Design setup form")
+- [ ] Link the GitHub repo: `https://github.com/arudaev/kaffeelisten`
+- [ ] Run the design system generation session
+- [ ] Save outputs to `exports/` and `assets/generated/`
+- [ ] Extract color tokens → update `apps/web/tailwind.config.ts`
+- [ ] Generate member flow screens
+- [ ] Generate admin panel screens
+
+**Why parallel:** By the time infra is live at 16:00, the generated design system is ready to implement from. If you run Claude Design after Block 1, you build components without visual direction and revise everything later — that costs 2–3 hours.
+
+**Exit condition (Track A):** `https://kaffeelisten.vercel.app` loads. Supabase returns companies.  
+**Exit condition (Track B):** Member flow screens generated. Tailwind tokens updated from the design output.
 
 ---
 
