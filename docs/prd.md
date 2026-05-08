@@ -177,7 +177,7 @@ Full schema: `supabase/migrations/001_initial_schema.sql`
 | # | Question | Owner | Blocking? |
 |---|---|---|---|
 | 1 | How many companies and members are currently at ITC1? | Admin / ITC1 CEO | No |
-| 2 | Should members log multiple items in a single session, or one item at a time? | UX / Admin | Yes |
+| 2 | Should members log multiple items in a single session, or one item at a time? **→ Multiple items per session. Each item has its own quantity counter; all are submitted as a batch.** | UX / Admin | ~~Yes~~ Resolved |
 | 3 | What is the exact list of items available on campus today (types, prices)? | Admin | Yes |
 | 4 | Is the admin email a single address or a distribution list? | Admin | No |
 | 5 | Should archived data be permanently retained or deleted after a retention period? | Admin / Legal | No |
