@@ -13,8 +13,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'dashboard',  label: 'Übersicht',      icon: 'home' },
   { id: 'log',        label: 'Einträge',        icon: 'log' },
-  { id: 'companies',  label: 'Unternehmen',     icon: 'report' },
-  { id: 'members',    label: 'Mitarbeitende',   icon: 'report' },
+  { id: 'companies',  label: 'Unternehmen',     icon: 'building' },
+  { id: 'members',    label: 'Mitarbeitende',   icon: 'users' },
   { id: 'items',      label: 'Items',           icon: 'coffee' },
   { id: 'settings',   label: 'Einstellungen',   icon: 'settings' },
 ]

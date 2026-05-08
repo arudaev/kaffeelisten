@@ -15,6 +15,8 @@ type AdminIconName =
   | 'chevron'
   | 'back'
   | 'coffee'
+  | 'building'
+  | 'users'
 
 interface AdminIconProps {
   name: AdminIconName
@@ -107,6 +109,25 @@ const paths: Record<AdminIconName, React.ReactNode> = {
   ),
   chevron: <path d="M6 9l6 6 6-6" />,
   back: <path d="M15 18l-6-6 6-6" />,
+  building: (
+    <>
+      <path d="M3 21h18" />
+      <rect x="4" y="3" width="16" height="18" rx="1" />
+      <path d="M9 8h2" />
+      <path d="M13 8h2" />
+      <path d="M9 12h2" />
+      <path d="M13 12h2" />
+      <path d="M9 16h6" />
+    </>
+  ),
+  users: (
+    <>
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <path d="M21 21v-2a4 4 0 0 0-3-3.85" />
+    </>
+  ),
   coffee: (
     <>
       <path d="M5 9h11a3 3 0 0 1 0 6h-1" />
