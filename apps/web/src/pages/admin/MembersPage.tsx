@@ -21,9 +21,14 @@ interface CompanyOption {
 }
 
 interface MemberForm {
-  name: string
+  firstName: string
+  lastName: string
   company_id: string
   active: boolean
+}
+
+function capitalizeName(s: string): string {
+  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
 }
 
 interface Props {
@@ -44,7 +49,8 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<MemberForm>({
-    name: '',
+    firstName: '',
+    lastName: '',
     company_id: '',
     active: true,
   })
@@ -75,7 +81,8 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
 
   const openAdd = () => {
     setForm({
-      name: '',
+      firstName: '',
+      lastName: '',
       company_id: companies[0]?.id ?? '',
       active: true,
     })
@@ -85,8 +92,10 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   }
 
   const openEdit = (member: MemberRow) => {
+    const parts = member.name.trim().split(/\s+/)
     setForm({
-      name: member.name,
+      firstName: parts[0] ?? '',
+      lastName: parts.slice(1).join(' '),
       company_id: member.company_id,
       active: member.active,
     })
@@ -96,8 +105,10 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   }
 
   const handleSubmit = async () => {
-    const name = form.name.trim()
-    if (!name || !form.company_id) return
+    const firstName = capitalizeName(form.firstName)
+    const lastName = capitalizeName(form.lastName)
+    if (!firstName || !form.company_id) return
+    const name = lastName ? `${firstName} ${lastName}` : firstName
     setSaving(true)
     const payload = {
       name,
@@ -298,7 +309,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             <AdminButton
               variant="primary"
               onClick={handleSubmit}
-              disabled={saving || !form.name.trim() || !form.company_id}
+              disabled={saving || !form.firstName.trim() || !form.company_id}
             >
               {saving ? 'Speichern…' : 'Speichern'}
             </AdminButton>
@@ -306,18 +317,31 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
         }
       >
         <div className="flex flex-col gap-4 mt-1">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Name
-            </span>
-            <input
-              className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="z. B. Anna Müller"
-              autoFocus
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                Vorname <span className="text-red-500">*</span>
+              </span>
+              <input
+                className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
+                value={form.firstName}
+                onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+                placeholder="z. B. Anna"
+                autoFocus
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                Nachname
+              </span>
+              <input
+                className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
+                value={form.lastName}
+                onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+                placeholder="z. B. Müller"
+              />
+            </label>
+          </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
               Unternehmen
