@@ -21,6 +21,29 @@ No accounts. No passwords. No payments. No hardware.
 
 ---
 
+## Screenshots
+
+### Member flow
+
+<p>
+  <img src="docs/screenshots/member-start.png" alt="Kaffeelisten start screen" width="49%">
+  <img src="docs/screenshots/member-company.png" alt="Company selection screen" width="49%">
+</p>
+
+<p>
+  <img src="docs/screenshots/member-item-selection.png" alt="Item selection screen with two coffee items selected" width="49%">
+  <img src="docs/screenshots/member-confirmation.png" alt="Consumption confirmation screen" width="49%">
+</p>
+
+### Admin
+
+<p>
+  <img src="docs/screenshots/admin-dashboard.png" alt="Admin dashboard overview" width="49%">
+  <img src="docs/screenshots/admin-log.png" alt="Admin transaction log" width="49%">
+</p>
+
+---
+
 ## Stack
 
 | Layer | Tool |
