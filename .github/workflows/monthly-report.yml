@@ -1,0 +1,29 @@
+name: Monthly Report (manual trigger)
+
+on:
+  # Manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "send" to confirm triggering the monthly report and database reset'
+        required: true
+        type: string
+
+jobs:
+  send-report:
+    name: Trigger monthly report
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'send'
+
+    steps:
+      - name: Trigger report API
+        run: |
+          curl -X POST "${{ secrets.VERCEL_APP_URL }}/api/cron/monthly-report" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail \
+            --silent \
+            --show-error
+
+      - name: Report success
+        run: echo "Monthly report triggered successfully."
