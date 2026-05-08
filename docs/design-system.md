@@ -127,16 +127,22 @@ Tap target:  min 44x44px (enforced by full tile clickability)
 ### Item card
 
 ```
-Size:        min 100px height
+Size:        min 124px height
 Padding:     p-4
-Radius:      rounded-lg
+Radius:      rounded-xl
 Background:  white
 Border:      1px stone-200
 Shadow:      shadow-sm
 Selected:    bg amber-50, border amber-600, ring-2 amber-600
 Price label: text-sm text-stone-600
-Name:        text-base font-medium stone-900
-Icon:        24x24 custom SVG, stone-600
+Name:        text-lg font-semibold stone-900
+Icon:        28x28 custom SVG, stone-600 (amber-700 when selected)
+
+Quantity controls (shown only when selected, bottom-right of card):
+  − button: w-8 h-8, rounded-lg, bg amber-100, text amber-700
+  count:     w-6 text-center font-bold stone-900
+  + button:  w-8 h-8, rounded-lg, bg amber-100, text amber-700
+  click propagation stopped on control area so card body click does not fire
 ```
 
 ### Primary button
