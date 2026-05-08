@@ -113,12 +113,13 @@ Product phases from hackathon MVP to production-ready service.
 
 - [ ] Import real ITC1 companies, members, and items (replace seed data)
 - [ ] Monthly cron job — verify end-to-end (fires last day of month, 23:00 CET)
+- [ ] **Member work email field** — add optional `email` column to `members` table (migration); capture it in the self-registration modal and in the admin Members edit form. The email is **never** shown in the member flow tile, the transaction log, or the summary cards — it is visible only in the admin "Mitarbeitende bearbeiten" form and included in the monthly report CSV/email so the admin can cross-reference billing contacts per person.
 - [ ] 10-second undo window after logging
-- [ ] CSV export from admin panel
+- [ ] CSV export from admin panel (include member email column in export)
 - [ ] German copy final review
 - [ ] Custom domain setup (e.g. kaffeelisten.itc1.de)
 - [ ] Error logging (Vercel function logs at minimum)
-- [ ] Basic GDPR notice on member flow
+- [ ] Basic GDPR notice on member flow (note that work email is stored for billing purposes)
 
 ---
 
@@ -129,8 +130,9 @@ Product phases from hackathon MVP to production-ready service.
 - [ ] Email report: plain-text + HTML versions, improved formatting
 - [ ] Admin: soft-delete recovery (reactivate companies / members)
 - [ ] Health check endpoint + uptime monitoring (UptimeRobot free tier)
-- [ ] Automated backup of `transactions_archive` table
 - [ ] Hardened admin auth (time-limited session tokens instead of stateless PIN)
+- [ ] **Auto-deactivate inactive members** — a scheduled job (Vercel Cron, monthly) soft-deletes any member who has had zero transactions in the past 90 days. Handles the common case where someone leaves a company under ITC1 and the admin forgets to remove them. Deactivated members are hidden from the member flow immediately but remain in the admin Members list (greyed out) so the admin can reactivate them if needed. The 90-day window is configurable via an env var (`MEMBER_INACTIVITY_DAYS`, default `90`).
+- [ ] **Archive data retention — 3-month rolling window** — a scheduled job purges records from `transactions_archive` older than 90 days. Runs after each monthly report is sent. Keeps storage lean on the Supabase free tier. The retention window is configurable via env var (`ARCHIVE_RETENTION_DAYS`, default `90`). Admin is warned in the report email when records are about to be purged.
 
 ---
 

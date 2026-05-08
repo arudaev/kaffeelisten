@@ -25,8 +25,9 @@ A person who works at a company on campus.
 |---|---|---|
 | `id` | uuid | Primary key |
 | `company_id` | uuid | FK → companies |
-| `name` | text | Display name |
-| `active` | boolean | Soft delete — inactive members are hidden from member flow |
+| `name` | text | Display name (standardised format: "Vorname N.") |
+| `email` | text \| null | Work email — **Phase 1 addition** (migration required). Collected during self-registration and admin edit. **Never rendered** in the member flow tile, transaction log, or summary cards. Visible only in the admin Mitarbeitende edit form. Included in the monthly report CSV/email for billing cross-reference. |
+| `active` | boolean | Soft delete — inactive members hidden from member flow; auto-deactivated after 90 days of inactivity (Phase 2) |
 | `created_at` | timestamptz | — |
 
 ### Item
@@ -99,6 +100,10 @@ items     1 ──< transactions
 6. **Inactive filtering** — the member flow only shows active companies and members. Items marked inactive do not appear in the item selection screen.
 
 7. **Multi-item sessions** — a member can select multiple different items in one session, each with its own quantity. Each item produces a separate `transactions` row on submit (batch insert). The `quantity` field on each row reflects how many units of that specific item were taken.
+
+8. **Member inactivity auto-deactivation** (Phase 2) — a monthly cron job soft-deletes any member with zero transactions in the past 90 days (`MEMBER_INACTIVITY_DAYS` env var, default `90`). Deactivated members are hidden from the member flow but remain in the admin Members list for manual reactivation.
+
+9. **Archive retention** (Phase 2) — records in `transactions_archive` older than 90 days are purged after each monthly report is sent (`ARCHIVE_RETENTION_DAYS` env var, default `90`). The live `transactions` table is cleared monthly as part of the normal report cycle, not on this schedule.
 
 ---
 
