@@ -28,9 +28,10 @@ interface MemberForm {
 
 interface Props {
   onToast: (msg: string) => void
+  onMenuClick: () => void
 }
 
-export default function MembersPage({ onToast }: Props) {
+export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -197,6 +198,7 @@ export default function MembersPage({ onToast }: Props) {
     <>
       <Topbar
         title="Mitarbeitende"
+        onMenuClick={onMenuClick}
         right={
           <AdminButton
             variant="primary"
@@ -207,7 +209,7 @@ export default function MembersPage({ onToast }: Props) {
           </AdminButton>
         }
       />
-      <div className="p-8 flex flex-col gap-4">
+      <div className="p-4 md:p-8 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">

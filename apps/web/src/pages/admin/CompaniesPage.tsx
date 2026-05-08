@@ -19,9 +19,10 @@ interface CompanyForm {
 
 interface Props {
   onToast: (msg: string) => void
+  onMenuClick: () => void
 }
 
-export default function CompaniesPage({ onToast }: Props) {
+export default function CompaniesPage({ onToast, onMenuClick }: Props) {
   const [companies, setCompanies] = useState<CompanyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
@@ -148,6 +149,7 @@ export default function CompaniesPage({ onToast }: Props) {
     <>
       <Topbar
         title="Unternehmen"
+        onMenuClick={onMenuClick}
         right={
           <AdminButton
             variant="primary"
@@ -158,7 +160,7 @@ export default function CompaniesPage({ onToast }: Props) {
           </AdminButton>
         }
       />
-      <div className="p-8 flex flex-col gap-4">
+      <div className="p-4 md:p-8 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <select
             className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
