@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
@@ -35,6 +35,10 @@ export default function MembersPage({ onToast }: Props) {
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCompanyId, setFilterCompanyId] = useState<string>('')
+  const [filterName, setFilterName] = useState<string>('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+  const [sortKey, setSortKey] = useState<'name' | 'company'>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editId, setEditId] = useState<string | null>(null)
@@ -126,9 +130,20 @@ export default function MembersPage({ onToast }: Props) {
     }
   }
 
-  const displayed = filterCompanyId
-    ? members.filter(m => m.company_id === filterCompanyId)
-    : members
+  const displayed = useMemo(() => {
+    let rows = members
+    if (filterCompanyId) rows = rows.filter(m => m.company_id === filterCompanyId)
+    if (filterStatus !== 'all') rows = rows.filter(m => m.active === (filterStatus === 'active'))
+    if (filterName.trim()) {
+      const q = filterName.trim().toLowerCase()
+      rows = rows.filter(m => m.name.toLowerCase().includes(q))
+    }
+    return [...rows].sort((a, b) => {
+      const av = sortKey === 'name' ? a.name : a.company_name
+      const bv = sortKey === 'name' ? b.name : b.company_name
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+  }, [members, filterCompanyId, filterStatus, filterName, sortKey, sortDir])
 
   const columns: Column<MemberRow>[] = [
     {
@@ -193,8 +208,18 @@ export default function MembersPage({ onToast }: Props) {
         }
       />
       <div className="p-8 flex flex-col gap-4">
-        {/* Company filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+              <AdminIcon name="search" size={16} strokeWidth={1.5} />
+            </span>
+            <input
+              className="h-9 pl-8 pr-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors w-44"
+              placeholder="Name suchen…"
+              value={filterName}
+              onChange={e => setFilterName(e.target.value)}
+            />
+          </div>
           <select
             className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
             value={filterCompanyId}
@@ -205,13 +230,35 @@ export default function MembersPage({ onToast }: Props) {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          {filterCompanyId && (
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+          >
+            <option value="all">Alle Status</option>
+            <option value="active">Aktiv</option>
+            <option value="inactive">Inaktiv</option>
+          </select>
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={`${sortKey}-${sortDir}`}
+            onChange={e => {
+              const [k, d] = e.target.value.split('-') as ['name' | 'company', 'asc' | 'desc']
+              setSortKey(k); setSortDir(d)
+            }}
+          >
+            <option value="name-asc">Name A→Z</option>
+            <option value="name-desc">Name Z→A</option>
+            <option value="company-asc">Unternehmen A→Z</option>
+            <option value="company-desc">Unternehmen Z→A</option>
+          </select>
+          {(filterCompanyId || filterStatus !== 'all' || filterName) && (
             <button
               type="button"
-              onClick={() => setFilterCompanyId('')}
+              onClick={() => { setFilterCompanyId(''); setFilterStatus('all'); setFilterName('') }}
               className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
             >
-              Zurücksetzen
+              Filter zurücksetzen
             </button>
           )}
           <span className="ml-auto text-sm text-stone-500">

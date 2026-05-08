@@ -66,6 +66,8 @@ export default function AdminDashboard() {
   // Log filter state
   const [filterCompanyId, setFilterCompanyId] = useState<string>('')
   const [filterName, setFilterName] = useState<string>('')
+  const [filterItemName, setFilterItemName] = useState<string>('')
+  const [logSortDir, setLogSortDir] = useState<'desc' | 'asc'>('desc')
 
   // Session guard
   useEffect(() => {
@@ -150,15 +152,18 @@ export default function AdminDashboard() {
   // Filtered log rows (client-side)
   const filteredTransactions = useMemo(() => {
     let rows = transactions
-    if (filterCompanyId) {
-      rows = rows.filter(r => r.company_id === filterCompanyId)
-    }
+    if (filterCompanyId) rows = rows.filter(r => r.company_id === filterCompanyId)
     if (filterName.trim()) {
       const q = filterName.trim().toLowerCase()
       rows = rows.filter(r => r.member_name.toLowerCase().includes(q))
     }
-    return rows
-  }, [transactions, filterCompanyId, filterName])
+    if (filterItemName) rows = rows.filter(r => r.item_name === filterItemName)
+    return [...rows].sort((a, b) => {
+      const ta = new Date(a.logged_at).getTime()
+      const tb = new Date(b.logged_at).getTime()
+      return logSortDir === 'desc' ? tb - ta : ta - tb
+    })
+  }, [transactions, filterCompanyId, filterName, filterItemName, logSortDir])
 
   const handleExportCsv = () => {
     const header = ['Zeitpunkt', 'Person', 'Unternehmen', 'Item', 'Menge', 'Betrag (€)']
@@ -230,6 +235,12 @@ export default function AdminDashboard() {
       if (!seen.has(t.company_id)) seen.set(t.company_id, t.company_name)
     }
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }))
+  }, [transactions])
+
+  const logItemOptions = useMemo(() => {
+    const seen = new Set<string>()
+    for (const t of transactions) seen.add(t.item_name)
+    return [...seen].sort()
   }, [transactions])
 
   return (
@@ -353,10 +364,27 @@ export default function AdminDashboard() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
-                {(filterCompanyId || filterName) && (
+                <select
+                  className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+                  value={filterItemName}
+                  onChange={e => setFilterItemName(e.target.value)}
+                >
+                  <option value="">Alle Items</option>
+                  {logItemOptions.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setLogSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                  className="inline-flex items-center gap-1.5 h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                >
+                  Datum {logSortDir === 'desc' ? '↓' : '↑'}
+                </button>
+                {(filterCompanyId || filterName || filterItemName) && (
                   <button
                     type="button"
-                    onClick={() => { setFilterCompanyId(''); setFilterName('') }}
+                    onClick={() => { setFilterCompanyId(''); setFilterName(''); setFilterItemName('') }}
                     className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
                   >
                     Filter zurücksetzen

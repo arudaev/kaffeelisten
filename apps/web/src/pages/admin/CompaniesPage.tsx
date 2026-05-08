@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
@@ -24,6 +24,8 @@ interface Props {
 export default function CompaniesPage({ onToast }: Props) {
   const [companies, setCompanies] = useState<CompanyRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editId, setEditId] = useState<string | null>(null)
@@ -73,6 +75,14 @@ export default function CompaniesPage({ onToast }: Props) {
       fetchCompanies()
     }
   }
+
+  const displayed = useMemo(() => {
+    let rows = companies
+    if (filterStatus !== 'all') rows = rows.filter(r => r.active === (filterStatus === 'active'))
+    return [...rows].sort((a, b) =>
+      sortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    )
+  }, [companies, filterStatus, sortDir])
 
   const toggleActive = async (company: CompanyRow) => {
     const { error } = await supabase
@@ -148,13 +158,44 @@ export default function CompaniesPage({ onToast }: Props) {
           </AdminButton>
         }
       />
-      <div className="p-8">
+      <div className="p-8 flex flex-col gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+          >
+            <option value="all">Alle Status</option>
+            <option value="active">Aktiv</option>
+            <option value="inactive">Inaktiv</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+            className="inline-flex items-center gap-1.5 h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+          >
+            Name {sortDir === 'asc' ? 'A→Z' : 'Z→A'}
+            <AdminIcon name="chevron" size={14} strokeWidth={2} />
+          </button>
+          {filterStatus !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setFilterStatus('all')}
+              className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              Filter zurücksetzen
+            </button>
+          )}
+          <span className="ml-auto text-sm text-stone-500">
+            {displayed.length} {displayed.length === 1 ? 'Unternehmen' : 'Unternehmen'}
+          </span>
+        </div>
         {loading ? (
           <div className="h-48 bg-stone-100 rounded-xl animate-pulse" />
         ) : (
           <DataTable
             columns={columns}
-            rows={companies}
+            rows={displayed}
             empty={{
               title: 'Noch keine Unternehmen.',
               body: 'Füge das erste Unternehmen hinzu.',
