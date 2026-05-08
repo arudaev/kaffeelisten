@@ -84,6 +84,70 @@ Key points:
 - Do not expose `ADMIN_PIN` or `RESEND_API_KEY` in the client bundle.
 - Do not delete `transactions` records — always archive first, then clear.
 
+## Git workflow
+
+### Branching pattern
+
+```
+main              — production-ready, protected
+hotfix/<slug>     — urgent fixes that go directly to main (e.g. hotfix/ci-working-directory)
+feat/<slug>       — new features (e.g. feat/member-flow)
+fix/<slug>        — non-urgent bug fixes
+chore/<slug>      — tooling, deps, CI, docs (e.g. chore/update-deps)
+```
+
+Always branch off `main`. Open a PR; never push directly to `main` except on a hotfix with a peer review waived only during the hackathon sprint.
+
+### Commit style (Conventional Commits)
+
+```
+<type>(<scope>): <short imperative summary>
+
+[optional body — WHY, not WHAT]
+```
+
+Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`  
+Scope is optional but helpful: `ui`, `api`, `db`, `ci`, `pwa`
+
+Examples:
+```
+feat(ui): add company selector screen
+fix(api): handle missing CRON_SECRET env var
+ci: fix working-directory for apps/web monorepo
+chore(deps): bump vite to 5.3
+```
+
+- Subject line ≤ 72 chars, lowercase after the colon, no trailing period.
+- Body only when the why isn't obvious from the diff.
+
+### Claude agent workflow
+
+1. **Read first** — always read `CLAUDE.md` and the relevant source files before editing.
+2. **Branch** — create a branch with the right prefix before any code change.
+3. **Small commits** — one logical change per commit; commit as soon as a unit of work is done.
+4. **Check CI** — after pushing, use the GitHub PAT (see `.env`) to poll `GET /repos/arudaev/kaffeelisten/actions/runs` and inspect failures before declaring the task done.
+5. **No direct `main` pushes** — open a PR; the CI gate must pass.
+6. **No generated secrets in commits** — `.env` is gitignored; secrets live there only.
+
+> **Monorepo note:** This is an npm workspaces repo. Run `npm install` / `npm ci` from the **repo root**, not from `apps/web`. The root `package.json` proxies all scripts (`dev`, `build`, `lint`, `typecheck`) to the workspace. `package-lock.json` lives at the root.
+
+## Environment variables and `.env`
+
+`.env` lives at the repo root and is gitignored. It holds all real secrets and tokens used locally and by Claude agents. `.env.example` (committed) shows the required keys with placeholder values.
+
+### For a teammate's Claude agent
+
+When a teammate's Claude Code session starts on a fresh clone:
+
+1. Copy `.env.example` to `.env` and fill in the real values (share via a secure channel — never commit them).
+2. The agent reads `.env` via the shell automatically — no extra setup needed for Claude Code.
+3. Keys the agent actively uses:
+   - `GITHUB_TOKEN` — checking and re-triggering GitHub Actions workflow runs.
+   - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — frontend Supabase client (also needed for `vite build` in CI via repo secrets).
+   - `SUPABASE_SERVICE_ROLE_KEY` — only needed if running migration scripts or the report API locally.
+   - `VERCEL_TOKEN` — only needed if manually triggering a Vercel deploy from the CLI.
+4. The agent must **never** commit `.env`, print secret values in responses, or embed them in source files.
+
 ## Useful references
 
 - PRD: `docs/prd.md`
