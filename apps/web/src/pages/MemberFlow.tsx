@@ -30,20 +30,37 @@ function formatPrice(priceCents: number): string {
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
 }
 
-// Build a standardized "Vorname N." display name that is unique within existingNames.
-function standardizeName(firstName: string, lastName: string, existingNames: string[]): string {
-  const first = firstName.trim()
-  const last = lastName.trim()
-  if (!last) return first
-  for (let n = 1; n <= last.length; n++) {
-    const abbrev = last.charAt(0).toUpperCase() + last.slice(1, n)
-    const candidate = `${first} ${abbrev}.`
-    if (!existingNames.some(name => name.toLowerCase() === candidate.toLowerCase())) {
-      return candidate
-    }
+// Capitalize first letter of each word, lowercase the rest ("anna müller" → "Anna Müller").
+function capitalizeName(s: string): string {
+  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+}
+
+// Compute the shortest unique abbreviated display name for a stored full name.
+// Uses the last word as surname; everything before it is the display given name.
+// e.g. "Anna Müller"       → "Anna M."
+//      "Anna Maria Müller" → "Anna Maria M."  (no conflict with "Anna Müller")
+//      "Anna Müller" vs "Anna Maier" → "Anna Mü." / "Anna Ma."
+// otherNames must already exclude the current member (caller filters by id).
+function getDisplayName(fullName: string, otherNames: string[]): string {
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  const displayFirst = parts.slice(0, -1).join(' ')
+  const surname = parts[parts.length - 1]
+  for (let n = 1; n <= surname.length; n++) {
+    const abbrev = surname.charAt(0).toUpperCase() + surname.slice(1, n).toLowerCase()
+    const candidate = `${displayFirst} ${abbrev}.`
+    const conflict = otherNames.some(other => {
+      const op = other.trim().split(/\s+/)
+      if (op.length < 2) return false
+      const otherFirst = op.slice(0, -1).join(' ')
+      const otherSurname = op[op.length - 1]
+      if (otherFirst.toLowerCase() !== displayFirst.toLowerCase()) return false
+      const otherAbbrev = otherSurname.charAt(0).toUpperCase() + otherSurname.slice(1, n).toLowerCase()
+      return `${otherFirst} ${otherAbbrev}.`.toLowerCase() === candidate.toLowerCase()
+    })
+    if (!conflict) return candidate
   }
-  // All abbreviations taken — fall back to full last name (extremely rare)
-  return `${first} ${last.charAt(0).toUpperCase() + last.slice(1)}`
+  return fullName // identical full name — nothing to abbreviate further
 }
 
 export default function MemberFlow() {
@@ -184,10 +201,10 @@ export default function MemberFlow() {
     if (!selectedCompany) return
     setAddingMember(true)
     setAddSelfError(null)
-    const displayName = standardizeName(first, last, members.map(m => m.name))
+    const storedName = last ? `${capitalizeName(first)} ${capitalizeName(last)}` : capitalizeName(first)
     const { data, error: err } = await supabase
       .from('members')
-      .insert({ company_id: selectedCompany.id, name: displayName, active: true })
+      .insert({ company_id: selectedCompany.id, name: storedName, active: true })
       .select()
       .single()
     setAddingMember(false)
@@ -204,7 +221,7 @@ export default function MemberFlow() {
   const stepIndex = { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
 
   const successSummary = selectedMember && selectedCompany
-    ? [selectedMember.name, selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
+    ? [getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)), selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
     : ''
 
   if (step === 'success') {
@@ -290,8 +307,11 @@ export default function MemberFlow() {
 
   if (step === 'member') {
     const twoCol = members.length > 4
-    const previewName = selfFirstName.trim()
-      ? standardizeName(selfFirstName, selfLastName, members.map(m => m.name))
+    const previewFullName = selfFirstName.trim()
+      ? (selfLastName.trim() ? `${selfFirstName.trim()} ${selfLastName.trim()}` : selfFirstName.trim())
+      : ''
+    const previewName = previewFullName
+      ? getDisplayName(previewFullName, members.map(m => m.name))
       : ''
 
     return (
@@ -326,7 +346,7 @@ export default function MemberFlow() {
                 {members.map(m => (
                   <Tile
                     key={m.id}
-                    label={m.name}
+                    label={getDisplayName(m.name, members.filter(x => x.id !== m.id).map(x => x.name))}
                     onClick={() => {
                       setSelectedMember(m)
                       setCart(new Map())
@@ -449,7 +469,7 @@ export default function MemberFlow() {
         header={
           <>
             <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
-              {selectedMember?.name} · {selectedCompany?.name}
+              {selectedMember ? getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)) : ''} · {selectedCompany?.name}
             </p>
             <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Was hast du genommen?</h1>
           </>
@@ -539,7 +559,7 @@ export default function MemberFlow() {
         <div className="bg-white border border-stone-200 rounded-2xl p-7 shadow-sm flex flex-col gap-4">
           <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
             <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Person</span>
-            <span className="text-xl font-semibold text-stone-900">{selectedMember.name}</span>
+            <span className="text-xl font-semibold text-stone-900">{getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))}</span>
           </div>
           <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
             <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Unternehmen</span>

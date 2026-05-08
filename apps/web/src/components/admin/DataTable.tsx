@@ -44,6 +44,7 @@ export default function DataTable<T>({
 
   return (
     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -85,6 +86,7 @@ export default function DataTable<T>({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
