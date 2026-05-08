@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/send-report-pdf-mobile
+
+### Added
+- `/api/send-report` — POST endpoint that computes the full month's transactions, generates a PDF report and an Excel workbook, sends both as email attachments via Resend, archives all transactions to `transactions_archive`, and clears the live `transactions` table
+- `/api/cron/monthly-report` — Vercel Cron wrapper (fires 22:00 UTC on days 28–31); verifies `CRON_SECRET` header and only runs on the actual last day of the month
+- PDF report generated from styled HTML via puppeteer + `@sparticuz/chromium-min`; matches project design language (amber header, stone palette, company sections, member tables)
+- Excel report (`.xlsx`) with two sheets: `Zusammenfassung` (company totals) and `Alle Einträge` (full transaction log with date, person, item, quantity, price)
+- Email body includes summary metrics and per-company breakdown table; attachments named `kaffeelisten-YYYY-MM.pdf/.xlsx`
+- `vercel.json` cron configuration: `0 22 28-31 * *`
+
+### Fixed
+- Member item grid (`grid-cols-3`) now collapses to `1 col` on mobile and `2 col` on tablet — previously completely broken on phones
+- Member name grid (`grid-cols-2`) now always starts at 1 column on mobile (`sm:grid-cols-2`)
+- FlowShell padding reduced on narrow screens (`px-8` → `px-4 md:px-8`) across top bar, content area, and footer
+- Start screen heading (`text-5xl`) and illustration (`w-40`) now scale down on small screens
+- SuccessScreen circle and heading size now scale down on small screens
+
 ## [Unreleased] — feat/implement-design (PR #4)
 
 ### Added
