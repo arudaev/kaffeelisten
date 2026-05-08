@@ -265,7 +265,7 @@ export default function MembersPage({ onToast }: Props) {
               className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="z. B. Anna M."
+              placeholder="z. B. Anna Müller"
               autoFocus
             />
           </label>
