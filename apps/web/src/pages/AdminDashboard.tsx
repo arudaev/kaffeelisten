@@ -1,7 +1,7 @@
 // Admin dashboard: month-to-date summary, transaction log, report trigger
 // Protected — requires valid session token from AdminLogin PIN flow
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Sidebar from '../components/admin/Sidebar'
@@ -12,6 +12,9 @@ import Modal from '../components/admin/Modal'
 import AdminButton from '../components/admin/AdminButton'
 import Badge from '../components/admin/Badge'
 import AdminIcon from '../components/admin/AdminIcon'
+import ItemsPage from './admin/ItemsPage'
+import CompaniesPage from './admin/CompaniesPage'
+import MembersPage from './admin/MembersPage'
 
 type PageId = 'dashboard' | 'log' | 'companies' | 'members' | 'items' | 'settings'
 
@@ -20,12 +23,13 @@ interface TransactionRow {
   logged_at: string
   member_name: string
   company_name: string
+  company_id: string
   item_name: string
   quantity: number
   price_cents: number
 }
 
-interface CompanyRow {
+interface CompanySummaryRow {
   id: string
   name: string
   month_total_cents: number
@@ -53,11 +57,15 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
   const [activePage, setActivePage] = useState<PageId>('dashboard')
   const [transactions, setTransactions] = useState<TransactionRow[]>([])
-  const [companies, setCompanies] = useState<CompanyRow[]>([])
+  const [companies, setCompanies] = useState<CompanySummaryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportSending, setReportSending] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // Log filter state
+  const [filterCompanyId, setFilterCompanyId] = useState<string>('')
+  const [filterName, setFilterName] = useState<string>('')
 
   // Session guard
   useEffect(() => {
@@ -66,7 +74,6 @@ export default function AdminDashboard() {
     }
   }, [navigate])
 
-  // Load data using separate queries to avoid complex join typing
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
@@ -85,7 +92,9 @@ export default function AdminDashboard() {
       if (txRes.data && membersRes.data && companiesRes.data && itemsRes.data) {
         const memberMap = new Map(membersRes.data.map(m => [m.id, m.name]))
         const companyMap = new Map(companiesRes.data.map(c => [c.id, c.name]))
-        const itemMap = new Map(itemsRes.data.map(i => [i.id, { name: i.name, price_cents: i.price_cents }]))
+        const itemMap = new Map(
+          itemsRes.data.map(i => [i.id, { name: i.name, price_cents: i.price_cents }])
+        )
 
         const rows: TransactionRow[] = txRes.data.map(t => {
           const item = itemMap.get(t.item_id)
@@ -94,6 +103,7 @@ export default function AdminDashboard() {
             logged_at: t.logged_at,
             member_name: memberMap.get(t.member_id) ?? '—',
             company_name: companyMap.get(t.company_id) ?? '—',
+            company_id: t.company_id,
             item_name: item?.name ?? '—',
             quantity: t.quantity,
             price_cents: (item?.price_cents ?? 0) * t.quantity,
@@ -101,9 +111,9 @@ export default function AdminDashboard() {
         })
         setTransactions(rows)
 
-        const coRows: CompanyRow[] = companiesRes.data.map(c => {
+        const coRows: CompanySummaryRow[] = companiesRes.data.map(c => {
           const total = rows
-            .filter(r => r.company_name === c.name)
+            .filter(r => r.company_id === c.id)
             .reduce((acc, r) => acc + r.price_cents, 0)
           return { id: c.id, name: c.name, month_total_cents: total, active: c.active }
         })
@@ -125,12 +135,51 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/send-report', { method: 'POST' })
       setReportOpen(false)
-      showToast(res.ok ? 'Bericht wurde erfolgreich gesendet.' : 'Fehler beim Senden. Bitte erneut versuchen.')
+      showToast(
+        res.ok
+          ? 'Bericht wurde erfolgreich gesendet.'
+          : 'Fehler beim Senden. Bitte erneut versuchen.'
+      )
     } catch {
       showToast('Fehler beim Senden. Bitte erneut versuchen.')
     } finally {
       setReportSending(false)
     }
+  }
+
+  // Filtered log rows (client-side)
+  const filteredTransactions = useMemo(() => {
+    let rows = transactions
+    if (filterCompanyId) {
+      rows = rows.filter(r => r.company_id === filterCompanyId)
+    }
+    if (filterName.trim()) {
+      const q = filterName.trim().toLowerCase()
+      rows = rows.filter(r => r.member_name.toLowerCase().includes(q))
+    }
+    return rows
+  }, [transactions, filterCompanyId, filterName])
+
+  const handleExportCsv = () => {
+    const header = ['Zeitpunkt', 'Person', 'Unternehmen', 'Item', 'Menge', 'Betrag (€)']
+    const rows = filteredTransactions.map(r => [
+      formatDateTime(r.logged_at),
+      r.member_name,
+      r.company_name,
+      r.item_name,
+      String(r.quantity),
+      (r.price_cents / 100).toFixed(2).replace('.', ','),
+    ])
+    const csv = [header, ...rows]
+      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `kaffeelisten-${new Date().toISOString().slice(0, 7)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const totalCents = transactions.reduce((acc, t) => acc + t.price_cents, 0)
@@ -145,7 +194,10 @@ export default function AdminDashboard() {
   const topItemCount = sortedItems[0]?.[1] ?? 0
 
   const txColumns: Column<TransactionRow>[] = [
-    { key: 'logged_at', label: 'Zeitpunkt', mono: true, muted: true, render: r => formatDateTime(r.logged_at) },
+    {
+      key: 'logged_at', label: 'Zeitpunkt', mono: true, muted: true,
+      render: r => formatDateTime(r.logged_at),
+    },
     { key: 'member_name', label: 'Person' },
     { key: 'company_name', label: 'Unternehmen', muted: true },
     { key: 'item_name', label: 'Item' },
@@ -156,45 +208,37 @@ export default function AdminDashboard() {
     },
   ]
 
-  const companyColumns: Column<CompanyRow>[] = [
-    { key: 'name', label: 'Unternehmen', render: r => <span className="font-semibold">{r.name}</span> },
+  const companyColumns: Column<CompanySummaryRow>[] = [
+    {
+      key: 'name', label: 'Unternehmen',
+      render: r => <span className="font-semibold">{r.name}</span>,
+    },
     {
       key: 'month_total_cents', label: monthLabel, align: 'right', mono: true,
       render: r => <span className="font-semibold">{formatPrice(r.month_total_cents)}</span>,
     },
-    { key: 'active', label: 'Status', render: () => <Badge kind="active">Aktiv</Badge> },
     {
-      key: 'actions', label: '', align: 'right',
-      render: () => (
-        <div className="inline-flex gap-1">
-          <button type="button" className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors">
-            <AdminIcon name="edit" size={16} />
-          </button>
-          <button type="button" className="text-stone-500 hover:text-red-600 p-1 rounded transition-colors">
-            <AdminIcon name="delete" size={16} />
-          </button>
-        </div>
-      ),
+      key: 'active', label: 'Status',
+      render: () => <Badge kind="active">Aktiv</Badge>,
     },
   ]
 
-  const logColumns: Column<TransactionRow>[] = [
-    ...txColumns,
-    {
-      key: 'delete', label: '', align: 'right',
-      render: () => (
-        <button type="button" className="text-stone-500 hover:text-red-600 p-1 rounded transition-colors">
-          <AdminIcon name="delete" size={16} />
-        </button>
-      ),
-    },
-  ]
+  // Unique companies present in current transaction set (for log filter dropdown)
+  const logCompanyOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const t of transactions) {
+      if (!seen.has(t.company_id)) seen.set(t.company_id, t.company_name)
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }))
+  }, [transactions])
 
   return (
     <div className="flex min-h-screen font-sans">
       <Sidebar active={activePage} onNavigate={setActivePage} onSendReport={() => setReportOpen(true)} />
 
       <main className="flex-1 min-w-0 bg-stone-50">
+
+        {/* ── Dashboard ── */}
         {activePage === 'dashboard' && (
           <>
             <Topbar
@@ -203,7 +247,11 @@ export default function AdminDashboard() {
               right={
                 <>
                   <MonthSelector value={monthLabel} onChange={() => {}} />
-                  <AdminButton variant="secondary" icon={<AdminIcon name="download" size={16} />}>
+                  <AdminButton
+                    variant="secondary"
+                    icon={<AdminIcon name="download" size={16} />}
+                    onClick={handleExportCsv}
+                  >
                     CSV exportieren
                   </AdminButton>
                   <AdminButton
@@ -249,10 +297,20 @@ export default function AdminDashboard() {
                   empty={{ title: 'Noch keine Einträge.', body: 'Sobald jemand etwas einträgt, erscheint es hier.' }}
                 />
               </div>
+
+              {companies.length > 0 && (
+                <div>
+                  <h2 className="text-base font-semibold text-stone-900 mb-3">
+                    Übersicht nach Unternehmen
+                  </h2>
+                  <DataTable columns={companyColumns} rows={companies} />
+                </div>
+              )}
             </div>
           </>
         )}
 
+        {/* ── Log ── */}
         {activePage === 'log' && (
           <>
             <Topbar
@@ -261,67 +319,69 @@ export default function AdminDashboard() {
               right={
                 <>
                   <MonthSelector value={monthLabel} onChange={() => {}} />
-                  <AdminButton variant="secondary" icon={<AdminIcon name="filter" size={16} />}>Filter</AdminButton>
-                  <AdminButton variant="secondary" icon={<AdminIcon name="download" size={16} />}>Export</AdminButton>
+                  <AdminButton
+                    variant="secondary"
+                    icon={<AdminIcon name="download" size={16} />}
+                    onClick={handleExportCsv}
+                  >
+                    Export
+                  </AdminButton>
                 </>
               }
             />
-            <div className="p-8">
+            <div className="p-8 flex flex-col gap-4">
+              {/* Filter bar */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+                    <AdminIcon name="search" size={16} strokeWidth={1.5} />
+                  </span>
+                  <input
+                    className="h-9 pl-8 pr-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors w-52"
+                    placeholder="Person suchen…"
+                    value={filterName}
+                    onChange={e => setFilterName(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+                  value={filterCompanyId}
+                  onChange={e => setFilterCompanyId(e.target.value)}
+                >
+                  <option value="">Alle Unternehmen</option>
+                  {logCompanyOptions.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {(filterCompanyId || filterName) && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilterCompanyId(''); setFilterName('') }}
+                    className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+                  >
+                    Filter zurücksetzen
+                  </button>
+                )}
+                <span className="ml-auto text-sm text-stone-500">
+                  {filteredTransactions.length} Einträge
+                </span>
+              </div>
+
               <DataTable
-                columns={logColumns}
-                rows={transactions}
-                empty={{ title: 'Keine Einträge diesen Monat.' }}
+                columns={txColumns}
+                rows={filteredTransactions}
+                empty={{ title: 'Keine Einträge gefunden.' }}
               />
             </div>
           </>
         )}
 
-        {activePage === 'companies' && (
-          <>
-            <Topbar
-              title="Unternehmen"
-              right={
-                <AdminButton variant="primary" icon={<AdminIcon name="add" size={16} />}>
-                  Hinzufügen
-                </AdminButton>
-              }
-            />
-            <div className="p-8">
-              <DataTable
-                columns={companyColumns}
-                rows={companies}
-                empty={{ title: 'Keine Unternehmen.', body: 'Unternehmen können hier hinzugefügt werden.' }}
-              />
-            </div>
-          </>
-        )}
+        {/* ── CRUD pages ── */}
+        {activePage === 'companies' && <CompaniesPage onToast={showToast} />}
+        {activePage === 'members' && <MembersPage onToast={showToast} />}
+        {activePage === 'items' && <ItemsPage onToast={showToast} />}
 
-        {activePage === 'members' && (
-          <>
-            <Topbar title="Mitarbeitende" right={<AdminButton variant="primary" icon={<AdminIcon name="add" size={16} />}>Hinzufügen</AdminButton>} />
-            <div className="p-8">
-              <DataTable
-                columns={[{ key: 'name', label: 'Name' }]}
-                rows={[]}
-                empty={{ title: 'Noch keine Mitarbeitenden.', body: 'Mitarbeitende werden hier verwaltet.' }}
-              />
-            </div>
-          </>
-        )}
-
-        {activePage === 'items' && (
-          <>
-            <Topbar title="Items" right={<AdminButton variant="primary" icon={<AdminIcon name="add" size={16} />}>Hinzufügen</AdminButton>} />
-            <div className="p-8">
-              <DataTable
-                columns={[{ key: 'name', label: 'Name' }]}
-                rows={[]}
-                empty={{ title: 'Noch keine Items.', body: 'Items können hier hinzugefügt werden.' }}
-              />
-            </div>
-          </>
-        )}
-
+        {/* ── Settings ── */}
         {activePage === 'settings' && (
           <>
             <Topbar title="Einstellungen" />
