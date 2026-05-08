@@ -1,13 +1,12 @@
 // Member-facing logging flow: start → company → member → item → confirm → success
 // Design spec: docs/design-foundation.md, ui_kits/member-flow/
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import BigButton from '../components/BigButton'
 import Tile from '../components/Tile'
 import ItemCard from '../components/ItemCard'
-import Stepper from '../components/Stepper'
 import FlowShell from '../components/FlowShell'
 import SuccessScreen from '../components/SuccessScreen'
 import Icon from '../components/Icon'
@@ -16,6 +15,8 @@ type Company = Database['public']['Tables']['companies']['Row']
 type Member = Database['public']['Tables']['members']['Row']
 type Item = Database['public']['Tables']['items']['Row']
 type Step = 'start' | 'company' | 'member' | 'item' | 'confirm' | 'success'
+
+type CartEntry = { item: Item; quantity: number }
 
 const CATEGORY_LABELS: Record<string, string> = {
   coffee: 'Kaffee',
@@ -27,6 +28,22 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function formatPrice(priceCents: number): string {
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
+}
+
+// Build a standardized "Vorname N." display name that is unique within existingNames.
+function standardizeName(firstName: string, lastName: string, existingNames: string[]): string {
+  const first = firstName.trim()
+  const last = lastName.trim()
+  if (!last) return first
+  for (let n = 1; n <= last.length; n++) {
+    const abbrev = last.charAt(0).toUpperCase() + last.slice(1, n)
+    const candidate = `${first} ${abbrev}.`
+    if (!existingNames.some(name => name.toLowerCase() === candidate.toLowerCase())) {
+      return candidate
+    }
+  }
+  // All abbreviations taken — fall back to full last name (extremely rare)
+  return `${first} ${last.charAt(0).toUpperCase() + last.slice(1)}`
 }
 
 export default function MemberFlow() {
@@ -41,10 +58,21 @@ export default function MemberFlow() {
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null)
-  const [quantity, setQuantity] = useState(1)
+  const [cart, setCart] = useState<Map<string, CartEntry>>(new Map())
   const [activeCategory, setActiveCategory] = useState<string>('coffee')
   const [submitting, setSubmitting] = useState(false)
+
+  // Self-registration modal
+  const [addSelfOpen, setAddSelfOpen] = useState(false)
+  const [selfFirstName, setSelfFirstName] = useState('')
+  const [selfLastName, setSelfLastName] = useState('')
+  const [addingMember, setAddingMember] = useState(false)
+  const [addSelfError, setAddSelfError] = useState<string | null>(null)
+  const firstNameRef = useRef<HTMLInputElement>(null)
+
+  const cartEntries = [...cart.values()]
+  const cartCount = cartEntries.reduce((sum, e) => sum + e.quantity, 0)
+  const cartTotal = cartEntries.reduce((sum, e) => sum + e.item.price_cents * e.quantity, 0)
 
   // Load companies + items on mount
   useEffect(() => {
@@ -55,17 +83,15 @@ export default function MemberFlow() {
       setLoadingCompanies(false)
       const itsResult = await supabase.from('items').select('*').eq('active', true).order('name')
       setLoadingItems(false)
-      const cos = cosResult.data
-      const its = itsResult.data
       const cosErr = cosResult.error
       const itsErr = itsResult.error
       if (cosErr || itsErr) {
         setError('Daten konnten nicht geladen werden.')
         return
       }
-      setCompanies(cos ?? [])
-      setItems(its ?? [])
-      const cats = [...new Set((its ?? []).map(i => i.category))]
+      setCompanies(cosResult.data ?? [])
+      setItems(itsResult.data ?? [])
+      const cats = [...new Set((itsResult.data ?? []).map(i => i.category))]
       if (cats.length > 0) setActiveCategory(cats[0])
     }
     fetchInitial()
@@ -89,39 +115,102 @@ export default function MemberFlow() {
     fetchMembers()
   }, [selectedCompany])
 
+  // Focus first name input when modal opens
+  useEffect(() => {
+    if (addSelfOpen) {
+      setTimeout(() => firstNameRef.current?.focus(), 50)
+    }
+  }, [addSelfOpen])
+
   const reset = () => {
     setStep('start')
     setSelectedCompany(null)
     setSelectedMember(null)
-    setSelectedItem(null)
-    setQuantity(1)
+    setCart(new Map())
     setError(null)
     const cats = [...new Set(items.map(i => i.category))]
     if (cats.length > 0) setActiveCategory(cats[0])
   }
 
+  const addToCart = (item: Item) => {
+    setCart(prev => {
+      const next = new Map(prev)
+      const entry = next.get(item.id)
+      next.set(item.id, { item, quantity: (entry?.quantity ?? 0) + 1 })
+      return next
+    })
+  }
+
+  const removeFromCart = (itemId: string) => {
+    setCart(prev => {
+      const next = new Map(prev)
+      const entry = next.get(itemId)
+      if (!entry) return prev
+      if (entry.quantity <= 1) {
+        next.delete(itemId)
+      } else {
+        next.set(itemId, { ...entry, quantity: entry.quantity - 1 })
+      }
+      return next
+    })
+  }
+
   const handleConfirm = async () => {
-    if (!selectedMember || !selectedCompany || !selectedItem) return
+    if (!selectedMember || !selectedCompany || cartEntries.length === 0) return
     setSubmitting(true)
-    const { error: err } = await supabase.from('transactions').insert({
+    const rows = cartEntries.map(e => ({
       member_id: selectedMember.id,
       company_id: selectedCompany.id,
-      item_id: selectedItem.id,
-      quantity,
-    })
+      item_id: e.item.id,
+      quantity: e.quantity,
+    }))
+    const { error: err } = await supabase.from('transactions').insert(rows)
     setSubmitting(false)
     if (err) { setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
     setStep('success')
+  }
+
+  const openAddSelf = () => {
+    setSelfFirstName('')
+    setSelfLastName('')
+    setAddSelfError(null)
+    setAddSelfOpen(true)
+  }
+
+  const handleAddSelf = async () => {
+    const first = selfFirstName.trim()
+    const last = selfLastName.trim()
+    if (!first) { setAddSelfError('Vorname fehlt.'); return }
+    if (!selectedCompany) return
+    setAddingMember(true)
+    setAddSelfError(null)
+    const displayName = standardizeName(first, last, members.map(m => m.name))
+    const { data, error: err } = await supabase
+      .from('members')
+      .insert({ company_id: selectedCompany.id, name: displayName, active: true })
+      .select()
+      .single()
+    setAddingMember(false)
+    if (err || !data) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
+    setMembers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setSelectedMember(data)
+    setAddSelfOpen(false)
+    setCart(new Map())
+    setStep('item')
   }
 
   const availableCategories = [...new Set(items.map(i => i.category))]
   const filteredItems = items.filter(i => i.category === activeCategory)
   const stepIndex = { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
 
-  if (step === 'success' && selectedItem && selectedMember && selectedCompany) {
+  const successSummary = selectedMember && selectedCompany
+    ? [selectedMember.name, selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
+    : ''
+
+  if (step === 'success') {
     return (
       <SuccessScreen
-        summary={`${quantity} × ${selectedItem.name} · ${selectedMember.name} · ${selectedCompany.name}`}
+        summary={successSummary}
         onUndo={() => setStep('confirm')}
         onReset={reset}
       />
@@ -185,7 +274,12 @@ export default function MemberFlow() {
               <Tile
                 key={c.id}
                 label={c.name}
-                onClick={() => { setSelectedCompany(c); setStep('member') }}
+                onClick={() => {
+                  setSelectedCompany(c)
+                  setSelectedMember(null)
+                  setCart(new Map())
+                  setStep('member')
+                }}
               />
             ))}
           </div>
@@ -196,39 +290,150 @@ export default function MemberFlow() {
 
   if (step === 'member') {
     const twoCol = members.length > 4
+    const previewName = selfFirstName.trim()
+      ? standardizeName(selfFirstName, selfLastName, members.map(m => m.name))
+      : ''
+
     return (
-      <FlowShell
-        step={stepIndex}
-        totalSteps={4}
-        onBack={() => setStep('company')}
-        header={
-          <>
-            <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
-              {selectedCompany?.name}
-            </p>
-            <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Schön, dich zu sehen.</h1>
-            <p className="text-lg text-stone-600">Wähle deinen Namen.</p>
-          </>
-        }
-      >
-        {loadingMembers ? (
-          <div className="flex flex-col gap-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-[72px] rounded-xl bg-stone-100 animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className={twoCol ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
-            {members.map(m => (
-              <Tile
-                key={m.id}
-                label={m.name}
-                onClick={() => { setSelectedMember(m); setStep('item') }}
-              />
-            ))}
+      <>
+        <FlowShell
+          step={stepIndex}
+          totalSteps={4}
+          onBack={() => {
+            setSelectedMember(null)
+            setCart(new Map())
+            setStep('company')
+          }}
+          header={
+            <>
+              <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
+                {selectedCompany?.name}
+              </p>
+              <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Schön, dich zu sehen.</h1>
+              <p className="text-lg text-stone-600">Wähle deinen Namen.</p>
+            </>
+          }
+        >
+          {loadingMembers ? (
+            <div className="flex flex-col gap-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-[72px] rounded-xl bg-stone-100 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className={twoCol ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
+                {members.map(m => (
+                  <Tile
+                    key={m.id}
+                    label={m.name}
+                    onClick={() => {
+                      setSelectedMember(m)
+                      setCart(new Map())
+                      setStep('item')
+                    }}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={openAddSelf}
+                className="mt-2 self-start flex items-center gap-2 px-4 h-11 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+              >
+                <span className="text-xl leading-none">+</span>
+                Ich bin noch nicht dabei
+              </button>
+            </div>
+          )}
+        </FlowShell>
+
+        {/* Self-registration modal */}
+        {addSelfOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6"
+            onClick={() => setAddSelfOpen(false)}
+          >
+            <div
+              className="bg-white rounded-2xl p-7 w-full max-w-[440px] shadow-lg flex flex-col gap-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-xl font-semibold text-stone-900">Namen hinzufügen</h2>
+                <button
+                  type="button"
+                  onClick={() => setAddSelfOpen(false)}
+                  className="text-stone-400 hover:text-stone-700 p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                  aria-label="Schließen"
+                >
+                  <Icon name="close" size={20} strokeWidth={2} />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-stone-700" htmlFor="self-first">
+                    Vorname
+                  </label>
+                  <input
+                    ref={firstNameRef}
+                    id="self-first"
+                    type="text"
+                    autoComplete="given-name"
+                    value={selfFirstName}
+                    onChange={e => setSelfFirstName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
+                    placeholder="z. B. Max"
+                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-stone-700" htmlFor="self-last">
+                    Nachname
+                  </label>
+                  <input
+                    id="self-last"
+                    type="text"
+                    autoComplete="family-name"
+                    value={selfLastName}
+                    onChange={e => setSelfLastName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
+                    placeholder="z. B. Mustermann"
+                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                  />
+                </div>
+              </div>
+
+              {previewName && (
+                <p className="text-sm text-stone-600 bg-stone-50 rounded-lg px-4 py-2.5">
+                  Dein Name in der Liste: <strong className="text-stone-900">{previewName}</strong>
+                </p>
+              )}
+
+              {addSelfError && (
+                <p className="text-sm text-red-600">{addSelfError}</p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAddSelfOpen(false)}
+                  className="h-11 px-5 rounded-xl text-base font-medium text-stone-700 hover:bg-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddSelf}
+                  disabled={addingMember || !selfFirstName.trim()}
+                  className="h-11 px-5 rounded-xl text-base font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                >
+                  {addingMember ? 'Speichern…' : 'Hinzufügen'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </FlowShell>
+      </>
     )
   }
 
@@ -237,7 +442,10 @@ export default function MemberFlow() {
       <FlowShell
         step={stepIndex}
         totalSteps={4}
-        onBack={() => setStep('member')}
+        onBack={() => {
+          setCart(new Map())
+          setStep('member')
+        }}
         header={
           <>
             <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
@@ -247,15 +455,17 @@ export default function MemberFlow() {
           </>
         }
         footer={
-          selectedItem ? (
+          cartCount > 0 ? (
             <>
-              <Stepper value={quantity} onChange={setQuantity} />
+              <span className="text-base font-medium text-stone-700">
+                {cartCount} {cartCount === 1 ? 'Artikel' : 'Artikel'} · {formatPrice(cartTotal)}
+              </span>
               <div className="flex-1" />
-              <BigButton variant="secondary" onClick={() => setSelectedItem(null)}>
+              <BigButton variant="secondary" onClick={() => setCart(new Map())}>
                 Auswahl löschen
               </BigButton>
               <BigButton variant="primary" onClick={() => setStep('confirm')}>
-                Weiter — {quantity} × {selectedItem.name}
+                Weiter
               </BigButton>
             </>
           ) : undefined
@@ -290,8 +500,9 @@ export default function MemberFlow() {
                 name={item.name}
                 price={formatPrice(item.price_cents)}
                 category={item.category as 'coffee' | 'drink' | 'snack' | 'food' | 'other'}
-                selected={selectedItem?.id === item.id}
-                onClick={() => setSelectedItem(item)}
+                quantity={cart.get(item.id)?.quantity ?? 0}
+                onAdd={() => addToCart(item)}
+                onRemove={() => removeFromCart(item.id)}
               />
             ))}
           </div>
@@ -300,14 +511,7 @@ export default function MemberFlow() {
     )
   }
 
-  if (step === 'confirm' && selectedItem && selectedMember && selectedCompany) {
-    const totalCents = selectedItem.price_cents * quantity
-    const rows: [string, string][] = [
-      ['Person', selectedMember.name],
-      ['Unternehmen', selectedCompany.name],
-      ['Item', `${quantity} × ${selectedItem.name}`],
-      ['Preis', formatPrice(totalCents)],
-    ]
+  if (step === 'confirm' && selectedMember && selectedCompany && cartEntries.length > 0) {
     return (
       <FlowShell
         step={stepIndex}
@@ -333,15 +537,29 @@ export default function MemberFlow() {
         }
       >
         <div className="bg-white border border-stone-200 rounded-2xl p-7 shadow-sm flex flex-col gap-4">
-          {rows.map(([label, value]) => (
+          <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
+            <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Person</span>
+            <span className="text-xl font-semibold text-stone-900">{selectedMember.name}</span>
+          </div>
+          <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
+            <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Unternehmen</span>
+            <span className="text-xl font-semibold text-stone-900">{selectedCompany.name}</span>
+          </div>
+          {cartEntries.map(({ item, quantity }) => (
             <div
-              key={label}
+              key={item.id}
               className="flex justify-between items-center border-b border-stone-200 pb-3.5 last:border-0 last:pb-0"
             >
-              <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">{label}</span>
-              <span className="text-xl font-semibold text-stone-900">{value}</span>
+              <span className="text-base text-stone-700">{quantity} × {item.name}</span>
+              <span className="text-xl font-semibold text-stone-900">{formatPrice(item.price_cents * quantity)}</span>
             </div>
           ))}
+          {cartEntries.length > 1 && (
+            <div className="flex justify-between items-center pt-1 border-t border-stone-200">
+              <span className="text-sm font-medium text-stone-900 uppercase tracking-[0.06em]">Gesamt</span>
+              <span className="text-xl font-bold text-stone-900">{formatPrice(cartTotal)}</span>
+            </div>
+          )}
         </div>
       </FlowShell>
     )
