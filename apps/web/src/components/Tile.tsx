@@ -11,7 +11,7 @@ export default function Tile({ label, sub, selected = false, onClick }: TileProp
       type="button"
       onClick={onClick}
       className={[
-        'flex items-center gap-4 w-full px-6 py-5 min-h-[72px] text-left',
+        'flex items-center gap-4 w-full px-4 sm:px-6 py-5 min-h-[72px] text-left',
         'rounded-xl border shadow-sm',
         'transition-[background,border-color,box-shadow] duration-[120ms]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2',
@@ -22,7 +22,7 @@ export default function Tile({ label, sub, selected = false, onClick }: TileProp
         .join(' ')}
     >
       <div className="flex flex-col gap-0.5 flex-1">
-        <span className="text-xl font-semibold text-stone-900">{label}</span>
+        <span className="text-lg sm:text-xl font-semibold text-stone-900">{label}</span>
         {sub && <span className="text-sm text-stone-600">{sub}</span>}
       </div>
       <span className={selected ? 'text-amber-700' : 'text-stone-400'}>

@@ -219,15 +219,15 @@ export default function MemberFlow() {
 
   if (step === 'start') {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-10 font-sans relative">
+      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
         <img
           src="/assets/illustrations/cappuccino-with-steam.svg"
           alt=""
-          className="w-40"
+          className="w-28 sm:w-40"
           style={{ color: '#44403C' }}
         />
         <div className="text-center max-w-xl">
-          <h1 className="text-5xl font-bold text-stone-900 tracking-tight">Kaffeelisten</h1>
+          <h1 className="text-3xl sm:text-5xl font-bold text-stone-900 tracking-tight">Kaffeelisten</h1>
           <p className="text-xl text-stone-600 mt-2.5 leading-relaxed">
             Kaffee, Getränke, Snacks. Kurz tippen, fertig.
           </p>
@@ -322,7 +322,7 @@ export default function MemberFlow() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className={twoCol ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
+              <div className={twoCol ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
                 {members.map(m => (
                   <Tile
                     key={m.id}
@@ -493,7 +493,7 @@ export default function MemberFlow() {
               )
             })}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredItems.map(item => (
               <ItemCard
                 key={item.id}
