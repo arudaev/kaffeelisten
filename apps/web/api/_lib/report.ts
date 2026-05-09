@@ -344,22 +344,6 @@ export async function generateExcel(
 
 // ─── Email ────────────────────────────────────────────────────────────────────
 
-// cappuccino-with-steam.svg paths with explicit stone-700 stroke for use on white bg.
-// Encoded at send time so email clients receive a plain <img> (SVG inline is stripped
-// by Gmail, Outlook, and Apple Mail).
-const CAPPUCCINO_SVG = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160">',
-  '<g fill="none" stroke="#44403C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
-  '<path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/>',
-  '<ellipse cx="83" cy="60" rx="43" ry="6"/>',
-  '<path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>',
-  '<path d="M126 70h12c10 0 18 8 18 18v0c0 10-8 18-18 18h-12"/>',
-  '<path d="M70 28c-3 6 3 12 0 18"/>',
-  '<path d="M83 22c-3 6 3 12 0 18"/>',
-  '<path d="M96 28c-3 6 3 12 0 18"/>',
-  '</g></svg>',
-].join('')
-
 export async function sendEmail(
   pdfBuffer: Buffer,
   xlsxBuffer: Buffer,
@@ -379,9 +363,11 @@ export async function sendEmail(
   const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
     .toLocaleDateString('de-DE', { month: 'long' })
 
-  // Base64-encode the cappuccino illustration so email clients treat it as a normal img
-  const cappuccinoB64 = Buffer.from(CAPPUCCINO_SVG).toString('base64')
-  const cappuccinoSrc = `data:image/svg+xml;base64,${cappuccinoB64}`
+  // Absolute URL for the cappuccino illustration — Gmail and Outlook block data: URIs
+  // but load plain HTTPS <img> tags fine. APP_URL is set in Vercel env vars;
+  // falls back to the production domain so existing deployments work without config change.
+  const appUrl = (process.env.APP_URL ?? 'https://kaffeelisten.vercel.app').replace(/\/$/, '')
+  const cappuccinoSrc = `${appUrl}/assets/illustrations/cappuccino-with-steam.svg`
 
   const companyRows = summaries
     .map(c => `
