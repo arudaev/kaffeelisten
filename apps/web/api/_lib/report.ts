@@ -470,13 +470,61 @@ export async function archiveTransactions(
 export async function pruneOldTransactions(): Promise<void> {
   const supabase = makeSupabase()
   const now = new Date()
-  // Delete anything older than the start of 3 months ago
   const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
-  const { error } = await supabase
+
+  const { error: liveErr } = await supabase
     .from('transactions')
     .delete()
     .lt('logged_at', cutoff)
-  if (error) throw new Error(`Prune failed: ${error.message}`)
+  if (liveErr) throw new Error(`Prune transactions failed: ${liveErr.message}`)
+
+  // Keep transactions_archive within the same 90-day window to stay within
+  // Supabase free-tier storage limits.
+  const { error: archErr } = await supabase
+    .from('transactions_archive')
+    .delete()
+    .lt('logged_at', cutoff)
+  if (archErr) throw new Error(`Prune archive failed: ${archErr.message}`)
+}
+
+// ─── Deactivate members inactive for 90+ days ────────────────────────────────
+
+export async function deactivateInactiveMembers(): Promise<void> {
+  const supabase = makeSupabase()
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
+
+  // Find members whose most recent transaction is older than the cutoff.
+  // Members with zero transactions ever are intentionally excluded — they may
+  // be newly added and simply haven't logged anything yet.
+  const { data: txData, error: txErr } = await supabase
+    .from('transactions')
+    .select('member_id, logged_at')
+    .order('logged_at', { ascending: false })
+
+  if (txErr) throw new Error(`deactivateInactiveMembers fetch failed: ${txErr.message}`)
+
+  // Build a map: member_id → most recent logged_at
+  const latestByMember = new Map<string, string>()
+  for (const row of txData ?? []) {
+    if (!latestByMember.has(row.member_id)) {
+      latestByMember.set(row.member_id, row.logged_at)
+    }
+  }
+
+  const toDeactivate = [...latestByMember.entries()]
+    .filter(([, last]) => last < cutoff)
+    .map(([id]) => id)
+
+  if (toDeactivate.length === 0) return
+
+  const { error: updErr } = await supabase
+    .from('members')
+    .update({ active: false })
+    .in('id', toDeactivate)
+    .eq('active', true)
+
+  if (updErr) throw new Error(`deactivateInactiveMembers update failed: ${updErr.message}`)
 }
 
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
@@ -491,4 +539,5 @@ export async function runMonthlyReport(forMonth?: string): Promise<void> {
   await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth)
   await archiveTransactions(transactions, reportMonth)
   await pruneOldTransactions()
+  await deactivateInactiveMembers()
 }
