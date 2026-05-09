@@ -72,7 +72,7 @@ export function buildReportHtml(
       </tr>`).join('')
 
     return `
-    <div style="margin:0 40px 20px;page-break-inside:avoid;break-inside:avoid;">
+    <div style="margin:0 40px;padding-top:20px;page-break-inside:avoid;break-inside:avoid;">
       <div style="background:#D97706;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0;">
         <span style="font-size:13px;font-weight:700;">${company.company_name}</span>
         <span style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;">${formatEuro(company.total_cents)}</span>
@@ -174,7 +174,7 @@ export function buildReportHtml(
   </div>
 
   <!-- ── Section heading ────────────────────────────────────────────────────── -->
-  <div style="margin:0 40px 14px;">
+  <div style="margin:0 40px;">
     <h2 style="font-size:10px;font-weight:700;color:#78716C;text-transform:uppercase;letter-spacing:.1em;">Aufschlüsselung nach Unternehmen</h2>
   </div>
 
