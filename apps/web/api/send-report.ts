@@ -14,7 +14,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    await runMonthlyReport()
+    const { month } = (req.body ?? {}) as { month?: string }
+    await runMonthlyReport(month)
     return res.status(200).json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

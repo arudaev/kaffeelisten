@@ -25,19 +25,22 @@ function makeSupabase() {
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
 
-export async function fetchAndEnrich(): Promise<{
+// forMonth: "2026-05" — defaults to the current calendar month if omitted
+export async function fetchAndEnrich(forMonth?: string): Promise<{
   transactions: EnrichedTransaction[]
   reportMonth: string
   monthLabel: string
 }> {
   const supabase = makeSupabase()
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth()
-  const reportMonth = `${year}-${String(month + 1).padStart(2, '0')}`
-  const monthStart = new Date(year, month, 1).toISOString()
-  const monthEnd = new Date(year, month + 1, 1).toISOString()
-  const monthLabel = now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+  const ref = forMonth ?? new Date().toISOString().slice(0, 7)
+  const [yearStr, monStr] = ref.split('-')
+  const year  = Number(yearStr)
+  const month = Number(monStr) - 1          // 0-indexed
+  const reportMonth  = `${yearStr}-${monStr}`
+  const monthStart   = new Date(year, month, 1).toISOString()
+  const monthEnd     = new Date(year, month + 1, 1).toISOString()
+  const monthLabel   = new Date(year, month, 1)
+    .toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
 
   const { data: txData, error: txErr } = await supabase
     .from('transactions')
@@ -480,10 +483,24 @@ export async function archiveTransactions(
   if (archErr) throw new Error(`Archive insert failed: ${archErr.message}`)
 }
 
+// ─── Prune old transactions (keep last 3 months) ──────────────────────────────
+
+export async function pruneOldTransactions(): Promise<void> {
+  const supabase = makeSupabase()
+  const now = new Date()
+  // Delete anything older than the start of 3 months ago
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .lt('logged_at', cutoff)
+  if (error) throw new Error(`Prune failed: ${error.message}`)
+}
+
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
-export async function runMonthlyReport(): Promise<void> {
-  const { transactions, reportMonth, monthLabel } = await fetchAndEnrich()
+export async function runMonthlyReport(forMonth?: string): Promise<void> {
+  const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
   const summaries = computeSummary(transactions)
   const [pdfBuffer, xlsxBuffer] = await Promise.all([
     generatePdf(summaries, transactions, monthLabel, reportMonth),
@@ -491,4 +508,5 @@ export async function runMonthlyReport(): Promise<void> {
   ])
   await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth)
   await archiveTransactions(transactions, reportMonth)
+  await pruneOldTransactions()
 }
