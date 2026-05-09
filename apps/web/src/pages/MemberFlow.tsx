@@ -418,6 +418,7 @@ export default function MemberFlow() {
                   <Tile
                     key={m.id}
                     label={getDisplayName(m.name, members.filter(x => x.id !== m.id).map(x => x.name))}
+                    accentColor={getLetterColor(m.name)}
                     onClick={() => {
                       setSelectedMember(m)
                       setCart(new Map())
