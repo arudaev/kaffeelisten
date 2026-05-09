@@ -363,10 +363,6 @@ export async function sendEmail(
   const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
     .toLocaleDateString('de-DE', { month: 'long' })
 
-  // Absolute URLs — Gmail/Outlook block data: URIs, plain HTTPS <img> loads fine.
-  // APP_URL falls back to the production domain so no config change needed on existing deploys.
-  const appUrl = (process.env.APP_URL ?? 'https://kaffeelisten.vercel.app').replace(/\/$/, '')
-
   const companyRows = summaries
     .map(c => `
       <tr>
@@ -381,12 +377,16 @@ export async function sendEmail(
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:system-ui,sans-serif;background:#FAFAF9;margin:0;padding:32px;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E7E5E4;">
-    <div style="background:#D97706;padding:22px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
-      <div>
-        <p style="color:rgba(255,255,255,.8);margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Kaffeelisten · ITC1 Deggendorf</p>
-        <h1 style="color:#fff;margin:6px 0 0;font-size:22px;font-weight:700;">Monatsbericht ${monthLabel}</h1>
-      </div>
-      <img src="${appUrl}/pwa-192x192.png" width="56" height="56" alt="Kaffeelisten" style="flex-shrink:0;border-radius:14px;border:2px solid rgba(255,255,255,0.3);">
+    <div style="background:#D97706;padding:24px 32px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:0;color:rgba(255,255,255,.84);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;line-height:1.2;">KAFFEELISTEN · ITC1 DEGGENDORF</td>
+          <td style="padding:0;text-align:right;width:28px;vertical-align:middle;">
+            <span aria-label="Kaffeelisten" style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#FDBA74;border:2px solid rgba(255,255,255,.72);line-height:14px;vertical-align:middle;">&nbsp;</span>
+          </td>
+        </tr>
+      </table>
+      <h1 style="color:#fff;margin:12px 0 0;font-size:22px;font-weight:700;line-height:1.2;">Monatsbericht ${monthLabel}</h1>
     </div>
     <div style="padding:28px 32px;">
       <p style="color:#57534E;margin:0 0 20px;">Anbei der Monatsbericht für <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Einträgen des ITC1-Campus.</p>
