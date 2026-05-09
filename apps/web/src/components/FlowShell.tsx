@@ -8,13 +8,28 @@ interface FlowShellProps {
   header?: ReactNode
   children: ReactNode
   footer?: ReactNode
+  decoration?: ReactNode
 }
 
-export default function FlowShell({ step, totalSteps, onBack, header, children, footer }: FlowShellProps) {
+export default function FlowShell({
+  step,
+  totalSteps,
+  onBack,
+  header,
+  children,
+  footer,
+  decoration,
+}: FlowShellProps) {
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50 flex flex-col font-sans relative isolate">
+      {decoration && (
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          {decoration}
+        </div>
+      )}
+
       {/* Top bar */}
-      <div className="flex items-center gap-4 px-4 md:px-8 py-5">
+      <div className="relative z-10 flex items-center gap-4 px-4 md:px-8 py-5">
         <button
           type="button"
           onClick={onBack}
@@ -51,7 +66,7 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-4 md:px-8 pb-3 md:pb-6 pt-2 w-full max-w-[920px] mx-auto flex flex-col gap-6">
+      <div className="relative z-10 flex-1 px-4 md:px-8 pb-3 md:pb-6 pt-2 w-full max-w-[920px] mx-auto flex flex-col gap-6">
         {header && (
           <div className="flex flex-col gap-1.5 py-3 pb-1">{header}</div>
         )}
@@ -60,7 +75,7 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
 
       {/* Footer */}
       {footer && (
-        <div className="px-4 md:px-8 py-4 pb-6 bg-stone-50 border-t border-stone-200">
+        <div className="relative z-10 px-4 md:px-8 py-4 pb-6 bg-stone-50 border-t border-stone-200">
           <div className="max-w-[920px] mx-auto flex items-center gap-3">{footer}</div>
         </div>
       )}

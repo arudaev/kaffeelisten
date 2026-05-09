@@ -11,6 +11,8 @@ import ItemCard from '../components/ItemCard'
 import FlowShell from '../components/FlowShell'
 import SuccessScreen from '../components/SuccessScreen'
 import Icon from '../components/Icon'
+import BrandMark from '../components/BrandMark'
+import Illustration from '../components/Illustration'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type Member = Database['public']['Tables']['members']['Row']
@@ -291,13 +293,18 @@ export default function MemberFlow() {
 
   if (step === 'start') {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
-        <img
-          src="/logo.svg"
-          alt="Kaffeelisten"
-          className="w-28 sm:w-40 drop-shadow-sm"
+      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative isolate overflow-hidden">
+        <Illustration
+          name="campus"
+          className="absolute bottom-14 left-1/2 hidden w-[620px] -translate-x-1/2 text-stone-300/70 sm:block"
+          strokeWidth={1.5}
         />
-        <div className="text-center max-w-xl">
+        <Illustration
+          name="beans"
+          className="absolute right-6 top-8 hidden w-32 rotate-12 text-amber-700/15 md:block"
+        />
+        <BrandMark className="relative z-10 w-36 text-amber-600 sm:w-48" />
+        <div className="relative z-10 text-center max-w-xl">
           <h1 className="text-3xl sm:text-5xl font-bold text-stone-900 tracking-tight">Kaffeelisten</h1>
           <p className="text-xl text-stone-600 mt-2.5 leading-relaxed">
             Kaffee, Getränke, Snacks. Kurz tippen, fertig.
@@ -329,6 +336,12 @@ export default function MemberFlow() {
         step={stepIndex}
         totalSteps={4}
         onBack={() => setStep('start')}
+        decoration={
+          <>
+            <Illustration name="beans" className="absolute -right-10 top-28 hidden w-48 rotate-12 text-amber-700/10 md:block" />
+            <Illustration name="campus" className="absolute bottom-3 left-8 hidden w-72 text-stone-300/60 lg:block" strokeWidth={1.4} />
+          </>
+        }
         header={
           <>
             <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Wer bist du?</h1>
@@ -398,6 +411,12 @@ export default function MemberFlow() {
             setCart(new Map())
             setStep('company')
           }}
+          decoration={
+            <>
+              <Illustration name="pine" className="absolute -left-8 bottom-4 hidden w-40 text-stone-300/60 md:block" strokeWidth={1.4} />
+              <Illustration name="emptyCup" className="absolute right-4 top-28 hidden w-36 -rotate-6 text-amber-700/10 lg:block" />
+            </>
+          }
           header={
             <>
               <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
@@ -556,6 +575,12 @@ export default function MemberFlow() {
           setCart(new Map())
           setStep('member')
         }}
+        decoration={
+          <>
+            <Illustration name="cappuccino" className="absolute -right-6 top-24 hidden w-44 rotate-6 text-amber-700/10 md:block" />
+            <Illustration name="beans" className="absolute bottom-20 left-6 hidden w-36 -rotate-12 text-stone-300/70 xl:block" />
+          </>
+        }
         header={
           <>
             <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
@@ -627,6 +652,9 @@ export default function MemberFlow() {
         step={stepIndex}
         totalSteps={4}
         onBack={() => setStep('item')}
+        decoration={
+          <Illustration name="emptyCup" className="absolute -right-4 top-28 hidden w-40 rotate-6 text-amber-700/10 md:block" />
+        }
         header={
           <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Alles richtig?</h1>
         }

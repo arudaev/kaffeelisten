@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import BrandMark from '../BrandMark'
+import Illustration from '../Illustration'
 
 interface PinKeypadProps {
   onSubmit: (pin: string) => void
@@ -41,9 +43,13 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
   }, [error, onErrorAnimEnd])
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-10 font-sans">
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-10 font-sans relative isolate overflow-hidden">
+      <Illustration name="campus" className="absolute bottom-10 left-1/2 hidden w-[540px] -translate-x-1/2 text-stone-300/70 sm:block" strokeWidth={1.4} />
+      <Illustration name="cappuccino" className="absolute right-8 top-10 hidden w-36 rotate-6 text-amber-700/12 md:block" />
+
       {/* Title */}
-      <div className="text-center">
+      <div className="relative z-10 text-center flex flex-col items-center">
+        <BrandMark className="mb-4 h-16 w-20 text-amber-600" />
         <p className="text-[12px] font-medium text-stone-500 uppercase tracking-[0.06em] mb-2">
           Kaffeelisten
         </p>

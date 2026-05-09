@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import Illustration from '../Illustration'
 
 export interface Column<T> {
   key: string
@@ -23,12 +24,7 @@ export default function DataTable<T>({
   if (rows.length === 0) {
     return (
       <div className="bg-white border border-stone-200 rounded-xl p-12 flex flex-col items-center gap-3">
-        <img
-          src="/assets/illustrations/empty-cup.svg"
-          alt=""
-          className="w-24 text-stone-400"
-          style={{ color: '#A8A29E' }}
-        />
+        <Illustration name="emptyCup" className="w-24 text-stone-400" />
         <p className="text-base font-semibold text-stone-900">
           {empty?.title ?? 'Diesen Monat noch nichts.'}
         </p>

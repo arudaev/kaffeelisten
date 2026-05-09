@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import AdminIcon from './AdminIcon'
+import BrandMark from '../BrandMark'
 
 interface TopbarProps {
   title: string
@@ -22,6 +23,7 @@ export function Topbar({ title, eyebrow, right, onMenuClick }: TopbarProps) {
             <AdminIcon name="menu" size={22} strokeWidth={1.5} />
           </button>
         )}
+        <BrandMark alt="" className="h-8 w-10 text-amber-600 md:hidden" loading="lazy" />
         <div className="min-w-0">
           {eyebrow && (
             <p className="text-xs font-medium text-stone-500 uppercase tracking-[0.06em] mb-1 hidden sm:block">

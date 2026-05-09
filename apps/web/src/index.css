@@ -9,9 +9,29 @@
     font-family: Inter, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color-scheme: only light;
   }
 
   body {
     @apply bg-stone-50 text-stone-900;
+  }
+}
+
+@layer components {
+  .kl-brand-mark,
+  .kl-illustration {
+    color-scheme: only light;
+    forced-color-adjust: none;
+  }
+
+  .kl-illustration {
+    pointer-events: none;
+    user-select: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .kl-illustration {
+    display: none !important;
   }
 }
