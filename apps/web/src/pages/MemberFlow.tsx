@@ -314,16 +314,12 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
-        <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-3 text-[12px] text-stone-400 uppercase tracking-[0.06em]">
-          <span>ITC1 Deggendorf · B4Y3RW4LD</span>
-          <span className="text-stone-300">·</span>
-          <Link
-            to="/datenschutz"
-            className="hover:text-stone-600 transition-colors normal-case tracking-normal"
-          >
+        <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-stone-400 uppercase tracking-[0.06em]">
+          ITC1 Deggendorf · B4Y3RW4LD ·{' '}
+          <Link to="/datenschutz" className="hover:text-stone-600 transition-colors">
             Datenschutz
           </Link>
-        </div>
+        </p>
       </div>
     )
   }
