@@ -56,8 +56,15 @@ function formatDateTime(iso: string): string {
   )
 }
 
-function currentMonthLabel(): string {
-  return new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+function currentMonthValue(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function monthLabel(value: string): string {
+  const [y, m] = value.split('-')
+  return new Date(Number(y), Number(m) - 1, 1)
+    .toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
 }
 
 export default function AdminDashboard() {
@@ -67,6 +74,15 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<TransactionRow[]>([])
   const [companies, setCompanies] = useState<CompanySummaryRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthValue())
+
+  // Clear log filters when month changes so stale selections don't hide data
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month)
+    setFilterCompanyId('')
+    setFilterName('')
+    setFilterItemName('')
+  }
   const [reportOpen, setReportOpen] = useState(false)
   const [reportSending, setReportSending] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -121,12 +137,10 @@ export default function AdminDashboard() {
         })
         setTransactions(rows)
 
-        const coRows: CompanySummaryRow[] = companiesRes.data.map(c => {
-          const total = rows
-            .filter(r => r.company_id === c.id)
-            .reduce((acc, r) => acc + r.price_cents, 0)
-          return { id: c.id, name: c.name, month_total_cents: total, active: c.active }
-        })
+        // company totals are computed per-month in the useMemo below
+        const coRows: CompanySummaryRow[] = companiesRes.data.map(c => ({
+          id: c.id, name: c.name, month_total_cents: 0, active: c.active,
+        }))
         setCompanies(coRows)
       }
 
@@ -143,7 +157,12 @@ export default function AdminDashboard() {
   const handleSendReport = async () => {
     setReportSending(true)
     try {
-      const res = await fetch('/api/send-report', { method: 'POST' })
+      const pin = sessionStorage.getItem('adminPin') ?? ''
+      const res = await fetch('/api/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        body: JSON.stringify({ month: selectedMonth }),
+      })
       setReportOpen(false)
       showToast(
         res.ok
@@ -157,9 +176,26 @@ export default function AdminDashboard() {
     }
   }
 
-  // Filtered log rows (client-side)
+  // Transactions scoped to the selected month
+  const monthTransactions = useMemo(
+    () => transactions.filter(t => t.logged_at.startsWith(selectedMonth)),
+    [transactions, selectedMonth],
+  )
+
+  // Company totals recomputed when month changes
+  const companiesForMonth = useMemo(
+    () => companies.map(c => ({
+      ...c,
+      month_total_cents: monthTransactions
+        .filter(t => t.company_id === c.id)
+        .reduce((acc, t) => acc + t.price_cents, 0),
+    })),
+    [companies, monthTransactions],
+  )
+
+  // Filtered log rows (client-side), scoped to selected month
   const filteredTransactions = useMemo(() => {
-    let rows = transactions
+    let rows = monthTransactions
     if (filterCompanyId) rows = rows.filter(r => r.company_id === filterCompanyId)
     if (filterName.trim()) {
       const q = filterName.trim().toLowerCase()
@@ -171,7 +207,7 @@ export default function AdminDashboard() {
       const tb = new Date(b.logged_at).getTime()
       return logSortDir === 'desc' ? tb - ta : ta - tb
     })
-  }, [transactions, filterCompanyId, filterName, filterItemName, logSortDir])
+  }, [monthTransactions, filterCompanyId, filterName, filterItemName, logSortDir])
 
   const handleExportCsv = () => {
     const header = ['Zeitpunkt', 'Person', 'Unternehmen', 'Item', 'Menge', 'Betrag (€)']
@@ -195,11 +231,11 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const totalCents = transactions.reduce((acc, t) => acc + t.price_cents, 0)
-  const monthLabel = currentMonthLabel()
+  const totalCents = monthTransactions.reduce((acc, t) => acc + t.price_cents, 0)
+  const selectedMonthLabel = monthLabel(selectedMonth)
 
   const itemCounts: Record<string, number> = {}
-  for (const t of transactions) {
+  for (const t of monthTransactions) {
     itemCounts[t.item_name] = (itemCounts[t.item_name] ?? 0) + t.quantity
   }
   const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])
@@ -227,7 +263,7 @@ export default function AdminDashboard() {
       render: r => <span className="font-semibold">{r.name}</span>,
     },
     {
-      key: 'month_total_cents', label: monthLabel, align: 'right', mono: true,
+      key: 'month_total_cents', label: selectedMonthLabel, align: 'right', mono: true,
       render: r => <span className="font-semibold">{formatPrice(r.month_total_cents)}</span>,
     },
     {
@@ -236,20 +272,20 @@ export default function AdminDashboard() {
     },
   ]
 
-  // Unique companies present in current transaction set (for log filter dropdown)
+  // Unique companies/items in the selected month (for log filter dropdowns)
   const logCompanyOptions = useMemo(() => {
     const seen = new Map<string, string>()
-    for (const t of transactions) {
+    for (const t of monthTransactions) {
       if (!seen.has(t.company_id)) seen.set(t.company_id, t.company_name)
     }
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }))
-  }, [transactions])
+  }, [monthTransactions])
 
   const logItemOptions = useMemo(() => {
     const seen = new Set<string>()
-    for (const t of transactions) seen.add(t.item_name)
+    for (const t of monthTransactions) seen.add(t.item_name)
     return [...seen].sort()
-  }, [transactions])
+  }, [monthTransactions])
 
   return (
     <div className="flex h-screen overflow-hidden font-sans">
@@ -268,11 +304,11 @@ export default function AdminDashboard() {
           <>
             <Topbar
               title="Übersicht"
-              eyebrow={monthLabel}
+              eyebrow={selectedMonthLabel}
               onMenuClick={() => setSidebarOpen(true)}
               right={
                 <>
-                  <MonthSelector value={monthLabel} onChange={() => {}} />
+                  <MonthSelector value={selectedMonth} onChange={handleMonthChange} />
                   <AdminButton
                     variant="secondary"
                     icon={<AdminIcon name="download" size={16} />}
@@ -299,13 +335,13 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <SummaryCard label="Einträge diesen Monat" metric={transactions.length} sub="Alle Unternehmen" />
+                  <SummaryCard label="Einträge" metric={monthTransactions.length} sub={selectedMonthLabel} />
                   <SummaryCard
-                    label="Umsatz diesen Monat"
+                    label="Umsatz"
                     metric={formatPrice(totalCents)}
-                    sub={`${new Set(transactions.map(t => t.member_name)).size} Konsumierende aktiv`}
+                    sub={`${new Set(monthTransactions.map(t => t.member_name)).size} Konsumierende`}
                   />
-                  <SummaryCard label="Beliebtestes Item" metric={topItem} sub={`${topItemCount} × diesen Monat`} accent="stone" />
+                  <SummaryCard label="Beliebtestes Item" metric={topItem} sub={`${topItemCount} × im Monat`} accent="stone" />
                   <SummaryCard label="Unternehmen" metric={companies.length} sub="mit Einträgen" accent="stone" />
                 </div>
               )}
@@ -319,17 +355,17 @@ export default function AdminDashboard() {
                 </div>
                 <DataTable
                   columns={txColumns}
-                  rows={transactions.slice(0, 6)}
+                  rows={monthTransactions.slice(0, 6)}
                   empty={{ title: 'Noch keine Einträge.', body: 'Sobald jemand etwas einträgt, erscheint es hier.' }}
                 />
               </div>
 
-              {companies.length > 0 && (
+              {companiesForMonth.some(c => c.month_total_cents > 0) && (
                 <div>
                   <h2 className="text-base font-semibold text-stone-900 mb-3">
                     Übersicht nach Unternehmen
                   </h2>
-                  <DataTable columns={companyColumns} rows={companies} />
+                  <DataTable columns={companyColumns} rows={companiesForMonth} />
                 </div>
               )}
             </div>
@@ -341,11 +377,11 @@ export default function AdminDashboard() {
           <>
             <Topbar
               title="Einträge"
-              eyebrow={monthLabel}
+              eyebrow={selectedMonthLabel}
               onMenuClick={() => setSidebarOpen(true)}
               right={
                 <>
-                  <MonthSelector value={monthLabel} onChange={() => {}} />
+                  <MonthSelector value={selectedMonth} onChange={handleMonthChange} />
                   <AdminButton
                     variant="secondary"
                     icon={<AdminIcon name="download" size={16} />}
@@ -458,9 +494,8 @@ export default function AdminDashboard() {
           </>
         }
       >
-        Der Bericht für <strong>{monthLabel}</strong> ({transactions.length} Einträge,{' '}
-        {formatPrice(totalCents)}) wird per E-Mail versendet. Nach dem Senden werden die Einträge
-        archiviert und die Tabelle zurückgesetzt.
+        Der Bericht für <strong>{selectedMonthLabel}</strong> ({monthTransactions.length} Einträge,{' '}
+        {formatPrice(totalCents)}) wird per E-Mail versendet. Die Einträge bleiben erhalten.
       </Modal>
 
       {toast && (

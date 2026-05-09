@@ -21,18 +21,18 @@ export default function SuccessScreen({ summary, onUndo, onReset }: SuccessScree
   }, [secs, onReset])
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-8 font-sans">
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-6 sm:p-8 font-sans">
       {/* Check circle */}
-      <div className="relative w-36 h-36 flex items-center justify-center">
+      <div className="relative w-28 sm:w-36 h-28 sm:h-36 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full bg-gradient-radial from-amber-50 to-transparent" />
-        <div className="w-24 h-24 rounded-full bg-amber-600 flex items-center justify-center text-white animate-pop">
+        <div className="w-20 sm:w-24 h-20 sm:h-24 rounded-full bg-amber-600 flex items-center justify-center text-white animate-pop">
           <Icon name="check" size={48} strokeWidth={2.5} />
         </div>
       </div>
 
       {/* Text */}
       <div className="text-center">
-        <p className="text-4xl font-bold text-stone-900 tracking-tight">Gespeichert.</p>
+        <p className="text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">Gespeichert.</p>
         <p className="text-lg text-stone-600 mt-2">{summary}</p>
       </div>
 

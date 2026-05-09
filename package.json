@@ -13,5 +13,8 @@
   },
   "engines": {
     "node": ">=24"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
   }
 }
