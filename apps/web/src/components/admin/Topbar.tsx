@@ -39,19 +39,32 @@ export function Topbar({ title, eyebrow, right, onMenuClick }: TopbarProps) {
 }
 
 interface MonthSelectorProps {
-  value: string
-  onChange: () => void
+  value: string  // "2026-05"
+  onChange: (month: string) => void
+}
+
+function recentMonths(): Array<{ value: string; label: string }> {
+  const now = new Date()
+  return Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    return {
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+    }
+  })
 }
 
 export function MonthSelector({ value, onChange }: MonthSelectorProps) {
+  const months = recentMonths()
   return (
-    <button
-      type="button"
-      onClick={onChange}
-      className="hidden md:inline-flex items-center gap-2 h-9 px-3 bg-white border border-stone-200 rounded-md text-sm font-medium text-stone-900 hover:bg-stone-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="hidden md:inline-flex h-9 px-3 bg-white border border-stone-200 rounded-md text-sm font-medium text-stone-900 hover:bg-stone-50 transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none cursor-pointer"
     >
-      {value}
-      <AdminIcon name="chevron" size={16} />
-    </button>
+      {months.map(m => (
+        <option key={m.value} value={m.value}>{m.label}</option>
+      ))}
+    </select>
   )
 }

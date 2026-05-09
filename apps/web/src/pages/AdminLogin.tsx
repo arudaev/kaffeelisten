@@ -20,6 +20,7 @@ export default function AdminLogin() {
       })
       if (res.ok) {
         sessionStorage.setItem('adminSession', 'true')
+        sessionStorage.setItem('adminPin', pin)
         navigate('/admin/dashboard')
       } else {
         setError(true)
