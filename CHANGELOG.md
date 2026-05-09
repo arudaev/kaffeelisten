@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/auto-cleanup
+
+### Added
+- `deactivateInactiveMembers()` in `_lib/report.ts`: after each monthly report, soft-deactivates any member whose last transaction is older than 90 days; brand-new members with zero transactions are never auto-deactivated
+- Both cleanup jobs (`pruneOldTransactions` + `deactivateInactiveMembers`) are called automatically by `runMonthlyReport()` after each report send
+
+### Changed
+- `pruneOldTransactions()` now also prunes `transactions_archive` to the same 90-day rolling window, keeping Supabase free-tier storage in check
+
+---
+
 ## [Unreleased] — feat/member-work-email
 
 ### Added
