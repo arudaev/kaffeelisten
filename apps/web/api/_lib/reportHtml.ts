@@ -97,16 +97,16 @@ export function buildReportHtml(
       </div>
       <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">
         <thead>
-          <tr style="background:#FFFBEB;">
-            <th style="padding:7px 16px;text-align:left;font-size:10px;font-weight:600;color:#92400E;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #FDE68A;width:22%;">Person</th>
-            <th style="padding:7px 16px;text-align:center;font-size:10px;font-weight:600;color:#92400E;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #FDE68A;width:10%;">Einträge</th>
-            <th style="padding:7px 16px;text-align:right;font-size:10px;font-weight:600;color:#92400E;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #FDE68A;width:14%;">Betrag</th>
-            <th style="padding:7px 16px;text-align:left;font-size:10px;font-weight:600;color:#92400E;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #FDE68A;">Items</th>
+          <tr style="background:#F5F5F4;">
+            <th style="padding:7px 16px;text-align:left;font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #E7E5E4;width:22%;">Person</th>
+            <th style="padding:7px 16px;text-align:center;font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #E7E5E4;width:10%;">Einträge</th>
+            <th style="padding:7px 16px;text-align:right;font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #E7E5E4;width:14%;">Betrag</th>
+            <th style="padding:7px 16px;text-align:left;font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #E7E5E4;">Items</th>
           </tr>
         </thead>
         <tbody>
           ${memberRows}
-          <tr style="background:#FFFBEB;border-top:2px solid #FDE68A;page-break-before:avoid;break-before:avoid;">
+          <tr style="background:#FFFBEB;border-top:2px solid #D97706;page-break-before:avoid;break-before:avoid;">
             <td colspan="2" style="padding:9px 16px;font-size:12px;font-weight:700;color:#92400E;">Gesamt</td>
             <td style="padding:9px 16px;text-align:right;font-size:13px;font-weight:800;color:#D97706;font-variant-numeric:tabular-nums;">${formatEuro(company.total_cents)}</td>
             <td></td>
