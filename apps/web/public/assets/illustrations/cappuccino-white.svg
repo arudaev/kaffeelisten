@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <rect width="200" height="200" rx="40" ry="40" fill="#D97706"/>
-  <g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,20)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" aria-hidden="true">
+  <g fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/>
     <ellipse cx="83" cy="60" rx="43" ry="6"/>
     <path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>
