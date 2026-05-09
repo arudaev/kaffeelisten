@@ -31,14 +31,20 @@ export default function Tile({ label, sub, selected = false, leading, accentColo
         <span className="text-lg sm:text-xl font-semibold text-stone-900">{label}</span>
         {sub && <span className="text-sm text-stone-600">{sub}</span>}
       </div>
-      <span style={arrowColor ? { color: arrowColor } : undefined} className={!arrowColor ? 'text-stone-400' : undefined}>
+      <span
+        style={arrowColor ? { backgroundColor: arrowColor + '18', color: arrowColor } : undefined}
+        className={[
+          'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg',
+          !arrowColor ? 'text-stone-400' : '',
+        ].join(' ')}
+      >
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
