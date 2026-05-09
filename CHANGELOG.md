@@ -7,6 +7,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/gdpr-notice
+
+### Added
+- `/datenschutz` — German GDPR notice page explaining what data is collected, why, retention period (90 days), who has access (admin only), how to request deletion, and confirmation that no tracking cookies or analytics are used
+- Start screen footer: "Datenschutz" link opens `/datenschutz`; built on the same `FlowShell` wrapper with amber accent styling and a back-to-home chevron
+
+---
+
 ## [Unreleased] — chore/itc1-seed-data
 
 ### Added
