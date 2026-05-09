@@ -27,6 +27,7 @@ export type Database = {
           id: string
           company_id: string
           name: string
+          work_email: string | null
           active: boolean
           created_at: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           company_id: string
           name: string
+          work_email?: string | null
           active?: boolean
           created_at?: string
         }
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           company_id?: string
           name?: string
+          work_email?: string | null
           active?: boolean
           created_at?: string
         }

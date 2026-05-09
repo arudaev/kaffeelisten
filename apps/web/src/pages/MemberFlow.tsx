@@ -83,6 +83,7 @@ export default function MemberFlow() {
   const [addSelfOpen, setAddSelfOpen] = useState(false)
   const [selfFirstName, setSelfFirstName] = useState('')
   const [selfLastName, setSelfLastName] = useState('')
+  const [selfEmail, setSelfEmail] = useState('')
   const [addingMember, setAddingMember] = useState(false)
   const [addSelfError, setAddSelfError] = useState<string | null>(null)
   const firstNameRef = useRef<HTMLInputElement>(null)
@@ -190,6 +191,7 @@ export default function MemberFlow() {
   const openAddSelf = () => {
     setSelfFirstName('')
     setSelfLastName('')
+    setSelfEmail('')
     setAddSelfError(null)
     setAddSelfOpen(true)
   }
@@ -202,9 +204,10 @@ export default function MemberFlow() {
     setAddingMember(true)
     setAddSelfError(null)
     const storedName = last ? `${capitalizeName(first)} ${capitalizeName(last)}` : capitalizeName(first)
+    const email = selfEmail.trim() || null
     const { data, error: err } = await supabase
       .from('members')
-      .insert({ company_id: selectedCompany.id, name: storedName, active: true })
+      .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
       .select()
       .single()
     setAddingMember(false)
@@ -418,6 +421,21 @@ export default function MemberFlow() {
                     onChange={e => setSelfLastName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. Mustermann"
+                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-stone-700" htmlFor="self-email">
+                    Arbeits-E-Mail
+                  </label>
+                  <input
+                    id="self-email"
+                    type="email"
+                    autoComplete="work email"
+                    value={selfEmail}
+                    onChange={e => setSelfEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
+                    placeholder="z. B. max.mustermann@firma.de"
                     className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
                   />
                 </div>
