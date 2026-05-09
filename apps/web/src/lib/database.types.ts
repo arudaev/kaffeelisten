@@ -132,6 +132,27 @@ export type Database = {
           }
         ]
       }
+      admin_settings: {
+        Row: {
+          id: string
+          key: string
+          value: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          value?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions_archive: {
         Row: {
           id: string
