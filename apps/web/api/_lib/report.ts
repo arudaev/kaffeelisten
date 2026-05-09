@@ -14,6 +14,9 @@ import {
 
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
+const EMAIL_LOGO_CONTENT_ID = 'kaffeelisten-logo'
+const EMAIL_LOGO_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAGAAAABNCAYAAABZqmHQAAAFhElEQVR4nOycW4xdUxzGvzOM6ZS2o6j77aE0LlHULdEQEhKhiLsHIqQkqFDxJKlHmnjxUNKQIOJFSLRumYgH16pqk5aQKo5rVA2j2k61Osf3Weukx2SfOVusddbqnv8v+bJm9t5zztr/b6/72tMDIyk9MJJiBiTGDEiMGZAYMyAxZkBizIDEmAGJMQMSYwYkJmsDGo1GnTocFWZvZAoDP5VJX61W+wEVJucSsIOaVHSC5tyNipDcAAZzNrVy7HE++duZbOC5OQV/dj6PX4YKkEMJOIz6ps25ZdS8guNHUF+jAuRgwFZqSptzH1EnFRzfQk1FBcjBgLXUWaxS9ik4p3ag6PjH1LmoAMkNYF3/G5O3qEsKTs+ivio4/jJ1KSpALr2gddRxYw/SnCVM3iy4fg11AipALuOABlUrOkETlrW5vhLkUgJOpL74D9efQn2OClBDJrARnsKn/Q9MMLIxYKJis6GJidIIszq5AK5e72853ON/lzTH0+elfn6vz4u0l9fY0jlK7fL6y2uH159emr4Y8WrlF2oVq7i1yIygVRADfzaTR6l9qTpccAeoaXCjXWky3Oh3G1zAJAVPgdyJ3UFWwBst+WwaI5N6/WfLQJnZ7z9XxzRKVluymfqdGvbXq+F+nZpPI0aRCcEMYPCPZfIe3BzNUdRGagXcdMJq3vQ6dAk16HABP506kzoHzhDxPfOSzSAupAEaNN1KzeUNrkSGMI8PMlnE/PUiE0I2wir6qpfn8Uaz610xTxo5z0FmhGyEP4Qr6qpf3+ANq/jX4SbbPqE+o9bz6fsSkeB3qh2YSR0PN1WhmdTZ/rSqwneoC5ERIasgTabdwgBfw5/VCB9DHU0dSWld91DqYGoGdSA1Hc4s1c1qNNUoq/fSbJCbDbHyqJKqh6XZ8CrQ+g7V9dP83w3B9XZ+pn6ifqS0nPkt3HpD3X/GJuZxAJkQpRvKG1Qv51Ovf0FzFEzN5St4+8EFs9k1be2S6rrmA6LeULP72ex2Nruc+q5/ej783i3j5Yvfjdzo+mSc7wIOe6Wgj0a8W3BcD0QdbmZ2kPl8G10g210REVEpKlrU19qDqrHTqMU0SQ/IQzRiBSIyEQ3YxaCuKTjePDZIPUwDbmb6KtP7eP0ziMRENKAUCjqDrx7ci0y38fcXEAGbjBsHX1JUEh6jCYcgAmZAB2iCxg5PUQsRATOgHEupGxEBM6AELAUazGmj8BkIjBlQng1wo/ugWC+oPBp1T0JgzIDy7A+3wBMUM6A8JyPCVhgzoARsfLUPdSsb4/UIjBlQjgVwY4HgmAEd4NN/D5MBPv1PIAIhDVAjNRl5o/WG0otQDP5dTG6nor2NE9IAbSPvR95ozn+o00UMvHZUaOpBq3mXx1xGDW3ATOSN1opHGeBFBee0lUZ9fa0hH0QtZeBvQmSCGcDMbuSNbaJObTPfngNz4Va9RgrO6Zjy/VzsRZhWQjfCr1BXYffiRm5cSd3ZzQB3IvRckFaO5rMUTEdmME/XMhnKKfgi+AYq3ugjTPp5owuQCcyTtrKsohYyX4PIiBgGaFuJ9ogu4c0+jQxgnp5kMsz83I/MCD4Q403u5A3fwR9fY7qZv7+EhPgSeQDzcRsyJNbGrNW+zn2e6YxYo8jx8BvAHofbjXc9MiXagozf2HQRdR2D8Sw1C13C/x8J7dDeznxc4f/vRJZ0ZRczA/IAk3vh3vldTn3AoHyHQPDz9eKGNuOeR10NV7IXt3nFNSu6to2cQdJq0g3UxXAvTmiDrnapjeD/oVKsDbqaKn6fWp5bT2c8ku3j94Zo+N9xbqbTRzHgv2IPxV5TTYztikiMGZAYMyAxZkBizIDEmAGJMQMSYwYkxgxIjBmQGDMgMWZAYsyAxJgBifkbAAD//3bPWa4AAAAGSURBVAMAqkWL0ctGfuYAAAAASUVORK5CYII='
+
 // ─── Supabase (service role — bypasses RLS) ───────────────────────────────────
 
 function makeSupabase() {
@@ -381,8 +384,8 @@ export async function sendEmail(
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
         <tr>
           <td style="padding:0;color:rgba(255,255,255,.84);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;line-height:1.2;">KAFFEELISTEN · ITC1 DEGGENDORF</td>
-          <td style="padding:0;text-align:right;width:28px;vertical-align:middle;">
-            <span aria-label="Kaffeelisten" style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#FDBA74;border:2px solid rgba(255,255,255,.72);line-height:14px;vertical-align:middle;">&nbsp;</span>
+          <td style="padding:0;text-align:right;width:48px;vertical-align:middle;">
+            <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="44" height="35" alt="Kaffeelisten" style="display:inline-block;width:44px;height:35px;border:0;outline:none;text-decoration:none;vertical-align:middle;">
           </td>
         </tr>
       </table>
@@ -435,6 +438,7 @@ export async function sendEmail(
     subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
     html,
     attachments: [
+      { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
       { filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') },
       { filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') },
     ],
