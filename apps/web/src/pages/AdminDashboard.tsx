@@ -143,7 +143,11 @@ export default function AdminDashboard() {
   const handleSendReport = async () => {
     setReportSending(true)
     try {
-      const res = await fetch('/api/send-report', { method: 'POST' })
+      const pin = sessionStorage.getItem('adminPin') ?? ''
+      const res = await fetch('/api/send-report', {
+        method: 'POST',
+        headers: { 'x-admin-pin': pin },
+      })
       setReportOpen(false)
       showToast(
         res.ok

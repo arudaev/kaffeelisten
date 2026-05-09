@@ -11,7 +11,8 @@ function isLastDayOfMonth(): boolean {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || req.headers['x-cron-secret'] !== cronSecret) {
+  const authHeader = req.headers['authorization']
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
