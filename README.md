@@ -1,150 +1,139 @@
 # Kaffeelisten
 
-Digital coffee and snack consumption logger for ITC1 Deggendorf campus.
+Digital consumption log for shared office spaces. Members tap what they had — coffee, drinks, snacks. The admin gets a formatted monthly report. No accounts, no friction.
 
-Replaces the paper sheet on the wall. Campus members log what they consumed in a few taps. The admin gets a formatted monthly email report, then the database resets.
+Built at [B4Y3RW4LD Hackathon](https://www.bayerwald-hackathon.de/) · ITC1 Deggendorf · May 2026
 
-Built for the **Kaffeelisten Challenge ITC1** at [B4Y3RW4LD Hackathon](https://www.bayerwald-hackathon.de/), May 8–9 2026, by team **HuggyWuggies**.
-
----
-
-## What it does
-
-1. A member opens the PWA (on a mounted iPad or any browser)
-2. They select their company, their name, and what they consumed
-3. The transaction is logged instantly — timestamp, person, company, item
-4. At month's end, the admin clicks "Send Report" (or a cron fires automatically)
-5. A clean email lands in the admin inbox: every transaction grouped by company and person
-6. The live table archives and resets for the next month
-
-No accounts. No passwords. No payments. No hardware.
+**[kaffeelisten.vercel.app](https://kaffeelisten.vercel.app)**
 
 ---
 
-## Screenshots
+## How it works
 
-### Member flow
+```
+Member opens app → picks company → picks name → picks items → done (< 15 seconds)
 
-<p>
-  <img src="docs/screenshots/member-start.png" alt="Kaffeelisten start screen" width="49%">
-  <img src="docs/screenshots/member-company.png" alt="Company selection screen" width="49%">
-</p>
+End of month → admin clicks "Bericht senden" (or cron fires automatically)
+             → PDF + Excel land in the admin inbox, grouped by company and person
+             → old records archive, live table resets
+```
 
-<p>
-  <img src="docs/screenshots/member-item-selection.png" alt="Item selection screen with two coffee items selected" width="49%">
-  <img src="docs/screenshots/member-confirmation.png" alt="Consumption confirmation screen" width="49%">
-</p>
-
-### Admin
-
-<p>
-  <img src="docs/screenshots/admin-dashboard.png" alt="Admin dashboard overview" width="49%">
-  <img src="docs/screenshots/admin-log.png" alt="Admin transaction log" width="49%">
-</p>
+No registration. No login. No payment. Works on a wall-mounted iPad or any browser.
 
 ---
 
 ## Stack
 
-| Layer | Tool |
+| | |
 |---|---|
-| Frontend | React 18 + Vite + TypeScript |
-| PWA | Vite PWA plugin (Workbox) |
-| Styling | Tailwind CSS |
-| Database | Supabase (PostgreSQL) |
-| Hosting | Vercel |
-| Email | Resend |
-| Cron | Vercel Cron Jobs |
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
+| Database | Supabase (PostgreSQL + RLS) |
+| Hosting | Vercel (serverless functions + cron) |
+| Email + attachments | Resend — PDF report + Excel workbook |
+| PWA | Vite PWA plugin (Workbox, offline shell) |
 
 ---
 
-## Project structure
+## Deploy your own
 
-```
-kaffeelisten/
-├── apps/
-│   └── web/              React PWA
-│       ├── public/
-│       │   └── manifest.json
-│       ├── src/
-│       │   ├── components/
-│       │   ├── pages/
-│       │   ├── lib/
-│       │   └── main.tsx
-│       ├── index.html
-│       ├── package.json
-│       └── vite.config.ts
-├── supabase/
-│   ├── migrations/       SQL migration files
-│   └── seed.sql          Dev seed data
-├── docs/
-│   ├── prd.md            Product Requirements Document
-│   ├── design-foundation.md
-│   ├── design-system.md
-│   ├── domain.md
-│   ├── roadmap.md
-│   ├── prompts.md
-│   └── claude-design-workflow.md
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml
-│   │   └── monthly-report.yml
-│   └── ISSUE_TEMPLATE/
-├── CLAUDE.md
-├── CHANGELOG.md
-└── package.json
-```
+### 1. Services
 
----
+You need three free accounts: [Supabase](https://supabase.com), [Resend](https://resend.com), [Vercel](https://vercel.com).
 
-## Getting started
+### 2. Database
 
-### Prerequisites
-
-- Node.js 20+
-- A Supabase project (free tier)
-- A Resend account (free tier)
-- Vercel CLI (optional, for local preview)
-
-### Environment variables
-
-Copy `.env.example` to `.env.local` in `apps/web/`:
-
-```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-RESEND_API_KEY=
-ADMIN_EMAIL=
-ADMIN_PIN=
-```
-
-### Install and run
+Create a Supabase project, then run the migrations in order:
 
 ```bash
-npm install
-npm run dev --workspace=apps/web
+# from supabase/migrations/ — apply each file via the Supabase SQL editor or CLI
+001_initial_schema.sql
+002_rls_policies.sql
+...
 ```
 
-### Database setup
+### 3. Environment variables
+
+Set these in Vercel (Settings → Environment Variables):
+
+| Variable | Where to find it |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project → Settings → API |
+| `VITE_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API |
+| `RESEND_API_KEY` | Resend dashboard → API Keys |
+| `ADMIN_EMAIL` | The address that receives monthly reports |
+| `ADMIN_PIN` | Numeric PIN for the `/admin` panel |
+| `CRON_SECRET` | Any random string — used to authenticate the Vercel Cron call |
+
+### 4. Deploy
 
 ```bash
-# Apply migrations to your Supabase project
-npx supabase db push
+# fork or clone, then:
+vercel deploy --prod
+```
 
-# Seed with sample data for local dev
-npx supabase db reset
+The cron job fires automatically on the last day of each month at 22:00 UTC. You can also trigger a report manually from the admin panel at any time.
+
+---
+
+## Local development
+
+```bash
+git clone https://github.com/arudaev/kaffeelisten
+cd kaffeelisten
+cp .env.example .env          # fill in real values
+npm install                   # from repo root (npm workspaces)
+npm run dev                   # starts Vite dev server at localhost:5173
+```
+
+The serverless API functions require Vercel CLI for local testing:
+
+```bash
+npm i -g vercel
+vercel dev                    # runs functions + frontend together
 ```
 
 ---
 
-## Docs
+## Project layout
 
-- [Product Requirements Document](docs/prd.md)
-- [Design Foundation](docs/design-foundation.md)
-- [Design System](docs/design-system.md)
-- [Domain Model](docs/domain.md)
-- [Roadmap](docs/roadmap.md)
-- [Claude Design Workflow](docs/claude-design-workflow.md)
+```
+apps/web/
+  src/          React frontend — member flow + admin panel
+  api/          Vercel serverless functions (send-report, cron, admin PIN)
+  public/       Static assets — icons, SVG illustrations, PWA manifest
+supabase/
+  migrations/   SQL — schema, RLS policies, grants
+  seeds/        Demo data (ITC1 Deggendorf campus, 28 companies, 239 members)
+docs/           PRD, design system, roadmap
+```
+
+---
+
+## Admin panel
+
+Route: `/admin` — PIN protected, server-side only.
+
+- Transaction log with filters (company, member, item, date)
+- Company-level summary cards
+- Full CRUD for companies, members, and items
+- Month selector — filters all views to any past month
+- CSV export
+- Manual report trigger
+
+---
+
+## Data model
+
+```
+companies   id · name · active
+members     id · company_id · name · work_email · active
+items       id · name · category · unit_label · price_cents · active
+transactions          id · member_id · company_id · item_id · quantity · logged_at
+transactions_archive  same + archived_at · report_month
+```
+
+RLS: anon role can read companies, members, items, transactions. Service role (serverless only) handles writes to the archive and report generation. The service key is never exposed to the client bundle.
 
 ---
 

@@ -1,192 +1,180 @@
 # Roadmap — Kaffeelisten
 
-Product phases from hackathon MVP to production-ready service.
+What was built for a hackathon, designed to last.
+This document covers everything past the shipped MVP — from making it truly maintenance-free to opening it up as a platform others can run.
 
 ---
 
-## Phase 0 — Hackathon Sprint (2026-05-08 → 2026-05-09 12:00)
+## Current state (as of 2026-05-09)
 
-**Goal:** Shippable, demo-ready product on a live URL by Saturday 12:00 pitch.
-
----
-
-### Status as of Sprint day 2 (2026-05-09)
+The core product is complete and deployed at [kaffeelisten.vercel.app](https://kaffeelisten.vercel.app).
 
 | Area | Status |
 |---|---|
-| Repo + CI + Vercel deploy | ✅ Done |
-| Supabase schema, RLS, GRANTs, seed data | ✅ Done |
-| Member flow (company → member → item → confirm → success) | ✅ Done |
-| Member self-registration modal (name standardisation) | ✅ Done |
-| Multi-item cart with per-card quantity controls | ✅ Done |
-| Member flow mobile responsiveness | ✅ Done |
-| Admin PIN login (`/api/admin/verify-pin`) | ✅ Done |
-| Admin dashboard — summary cards + transaction log | ✅ Done |
-| Log filtering (company, name, item, date sort) | ✅ Done |
-| CSV export | ✅ Done |
-| Month selector (filters dashboard to selected month) | ✅ Done |
-| Admin Items CRUD | ✅ Done |
-| Admin Members CRUD | ✅ Done |
-| Admin Companies CRUD | ✅ Done |
-| `/api/send-report.ts` — PDF + Excel + Resend email | ✅ Done |
-| `/api/cron/monthly-report.ts` — last-day guard + cron auth | ✅ Done |
-| Data retention (3-month rolling window, no hard delete) | ✅ Done |
-| Settings page | ❌ Placeholder only |
-| Admin responsive polish (table scroll on narrow screens) | ⚠️ Partially done |
+| Member logging flow (company → member → item → confirm) | ✅ |
+| Member self-registration | ✅ |
+| Multi-item cart | ✅ |
+| Admin dashboard — log, summary, month selector | ✅ |
+| Admin CRUD — companies, members, items | ✅ |
+| CSV export | ✅ |
+| Monthly PDF + Excel report via Resend | ✅ |
+| Vercel Cron (last day of month, 22:00 UTC) | ✅ |
+| Data retention — 3-month rolling window | ✅ |
+| Inactive member auto-deactivation | ✅ |
+| Work email field (Excel + CSV) | ✅ |
+| ITC1 Deggendorf campus seed data (28 companies, 239 members) | ✅ |
+| GDPR notice page (`/datenschutz`) | ✅ |
+| PWA — installable, offline shell | ✅ |
+| CI — lint + typecheck + build on every push | ✅ |
 
 ---
 
----
+## Phase 1 — Zero-maintenance operations
 
-## Phase 0.5 — Demo Readiness (before final pitch)
+**Goal:** the system runs itself. Admin touches it once a month at most, only to glance at the report.
 
-**Goal:** Five features required before the product is demo-ready and GDPR-safe.
+### 1.1 — 10-second undo
 
-### F1 — Member work email field (`feat/member-work-email`)
+After tapping "Bestätigen", a toast shows a countdown: *"Eintrag gespeichert — Rückgängig (9s)"*. The transaction is held client-side and only written to Supabase if the user does not cancel within the window. Fixes fat-finger errors on a shared iPad without needing admin intervention.
 
-Management needs a work email per employee for billing cross-reference. The field must be **invisible to members** and never surface in the member flow, log table, or summary cards. It appears only in:
-- Self-registration modal (optional field, labelled "Arbeits-E-Mail (optional)")
-- Admin Members add/edit modal
-- Monthly Excel report (new "E-Mail" column in "Alle Einträge" and "Pro Unternehmen" sheets)
-- Admin CSV export
+### 1.2 — Error visibility
 
-Implementation:
-- Supabase migration: `ALTER TABLE members ADD COLUMN work_email text` (nullable, no unique constraint — people can share an email)
-- Self-registration modal: add optional e-mail input below name
-- Admin Members modal: add optional e-mail input
-- `generateExcel`: include `work_email` in the relevant sheets
-- Admin CSV export: include `work_email` column
-- RLS: no change needed (anon can read member rows; email is already inside the member record)
+Wire up Vercel function logs or a lightweight Sentry project (free tier). Any serverless error (report generation, cron failure, Supabase timeout) should produce an email alert or appear in a dashboard — not fail silently.
 
----
+### 1.3 — Cron health check
 
-### F2 — Automated data hygiene (`feat/auto-cleanup`)
+Add a `/api/health` endpoint that returns the last successful report send date and current transaction count. A free uptime monitor (UptimeRobot) pings it daily and alerts if the cron hasn't fired when expected.
 
-Two complementary cleanup jobs, both fired by the existing monthly cron:
+### 1.4 — Custom domain
 
-**2a — Transaction rolling window (already shipped for `transactions`)**
-The `pruneOldTransactions()` call after each report keeps the live table to 3 months. Extend this to also prune `transactions_archive` to 90 days to stay within Supabase free-tier storage.
+Point `kaffeelisten.itc1.de` (or similar) at the Vercel deployment. Update `APP_URL` env var so email links resolve correctly.
 
-**2b — Inactive member auto-deactivation**
-After each monthly report, soft-deactivate any member whose most recent transaction is older than 90 days (3 months). Deactivated members are hidden from the member-flow company roster but remain visible in the admin Members list (greyed out, reactivatable). This handles the common case where someone leaves an ITC1 company and the admin forgets to remove them.
+### 1.5 — German copy review
 
-Implementation:
-- New function `deactivateInactiveMembers()` in `_lib/report.ts`: query last `logged_at` per member; set `active = false` where the last activity is older than 90 days and the member has at least one transaction ever (brand-new members are never auto-deactivated)
-- Call from `runMonthlyReport()` after `pruneOldTransactions()`
-- New Supabase migration: no schema change needed (`active` column already exists)
+Full native-speaker pass over all UI text — member flow, admin labels, email body, GDPR page. Fix any awkward phrasing before it goes in front of 200+ real users.
 
 ---
 
-### F3 — Real ITC1 seed data (`chore/itc1-seed-data`)
+## Phase 2 — Insights & analytics
 
-Replace the illustrative 5-company seed with accurate ITC1 Deggendorf campus data, plus realistic transaction history for the demo.
+**Goal:** the monthly report is useful, but the admin should be able to see trends without opening Excel.
 
-Research needed:
-- Enumerate current tenant companies and startups in ITC1 Deggendorf (web research of THD / ITC1 / B4Y3RW4LD ecosystem)
-- 30–50 German-name employees spread across companies (realistic German first/last names, not lorem ipsum)
-- 2–3 months of backdated transaction history (varied items, realistic usage patterns — heavier coffee in morning, occasional drinks/snacks)
+### 2.1 — Consumption dashboard
 
-Deliverables:
-- Updated `supabase/seeds/002_demo_data.sql` (or equivalent migration)
-- Companies: real ITC1 tenants where publicly known; fill remaining slots with plausible startup names
-- Members: 30–50 rows with `work_email` set to `vorname.nachname@company.de` patterns
-- Transactions: 200–400 rows spread across March–May 2026, covering multiple items
+Admin dashboard gets a second tab: charts generated from the current month's transaction data.
 
----
+- Top 5 items by volume and by revenue
+- Peak consumption hours (bar chart by hour of day)
+- Company comparison — who's drinking the most this month vs last month
+- Member streak — who has logged every working day
 
-### F4 — GDPR / data notice page (`feat/gdpr-notice`)
+All computed client-side from the existing Supabase data. No new backend needed.
 
-German users take data protection seriously. A simple, honest notice page reachable from the member flow (link in footer or on the start screen) explaining:
-- What data is collected (name, work email, consumption records)
-- Why (internal billing between ITC1 campus companies — not for ads, not shared with third parties)
-- How long it is stored (rolling 3-month window in live DB; monthly archive retained for 90 days)
-- Who can access it (admin only)
-- How to request deletion (contact admin)
+### 2.2 — Item performance analytics
 
-Design: single-column prose, stone/amber palette, same `FlowShell` wrapper. No cookie banner — no cookies or tracking are used. German copy throughout.
+Per-item view in the Admin Items page:
 
-Route: `/datenschutz` — linked from the start screen footer.
+- Total units sold this month / last 3 months
+- Revenue generated
+- Which companies buy it most
+- Whether it's trending up or down
 
----
+Helps decide which items to add, remove, or reprice.
 
-### F5 — Final audit (`chore/final-audit`)
+### 2.3 — Monthly trend report
 
-End-to-end verification before pitch:
+The email report gains a second page (PDF) and a new Excel sheet: month-over-month comparison. Tracks total spend, active members, and top items across the rolling 3-month window already in the database.
 
-| Check | What to verify |
-|---|---|
-| Supabase | RLS policies allow anon member flow; service role used only in serverless functions; no exposed service key in client bundle |
-| Supabase | `transactions`, `transactions_archive`, `members`, `companies`, `items` all return correct data via anon REST |
-| Vercel | All env vars set (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PIN`, `CRON_SECRET`) |
-| Vercel | `/api/send-report` — manual trigger works, email arrives with PDF + Excel attachments |
-| Vercel | `/api/cron/monthly-report` — cron secret check works; endpoint returns 401 without correct header |
-| GitHub | CI passes (lint + typecheck) on `main` after all Phase 0.5 PRs merged |
-| Member flow | Full path on mobile (iPhone/Android viewport): start → company → member → item → confirm → success |
-| Admin | Log filters, CSV export, month selector, CRUD modals — all functional |
-| Admin | Send report modal → email arrives within 60 s |
+### 2.4 — Admin analytics export
+
+One-click download of all analytics data as a structured CSV for use in external tools (Excel pivot tables, Power BI, etc.).
 
 ---
 
-### Phase 0.5 execution order
+## Phase 3 — Self-service administration
 
-1. `feat/member-work-email` ← start here
-2. `feat/auto-cleanup`
-3. `chore/itc1-seed-data`
-4. `feat/gdpr-notice`
-5. `chore/final-audit`
+**Goal:** reduce the admin's workload. Companies manage their own roster. The system rarely needs manual intervention.
 
----
+### 3.1 — Company member portal
 
-## Phase 1 — Post-Hackathon Hardening (within 2 weeks of event)
+Each company gets a read-only view of their own current-month log — accessible via a magic-link email the admin sends on demand. No password, no account. They see only their own data.
 
-**Goal:** Make the MVP safe to hand over to ITC1 for real use.
+### 3.2 — Admin approval queue for self-registered members
 
-- [ ] Monthly cron job — verify end-to-end on production (fires last day of month, 23:00 CET)
-- [ ] 10-second undo window after logging
-- [ ] German copy final review with a native speaker
-- [ ] Custom domain setup (e.g. kaffeelisten.itc1.de)
-- [ ] Error logging (Sentry or Vercel function logs)
+Currently, self-registered members are immediately active. Add an optional "approval required" mode: new self-registrations appear in a queue the admin approves once a week. Prevents phantom members from accumulating.
 
----
+### 3.3 — Configurable item catalog per company
 
-## Phase 2 — Operational Quality (month 2–3)
+Some companies might want different items or different prices. Allow item overrides at the company level (e.g. a startup gets subsidised coffee at a lower price).
 
-- [ ] Admin analytics view: top consumers, top items, monthly trend chart
-- [ ] "Same as last time" quick-log for frequent users
-- [ ] Admin: soft-delete recovery (reactivate companies / members from archived state)
-- [ ] Health check endpoint + uptime monitoring (UptimeRobot free tier)
-- [ ] Hardened admin auth (time-limited session tokens instead of stateless PIN)
-- [ ] Archive data retention — extend `transactions_archive` pruning to configurable `ARCHIVE_RETENTION_DAYS` (default 90 days) with admin warning in report email
+### 3.4 — Admin-initiated per-company reports
+
+The admin can send a report for a single company on demand — useful when a company asks for their invoice mid-month.
+
+### 3.5 — Soft-delete recovery
+
+Deactivated companies and members can be reactivated from the admin panel. Currently deactivation is one-way in the UI (though the `active` flag is already in the schema).
 
 ---
 
-## Phase 3 — Company Self-Service (month 4–6)
+## Phase 4 — Deployment & configuration
 
-- [ ] Company read-only portal: view current month's transactions for their own company
-- [ ] Company portal access via magic-link email (no password)
-- [ ] Admin can send per-company sub-reports on demand
-- [ ] Item photos in member flow
-- [ ] Admin approval flow for self-registered members
+**Goal:** anyone can run their own Kaffeelisten instance in under 30 minutes.
+
+### 4.1 — One-click deploy
+
+A "Deploy to Vercel" button in the README that forks the repo and pre-fills the required env vars via the Vercel template system. The user provides their Supabase URL + keys, Resend key, and admin email — that's it.
+
+### 4.2 — Setup wizard
+
+A first-run `/setup` page (only accessible before any companies exist) that walks a new admin through:
+1. Set admin PIN
+2. Create the first company
+3. Add the first items
+4. Send a test report
+
+After completion, the setup route is disabled permanently.
+
+### 4.3 — Configurable retention and cron schedule
+
+`ARCHIVE_RETENTION_DAYS` and `REPORT_DAY` env vars replace hardcoded values. The report email includes a warning when the archive is approaching its retention cutoff.
+
+### 4.4 — Supabase migration runner
+
+A `scripts/migrate.ts` that applies outstanding migrations against any Supabase project using the Management API — no Supabase CLI or Docker required. Makes it safe for non-technical operators to update their instance.
 
 ---
 
-## Phase 4 — Multi-Tenant / Open Source (future)
+## Phase 5 — Open platform
 
-- [ ] Multi-campus data model (campus → companies → members)
-- [ ] Admin onboarding flow (self-service campus setup)
-- [ ] Configurable item catalog (custom items per campus)
-- [ ] Open source release under MIT
-- [ ] Hosted SaaS option with free tier
+**Goal:** Kaffeelisten works for any shared-consumption scenario, not just ITC1 coffee.
+
+### 5.1 — Multi-campus support
+
+Schema gains a `campuses` table. Each campus has its own companies, members, items, and admin. One deployment serves multiple sites.
+
+### 5.2 — Public API
+
+A documented REST API (or tRPC) that lets third-party integrations push transactions, pull reports, or sync member rosters from an HR system.
+
+### 5.3 — Webhook support
+
+Campus admins configure a webhook URL. The system POSTs a payload after each report send, archive, or cleanup run. Enables integration with Slack, Teams, or internal dashboards without polling.
+
+### 5.4 — Open source release
+
+License: MIT. Published to GitHub with full docs, a demo Supabase project (read-only), and a public roadmap. Community contributions welcome for new item categories, language translations, and alternative email providers.
 
 ---
 
-## Milestone summary
+## What "closed-circle, zero-maintenance" looks like at the end
 
-| Phase | Target date | Key outcome | Status |
-|---|---|---|---|
-| 0 — Hackathon MVP | 2026-05-09 | Core product shipped | ✅ Done |
-| 0.5 — Demo Readiness | 2026-05-09 (pitch) | Work email, cleanup, real data, GDPR, audit | **In progress** |
-| 1 — Hardening | 2026-05-23 | Safe for real campus use | — |
-| 2 — Operational | 2026-07-31 | Runs unattended, analytics | — |
-| 3 — Self-service | 2026-10-31 | Company portal, reduced admin load | — |
-| 4 — Multi-tenant | TBD | Open source release | — |
+When all phases are complete, the admin's only regular interaction is reading the monthly email. Everything else runs itself:
+
+- Members self-register and self-log
+- Inactive members are auto-deactivated after 90 days
+- Old records are auto-pruned on a rolling window
+- Reports are generated and emailed by cron on the last day of each month
+- Companies manage their own portals without contacting the admin
+- Errors alert automatically via Sentry / UptimeRobot
+- Updates deploy automatically via Vercel on every merge to `main`
