@@ -12,6 +12,7 @@ interface MemberRow {
   name: string
   company_id: string
   company_name: string
+  work_email: string | null
   active: boolean
 }
 
@@ -23,6 +24,7 @@ interface CompanyOption {
 interface MemberForm {
   firstName: string
   lastName: string
+  workEmail: string
   company_id: string
   active: boolean
 }
@@ -51,6 +53,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [form, setForm] = useState<MemberForm>({
     firstName: '',
     lastName: '',
+    workEmail: '',
     company_id: '',
     active: true,
   })
@@ -59,7 +62,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const fetchData = async () => {
     setLoading(true)
     const [membersRes, companiesRes] = await Promise.all([
-      supabase.from('members').select('id, name, company_id, active').order('name'),
+      supabase.from('members').select('id, name, company_id, work_email, active').order('name'),
       supabase.from('companies').select('id, name').eq('active', true).order('name'),
     ])
     const companyMap = new Map(
@@ -70,6 +73,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       name: m.name,
       company_id: m.company_id,
       company_name: companyMap.get(m.company_id) ?? '—',
+      work_email: m.work_email ?? null,
       active: m.active,
     }))
     setMembers(rows)
@@ -83,6 +87,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     setForm({
       firstName: '',
       lastName: '',
+      workEmail: '',
       company_id: companies[0]?.id ?? '',
       active: true,
     })
@@ -96,6 +101,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     setForm({
       firstName: parts[0] ?? '',
       lastName: parts.slice(1).join(' '),
+      workEmail: member.work_email ?? '',
       company_id: member.company_id,
       active: member.active,
     })
@@ -113,6 +119,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     const payload = {
       name,
       company_id: form.company_id,
+      work_email: form.workEmail.trim() || null,
       active: form.active,
     }
     const { error } =
@@ -342,6 +349,18 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
               />
             </label>
           </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+              Arbeits-E-Mail <span className="font-normal normal-case text-stone-400">(optional)</span>
+            </span>
+            <input
+              className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
+              type="email"
+              value={form.workEmail}
+              onChange={e => setForm(f => ({ ...f, workEmail: e.target.value }))}
+              placeholder="z. B. anna.mueller@firma.de"
+            />
+          </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
               Unternehmen

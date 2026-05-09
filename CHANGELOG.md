@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/member-work-email
+
+### Added
+- `work_email` field on the `members` table (nullable text, Supabase migration 007)
+- Self-registration modal: optional "Arbeits-E-Mail" input stored on member creation; never shown in the member flow after registration
+- Admin Members add/edit modal: optional "Arbeits-E-Mail" input for admin-managed members
+- Excel report "Pro Unternehmen" sheet: new "E-Mail" column between Person and Einträge
+- Excel report "Alle Einträge" sheet: new "E-Mail" column between Person and Unternehmen
+- Admin CSV export: new "E-Mail" column between Person and Unternehmen
+
+---
+
 ## [Unreleased] — feat/send-report-pdf-mobile ([PR #7](https://github.com/arudaev/kaffeelisten/pull/7))
 
 ### Added

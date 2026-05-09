@@ -52,7 +52,7 @@ export async function fetchAndEnrich(forMonth?: string): Promise<{
   if (txErr) throw new Error(`Failed to fetch transactions: ${txErr.message}`)
 
   const [membersRes, companiesRes, itemsRes] = await Promise.all([
-    supabase.from('members').select('id, name, company_id'),
+    supabase.from('members').select('id, name, company_id, work_email'),
     supabase.from('companies').select('id, name'),
     supabase.from('items').select('id, name, unit_label, price_cents, category'),
   ])
@@ -71,6 +71,7 @@ export async function fetchAndEnrich(forMonth?: string): Promise<{
     return {
       ...t,
       member_name: member?.name ?? '—',
+      work_email: member?.work_email ?? null,
       company_name: companyMap.get(t.company_id) ?? '—',
       item_name: item?.name ?? '—',
       item_category: item?.category ?? '—',
@@ -101,7 +102,7 @@ export function computeSummary(transactions: EnrichedTransaction[]): CompanySumm
     const memberSummaries: MemberSummary[] = []
     for (const [member_name, entries] of members) {
       const subtotal_cents = entries.reduce((s, e) => s + e.total_cents, 0)
-      memberSummaries.push({ member_name, entries, subtotal_cents })
+      memberSummaries.push({ member_name, work_email: entries[0]?.work_email ?? null, entries, subtotal_cents })
     }
     memberSummaries.sort((a, b) => b.subtotal_cents - a.subtotal_cents)
 
@@ -255,14 +256,15 @@ export async function generateExcel(
   ws2.columns = [
     { key: 'company', width: 26 },
     { key: 'person',  width: 26 },
+    { key: 'email',   width: 32 },
     { key: 'entries', width: 12 },
     { key: 'total',   width: 18 },
   ]
 
-  const hdr2 = ws2.addRow(['Unternehmen', 'Person', 'Einträge', 'Betrag'])
-  styleHeaderRow(hdr2, 4)
-  hdr2.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }
-  hdr2.getCell(4).alignment = { horizontal: 'right',  vertical: 'middle' }
+  const hdr2 = ws2.addRow(['Unternehmen', 'Person', 'E-Mail', 'Einträge', 'Betrag'])
+  styleHeaderRow(hdr2, 5)
+  hdr2.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
+  hdr2.getCell(5).alignment = { horizontal: 'right',  vertical: 'middle' }
 
   let rowIdx = 0
   summaries.forEach(company => {
@@ -270,26 +272,27 @@ export async function generateExcel(
       const row = ws2.addRow([
         company.company_name,
         member.member_name,
+        member.work_email ?? '',
         member.entries.length,
         Number((member.subtotal_cents / 100).toFixed(2)),
       ])
-      if (rowIdx % 2 === 1) { for (let j = 1; j <= 4; j++) row.getCell(j).fill = altFill }
-      row.getCell(3).alignment = { horizontal: 'center' }
-      row.getCell(4).numFmt    = '#,##0.00 "€"'
-      row.getCell(4).alignment = { horizontal: 'right' }
-      for (let j = 1; j <= 4; j++) row.getCell(j).border = rowBorder
+      if (rowIdx % 2 === 1) { for (let j = 1; j <= 5; j++) row.getCell(j).fill = altFill }
+      row.getCell(4).alignment = { horizontal: 'center' }
+      row.getCell(5).numFmt    = '#,##0.00 "€"'
+      row.getCell(5).alignment = { horizontal: 'right' }
+      for (let j = 1; j <= 5; j++) row.getCell(j).border = rowBorder
       row.height = 18
       rowIdx++
     })
     const sub = ws2.addRow([
-      `${company.company_name} — Gesamt`, '',
+      `${company.company_name} — Gesamt`, '', '',
       company.total_entries,
       Number((company.total_cents / 100).toFixed(2)),
     ])
-    styleTotalRow(sub, 4)
-    sub.getCell(3).alignment = { horizontal: 'center' }
-    sub.getCell(4).numFmt    = '#,##0.00 "€"'
-    sub.getCell(4).alignment = { horizontal: 'right' }
+    styleTotalRow(sub, 5)
+    sub.getCell(4).alignment = { horizontal: 'center' }
+    sub.getCell(5).numFmt    = '#,##0.00 "€"'
+    sub.getCell(5).alignment = { horizontal: 'right' }
     rowIdx++
   })
 
@@ -299,6 +302,7 @@ export async function generateExcel(
     { key: 'date',       width: 13 },
     { key: 'time',       width: 9  },
     { key: 'person',     width: 26 },
+    { key: 'email',      width: 32 },
     { key: 'company',    width: 26 },
     { key: 'item',       width: 22 },
     { key: 'category',   width: 14 },
@@ -307,15 +311,16 @@ export async function generateExcel(
     { key: 'total',      width: 14 },
   ]
 
-  const hdr3 = ws3.addRow(['Datum', 'Uhrzeit', 'Person', 'Unternehmen', 'Item', 'Kategorie', 'Menge', 'Einzelpreis', 'Betrag'])
-  styleHeaderRow(hdr3, 9)
-  ;[7, 8, 9].forEach(i => { hdr3.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
+  const hdr3 = ws3.addRow(['Datum', 'Uhrzeit', 'Person', 'E-Mail', 'Unternehmen', 'Item', 'Kategorie', 'Menge', 'Einzelpreis', 'Betrag'])
+  styleHeaderRow(hdr3, 10)
+  ;[8, 9, 10].forEach(i => { hdr3.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
 
   transactions.forEach((t, i) => {
     const row = ws3.addRow([
       formatDate(t.logged_at),
       new Date(t.logged_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       t.member_name,
+      t.work_email ?? '',
       t.company_name,
       t.item_name,
       t.item_category,
@@ -323,13 +328,13 @@ export async function generateExcel(
       Number((t.price_cents / 100).toFixed(2)),
       Number((t.total_cents  / 100).toFixed(2)),
     ])
-    if (i % 2 === 1) { for (let j = 1; j <= 9; j++) row.getCell(j).fill = altFill }
-    row.getCell(7).alignment = { horizontal: 'right' }
-    row.getCell(8).numFmt    = '#,##0.00 "€"'
+    if (i % 2 === 1) { for (let j = 1; j <= 10; j++) row.getCell(j).fill = altFill }
     row.getCell(8).alignment = { horizontal: 'right' }
     row.getCell(9).numFmt    = '#,##0.00 "€"'
     row.getCell(9).alignment = { horizontal: 'right' }
-    for (let j = 1; j <= 9; j++) row.getCell(j).border = rowBorder
+    row.getCell(10).numFmt   = '#,##0.00 "€"'
+    row.getCell(10).alignment = { horizontal: 'right' }
+    for (let j = 1; j <= 10; j++) row.getCell(j).border = rowBorder
     row.height = 18
   })
 
