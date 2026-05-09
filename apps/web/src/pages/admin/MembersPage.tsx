@@ -351,7 +351,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Arbeits-E-Mail <span className="font-normal normal-case text-stone-400">(optional)</span>
+              Arbeits-E-Mail
             </span>
             <input
               className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
