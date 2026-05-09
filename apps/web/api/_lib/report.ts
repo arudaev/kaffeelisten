@@ -380,16 +380,18 @@ export async function sendEmail(
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:system-ui,sans-serif;background:#FAFAF9;margin:0;padding:32px;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E7E5E4;">
-    <div style="background:#D97706;padding:24px 32px 28px;">
+    <div style="background:#D97706;padding:24px 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
         <tr>
-          <td style="padding:0;color:rgba(255,255,255,.84);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;line-height:1.2;">KAFFEELISTEN · ITC1 DEGGENDORF</td>
-          <td style="padding:0;text-align:right;width:48px;vertical-align:middle;">
-            <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="44" height="35" alt="Kaffeelisten" style="display:inline-block;width:44px;height:35px;border:0;outline:none;text-decoration:none;vertical-align:middle;">
+          <td style="padding:0;vertical-align:middle;">
+            <p style="margin:0 0 8px;color:rgba(255,255,255,.84);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;line-height:1.2;">KAFFEELISTEN · ITC1 DEGGENDORF</p>
+            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.2;">Monatsbericht ${monthLabel}</h1>
+          </td>
+          <td style="padding:0;text-align:right;width:88px;vertical-align:middle;">
+            <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="72" height="58" alt="Kaffeelisten" style="display:inline-block;width:72px;height:58px;border:0;outline:none;text-decoration:none;vertical-align:middle;">
           </td>
         </tr>
       </table>
-      <h1 style="color:#fff;margin:12px 0 0;font-size:22px;font-weight:700;line-height:1.2;">Monatsbericht ${monthLabel}</h1>
     </div>
     <div style="padding:28px 32px;">
       <p style="color:#57534E;margin:0 0 20px;">Anbei der Monatsbericht für <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Einträgen des ITC1-Campus.</p>
