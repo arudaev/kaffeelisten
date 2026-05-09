@@ -55,14 +55,6 @@ export function buildReportHtml(
   const totalCents  = transactions.reduce((s, t) => s + t.total_cents, 0)
   const uniqueUsers = new Set(transactions.map(t => t.member_name)).size
   const createdAt   = new Date().toLocaleDateString('de-DE')
-  const overviewSpansPages = summaries.length > 16
-  const overviewFooterSpacer = overviewSpansPages
-    ? `
-      <tfoot style="display:table-footer-group;">
-        <tr><td colspan="4" style="height:12mm;padding:0;border:0;background:#fff;"></td></tr>
-      </tfoot>`
-    : ''
-  const overviewBottomMargin = overviewSpansPages ? 0 : 24
 
   const overviewRows = summaries.map((c, i) => `
     <tr style="background:${i % 2 === 0 ? '#FFFFFF' : '#FAFAF9'};">
@@ -82,7 +74,7 @@ export function buildReportHtml(
       </tr>`).join('')
 
     return `
-    <div style="margin:0 40px -12mm;padding-top:20px;padding-bottom:12mm;page-break-inside:avoid;break-inside:avoid;">
+    <div style="margin:0 40px;padding-top:20px;page-break-inside:avoid;break-inside:avoid;">
       <div style="background:#D97706;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0;">
         <span style="font-size:13px;font-weight:700;">${company.company_name}</span>
         <span style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;">${formatEuro(company.total_cents)}</span>
@@ -132,15 +124,15 @@ export function buildReportHtml(
     <!-- Logo + wordmark -->
     <div style="display:flex;align-items:center;gap:16px;">
       <!-- Coffee-cup icon — white on amber -->
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" width="76" height="60" style="flex-shrink:0;display:block;">
-        <g fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/>
-          <ellipse cx="83" cy="60" rx="43" ry="6"/>
-          <path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>
-          <path d="M126 70h12c10 0 18 8 18 18s-8 18-18 18h-12"/>
-          <path d="M70 28c-3 6 3 12 0 18"/>
-          <path d="M83 22c-3 6 3 12 0 18"/>
-          <path d="M96 28c-3 6 3 12 0 18"/>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="52" height="52" style="flex-shrink:0;">
+        <rect width="200" height="200" rx="36" ry="36" fill="rgba(255,255,255,0.18)"/>
+        <g transform="translate(100,100)" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="0" cy="-22" rx="38" ry="7"/>
+          <path d="M-38,-22 Q-42,30 -18,46 Q0,52 18,46 Q42,30 38,-22"/>
+          <path d="M38,-10 Q62,-10 62,10 Q62,30 38,30"/>
+          <path d="M-14,-42 Q-10,-54 -14,-66" stroke-width="6"/>
+          <path d="M0,-38 Q4,-52 0,-64" stroke-width="6"/>
+          <path d="M14,-42 Q18,-54 14,-66" stroke-width="6"/>
         </g>
       </svg>
       <div>
@@ -176,7 +168,7 @@ export function buildReportHtml(
   </div>
 
   <!-- ── Company overview table ─────────────────────────────────────────────── -->
-  <div style="margin:28px 40px ${overviewBottomMargin}px;">
+  <div style="margin:28px 40px 24px;">
     <h2 style="font-size:10px;font-weight:700;color:#78716C;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Übersicht nach Unternehmen</h2>
     <table style="width:100%;border-collapse:collapse;border:1px solid #E7E5E4;border-radius:6px;overflow:hidden;">
       <thead>
@@ -187,7 +179,6 @@ export function buildReportHtml(
           <th style="padding:8px 16px;text-align:right;font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.07em;width:20%;">Betrag</th>
         </tr>
       </thead>
-      ${overviewFooterSpacer}
       <tbody>
         ${overviewRows}
         <tr style="background:#FFFBEB;border-top:2px solid #D97706;">

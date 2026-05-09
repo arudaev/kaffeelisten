@@ -1,11 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" aria-label="Kaffeelisten">
-  <g fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/>
-    <ellipse cx="83" cy="60" rx="43" ry="6"/>
-    <path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>
-    <path d="M126 70h12c10 0 18 8 18 18s-8 18-18 18h-12"/>
-    <path d="M70 28c-3 6 3 12 0 18"/>
-    <path d="M83 22c-3 6 3 12 0 18"/>
-    <path d="M96 28c-3 6 3 12 0 18"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Amber rounded-square background -->
+  <rect width="200" height="200" rx="40" ry="40" fill="#D97706"/>
+
+  <!-- Coffee cup body — centred, white stroke -->
+  <g transform="translate(100,100)" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Rim ellipse top of cup -->
+    <ellipse cx="0" cy="-22" rx="38" ry="7"/>
+    <!-- Cup sides and bottom -->
+    <path d="M-38,-22 Q-42,30 -18,46 Q0,52 18,46 Q42,30 38,-22"/>
+    <!-- Handle -->
+    <path d="M38,-10 Q62,-10 62,10 Q62,30 38,30"/>
+    <!-- Steam wisps -->
+    <path d="M-14,-42 Q-10,-54 -14,-66" stroke-width="5"/>
+    <path d="M0,-38 Q4,-52 0,-64" stroke-width="5"/>
+    <path d="M14,-42 Q18,-54 14,-66" stroke-width="5"/>
   </g>
 </svg>

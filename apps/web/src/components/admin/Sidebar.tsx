@@ -1,5 +1,4 @@
 import AdminIcon from './AdminIcon'
-import BrandMark from '../BrandMark'
 
 type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
 
@@ -51,7 +50,9 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
         {/* Header */}
         <div className="px-5 py-6 border-b border-stone-200">
           <div className="flex items-center gap-2.5">
-            <BrandMark className="h-10 w-12 text-amber-600" loading="lazy" />
+            <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center">
+              <AdminIcon name="coffee" size={18} strokeWidth={2} />
+            </div>
             <div>
               <p className="text-[15px] font-bold text-stone-900 tracking-tight">Kaffeelisten</p>
               <p className="text-[11px] text-stone-500 uppercase tracking-[0.06em]">Admin</p>

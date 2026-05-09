@@ -15,7 +15,6 @@ import AdminIcon from '../components/admin/AdminIcon'
 import ItemsPage from './admin/ItemsPage'
 import CompaniesPage from './admin/CompaniesPage'
 import MembersPage from './admin/MembersPage'
-import Illustration from '../components/Illustration'
 
 type PageId = 'dashboard' | 'log' | 'companies' | 'members' | 'items' | 'settings'
 
@@ -331,8 +330,7 @@ export default function AdminDashboard() {
                 </>
               }
             />
-            <div className="p-4 md:p-8 flex flex-col gap-6 relative isolate overflow-hidden">
-              <Illustration name="beans" className="absolute right-8 top-5 hidden w-36 rotate-12 text-amber-700/10 xl:block" />
+            <div className="p-4 md:p-8 flex flex-col gap-6">
               {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[...Array(4)].map((_, i) => (

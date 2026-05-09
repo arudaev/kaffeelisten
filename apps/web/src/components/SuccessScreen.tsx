@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import BigButton from './BigButton'
 import Icon from './Icon'
-import Illustration from './Illustration'
 
 interface SuccessScreenProps {
   summary: string
@@ -22,10 +21,7 @@ export default function SuccessScreen({ summary, onUndo, onReset }: SuccessScree
   }, [secs, onReset])
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-6 sm:p-8 font-sans relative isolate overflow-hidden">
-      <Illustration name="beans" className="absolute right-8 top-10 hidden w-36 rotate-12 text-amber-700/15 md:block" />
-      <Illustration name="campus" className="absolute bottom-8 left-1/2 hidden w-[560px] -translate-x-1/2 text-stone-300/70 sm:block" strokeWidth={1.4} />
-
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-6 sm:p-8 font-sans">
       {/* Check circle */}
       <div className="relative w-28 sm:w-36 h-28 sm:h-36 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full bg-gradient-radial from-amber-50 to-transparent" />
