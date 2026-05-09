@@ -2,6 +2,7 @@
 // Design spec: docs/design-foundation.md, ui_kits/member-flow/
 
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import BigButton from '../components/BigButton'
@@ -313,9 +314,16 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
-        <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-stone-500 uppercase tracking-[0.06em]">
-          ITC1 Deggendorf · B4Y3RW4LD
-        </p>
+        <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-3 text-[12px] text-stone-400 uppercase tracking-[0.06em]">
+          <span>ITC1 Deggendorf · B4Y3RW4LD</span>
+          <span className="text-stone-300">·</span>
+          <Link
+            to="/datenschutz"
+            className="hover:text-stone-600 transition-colors normal-case tracking-normal"
+          >
+            Datenschutz
+          </Link>
+        </div>
       </div>
     )
   }
