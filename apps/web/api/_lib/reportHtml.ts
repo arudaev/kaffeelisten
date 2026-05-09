@@ -9,6 +9,7 @@ export interface EnrichedTransaction {
   quantity: number
   logged_at: string
   member_name: string
+  work_email: string | null
   company_name: string
   item_name: string
   item_category: string
@@ -19,6 +20,7 @@ export interface EnrichedTransaction {
 
 export interface MemberSummary {
   member_name: string
+  work_email: string | null
   entries: EnrichedTransaction[]
   subtotal_cents: number
 }

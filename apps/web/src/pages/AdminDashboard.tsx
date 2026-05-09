@@ -22,6 +22,7 @@ interface TransactionRow {
   id: string
   logged_at: string
   member_name: string
+  work_email: string | null
   company_name: string
   company_id: string
   item_name: string
@@ -116,18 +117,20 @@ export default function AdminDashboard() {
       ])
 
       if (txRes.data && membersRes.data && companiesRes.data && itemsRes.data) {
-        const memberMap = new Map(membersRes.data.map(m => [m.id, m.name]))
+        const memberMap = new Map(membersRes.data.map(m => [m.id, { name: m.name, work_email: m.work_email ?? null }]))
         const companyMap = new Map(companiesRes.data.map(c => [c.id, c.name]))
         const itemMap = new Map(
           itemsRes.data.map(i => [i.id, { name: i.name, price_cents: i.price_cents }])
         )
 
         const rows: TransactionRow[] = txRes.data.map(t => {
+          const member = memberMap.get(t.member_id)
           const item = itemMap.get(t.item_id)
           return {
             id: t.id,
             logged_at: t.logged_at,
-            member_name: memberMap.get(t.member_id) ?? '—',
+            member_name: member?.name ?? '—',
+            work_email: member?.work_email ?? null,
             company_name: companyMap.get(t.company_id) ?? '—',
             company_id: t.company_id,
             item_name: item?.name ?? '—',
@@ -210,10 +213,11 @@ export default function AdminDashboard() {
   }, [monthTransactions, filterCompanyId, filterName, filterItemName, logSortDir])
 
   const handleExportCsv = () => {
-    const header = ['Zeitpunkt', 'Person', 'Unternehmen', 'Item', 'Menge', 'Betrag (€)']
+    const header = ['Zeitpunkt', 'Person', 'E-Mail', 'Unternehmen', 'Item', 'Menge', 'Betrag (€)']
     const rows = filteredTransactions.map(r => [
       formatDateTime(r.logged_at),
       r.member_name,
+      r.work_email ?? '',
       r.company_name,
       r.item_name,
       String(r.quantity),
