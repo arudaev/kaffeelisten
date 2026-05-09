@@ -345,6 +345,29 @@ export async function generateExcel(
   return Buffer.from(buf)
 }
 
+// ─── Recipients ──────────────────────────────────────────────────────────────
+
+// Reads report_recipients from the settings table; falls back to ADMIN_EMAIL.
+export async function fetchRecipients(): Promise<string[]> {
+  try {
+    const supabase = makeSupabase()
+    const { data } = await supabase
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'report_recipients')
+      .single()
+    const dbValue = data?.value?.trim() ?? ''
+    if (dbValue) {
+      return dbValue.split(',').map(e => e.trim()).filter(e => e.length > 0)
+    }
+  } catch {
+    // fall through to env-var fallback
+  }
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail) throw new Error('Missing ADMIN_EMAIL and no recipients configured in settings')
+  return [adminEmail]
+}
+
 // ─── Email ────────────────────────────────────────────────────────────────────
 
 export async function sendEmail(
@@ -354,11 +377,11 @@ export async function sendEmail(
   transactions: EnrichedTransaction[],
   monthLabel: string,
   reportMonth: string,
+  recipients: string[],
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
-  const adminEmail = process.env.ADMIN_EMAIL
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
-  if (!adminEmail) throw new Error('Missing ADMIN_EMAIL')
+  if (recipients.length === 0) throw new Error('No report recipients configured')
 
   const resend = new Resend(resendKey)
   const totalCents = transactions.reduce((s, t) => s + t.total_cents, 0)
@@ -436,7 +459,7 @@ export async function sendEmail(
 
   await resend.emails.send({
     from: 'Kaffeelisten <onboarding@resend.dev>',
-    to: [adminEmail],
+    to: recipients,
     subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
     html,
     attachments: [
@@ -545,11 +568,12 @@ export async function deactivateInactiveMembers(): Promise<void> {
 export async function runMonthlyReport(forMonth?: string): Promise<void> {
   const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
   const summaries = computeSummary(transactions)
-  const [pdfBuffer, xlsxBuffer] = await Promise.all([
+  const [pdfBuffer, xlsxBuffer, recipients] = await Promise.all([
     generatePdf(summaries, transactions, monthLabel, reportMonth),
     generateExcel(summaries, transactions),
+    fetchRecipients(),
   ])
-  await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth)
+  await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth, recipients)
   await archiveTransactions(transactions, reportMonth)
   await pruneOldTransactions()
   await deactivateInactiveMembers()
