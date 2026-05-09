@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Amber rounded-square background -->
   <rect width="200" height="200" rx="40" ry="40" fill="#D97706"/>
+
+  <!-- Coffee cup body — centred, white stroke -->
   <g transform="translate(100,100)" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Rim ellipse top of cup -->
     <ellipse cx="0" cy="-22" rx="38" ry="7"/>
+    <!-- Cup sides and bottom -->
     <path d="M-38,-22 Q-42,30 -18,46 Q0,52 18,46 Q42,30 38,-22"/>
+    <!-- Handle -->
     <path d="M38,-10 Q62,-10 62,10 Q62,30 38,30"/>
+    <!-- Steam wisps -->
     <path d="M-14,-42 Q-10,-54 -14,-66" stroke-width="5"/>
     <path d="M0,-38 Q4,-52 0,-64" stroke-width="5"/>
     <path d="M14,-42 Q18,-54 14,-66" stroke-width="5"/>

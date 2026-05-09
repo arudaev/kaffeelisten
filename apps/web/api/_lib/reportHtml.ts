@@ -120,10 +120,25 @@ export function buildReportHtml(
 <body>
 
   <!-- ── Header ────────────────────────────────────────────────────────────── -->
-  <div style="background:#D97706;padding:28px 40px 24px;display:flex;justify-content:space-between;align-items:flex-end;">
-    <div>
-      <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:600;margin-bottom:6px;">ITC1 Deggendorf · B4Y3RW4LD</div>
-      <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;">Kaffeelisten</div>
+  <div style="background:#D97706;padding:22px 40px 20px;display:flex;justify-content:space-between;align-items:center;">
+    <!-- Logo + wordmark -->
+    <div style="display:flex;align-items:center;gap:16px;">
+      <!-- Coffee-cup icon — white on amber -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="52" height="52" style="flex-shrink:0;">
+        <rect width="200" height="200" rx="36" ry="36" fill="rgba(255,255,255,0.18)"/>
+        <g transform="translate(100,100)" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="0" cy="-22" rx="38" ry="7"/>
+          <path d="M-38,-22 Q-42,30 -18,46 Q0,52 18,46 Q42,30 38,-22"/>
+          <path d="M38,-10 Q62,-10 62,10 Q62,30 38,30"/>
+          <path d="M-14,-42 Q-10,-54 -14,-66" stroke-width="6"/>
+          <path d="M0,-38 Q4,-52 0,-64" stroke-width="6"/>
+          <path d="M14,-42 Q18,-54 14,-66" stroke-width="6"/>
+        </g>
+      </svg>
+      <div>
+        <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:600;margin-bottom:4px;">ITC1 Deggendorf · B4Y3RW4LD</div>
+        <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;">Kaffeelisten</div>
+      </div>
     </div>
     <div style="text-align:right;">
       <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px;">Monatsbericht</div>

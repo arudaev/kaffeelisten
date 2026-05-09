@@ -293,10 +293,9 @@ export default function MemberFlow() {
     return (
       <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
         <img
-          src="/assets/illustrations/cappuccino-with-steam.svg"
-          alt=""
-          className="w-28 sm:w-40"
-          style={{ color: '#44403C' }}
+          src="/logo.svg"
+          alt="Kaffeelisten"
+          className="w-28 sm:w-40 drop-shadow-sm"
         />
         <div className="text-center max-w-xl">
           <h1 className="text-3xl sm:text-5xl font-bold text-stone-900 tracking-tight">Kaffeelisten</h1>

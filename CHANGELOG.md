@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — hotfix/unified-logo
+
+### Added
+- `apps/web/public/logo.svg`: unified Kaffeelisten logo mark — amber rounded-square background with white coffee-cup line-art and steam wisps; replaces the three inconsistent visuals previously used across the app
+- `tools/generate-icons.mjs`: one-off script that renders `logo.svg` via Puppeteer + local Chrome to produce `pwa-192x192.png` and `pwa-512x512.png`
+
+### Changed
+- Start screen hero: switched from `cappuccino-with-steam.svg` (stroke illustration) to `logo.svg` so the brand mark is the same on every surface
+- `favicon.svg`: replaced `☕` emoji with the proper amber-background logo mark
+- `pwa-192x192.png` / `pwa-512x512.png`: regenerated from `logo.svg` — consistent with favicon and start screen
+- `index.html`: added `<link rel="apple-touch-icon" href="/pwa-192x192.png">` for iOS home-screen installs
+- `vite.config.ts`: updated `includeAssets` to reference the correct asset filenames
+- PDF report header: inline SVG logo mark (coffee cup on frosted amber tile) now appears beside the "Kaffeelisten" wordmark on every report page
+
+---
+
 ## [Unreleased] — feat/gdpr-notice
 
 ### Added
