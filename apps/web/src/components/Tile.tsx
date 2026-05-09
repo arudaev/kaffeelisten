@@ -1,11 +1,14 @@
+import type { ReactNode } from 'react'
+
 interface TileProps {
   label: string
   sub?: string
   selected?: boolean
+  leading?: ReactNode
   onClick: () => void
 }
 
-export default function Tile({ label, sub, selected = false, onClick }: TileProps) {
+export default function Tile({ label, sub, selected = false, leading, onClick }: TileProps) {
   return (
     <button
       type="button"
@@ -21,6 +24,7 @@ export default function Tile({ label, sub, selected = false, onClick }: TileProp
       ]
         .join(' ')}
     >
+      {leading}
       <div className="flex flex-col gap-0.5 flex-1">
         <span className="text-lg sm:text-xl font-semibold text-stone-900">{label}</span>
         {sub && <span className="text-sm text-stone-600">{sub}</span>}

@@ -30,6 +30,69 @@ function formatPrice(priceCents: number): string {
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
 }
 
+// Letter-color bands A–Z (P-Q-R = purple, as expected)
+const ALPHA_COLORS: [string, string][] = [
+  ['ABC', '#D97706'],
+  ['DEF', '#16A34A'],
+  ['GHI', '#2563EB'],
+  ['JKL', '#7C3AED'],
+  ['MNO', '#DB2777'],
+  ['PQR', '#9333EA'],
+  ['STU', '#EA580C'],
+  ['VWX', '#0D9488'],
+  ['YZ',  '#78716C'],
+]
+
+function getLetterColor(name: string): string {
+  // Normalize to strip diacritics so Ü→U, Ä→A, Ö→O pick the right color band
+  const ch = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()[0] ?? 'A'
+  for (const [band, color] of ALPHA_COLORS) {
+    if (band.includes(ch)) return color
+  }
+  return '#78716C'
+}
+
+function CompanyInitial({ name }: { name: string }) {
+  return (
+    <span
+      style={{ backgroundColor: getLetterColor(name) }}
+      className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base select-none"
+      aria-hidden="true"
+    >
+      {name[0] ?? '?'}
+    </span>
+  )
+}
+
+// localStorage-backed "Meine Firma" shortcut — only surfaces when ≥90% of
+// last 10 choices are the same company (self-suppresses on shared iPads).
+const HISTORY_KEY = 'kl_company_history'
+const HISTORY_MAX = 10
+const SHORTCUT_THRESHOLD = 0.9
+
+function readHistory(): string[] {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') } catch { return [] }
+}
+
+function recordChoice(id: string) {
+  const h = readHistory()
+  h.push(id)
+  if (h.length > HISTORY_MAX) h.splice(0, h.length - HISTORY_MAX)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h))
+}
+
+function getSuggestedCompany(companies: Company[]): Company | null {
+  const h = readHistory()
+  if (h.length < 3) return null
+  const counts: Record<string, number> = {}
+  for (const id of h) counts[id] = (counts[id] ?? 0) + 1
+  const [topId, topCount] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+  if (topCount / h.length >= SHORTCUT_THRESHOLD) {
+    return companies.find(c => c.id === topId) ?? null
+  }
+  return null
+}
+
 // Capitalize first letter of each word, lowercase the rest ("anna müller" → "Anna Müller").
 function capitalizeName(s: string): string {
   return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
@@ -107,7 +170,7 @@ export default function MemberFlow() {
         setError('Daten konnten nicht geladen werden.')
         return
       }
-      setCompanies(cosResult.data ?? [])
+      setCompanies((cosResult.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name, 'de')))
       setItems(itsResult.data ?? [])
       const cats = [...new Set((itsResult.data ?? []).map(i => i.category))]
       if (cats.length > 0) setActiveCategory(cats[0])
@@ -288,22 +351,39 @@ export default function MemberFlow() {
               <div key={i} className="h-[72px] rounded-xl bg-stone-100 animate-pulse" />
             ))}
           </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {companies.map(c => (
-              <Tile
-                key={c.id}
-                label={c.name}
-                onClick={() => {
-                  setSelectedCompany(c)
-                  setSelectedMember(null)
-                  setCart(new Map())
-                  setStep('member')
-                }}
-              />
-            ))}
-          </div>
-        )}
+        ) : (() => {
+          const suggested = getSuggestedCompany(companies)
+          const selectCompany = (c: Company) => {
+            recordChoice(c.id)
+            setSelectedCompany(c)
+            setSelectedMember(null)
+            setCart(new Map())
+            setStep('member')
+          }
+          return (
+            <div className="flex flex-col gap-3">
+              {suggested && (
+                <>
+                  <Tile
+                    key={`shortcut-${suggested.id}`}
+                    label={suggested.name}
+                    leading={<CompanyInitial name={suggested.name} />}
+                    onClick={() => selectCompany(suggested)}
+                  />
+                  <hr className="border-stone-200" />
+                </>
+              )}
+              {companies.map(c => (
+                <Tile
+                  key={c.id}
+                  label={c.name}
+                  leading={<CompanyInitial name={c.name} />}
+                  onClick={() => selectCompany(c)}
+                />
+              ))}
+            </div>
+          )
+        })()}
       </FlowShell>
     )
   }
