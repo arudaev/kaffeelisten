@@ -120,10 +120,24 @@ export function buildReportHtml(
 <body>
 
   <!-- ── Header ────────────────────────────────────────────────────────────── -->
-  <div style="background:#D97706;padding:28px 40px 24px;display:flex;justify-content:space-between;align-items:flex-end;">
-    <div>
-      <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:600;margin-bottom:6px;">ITC1 Deggendorf · B4Y3RW4LD</div>
-      <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;">Kaffeelisten</div>
+  <div style="background:#D97706;padding:22px 40px 20px;display:flex;justify-content:space-between;align-items:center;">
+    <!-- Wordmark + cappuccino illustration -->
+    <div style="display:flex;align-items:center;gap:18px;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" width="64" height="51" style="flex-shrink:0;opacity:.95;">
+        <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/>
+          <ellipse cx="83" cy="60" rx="43" ry="6"/>
+          <path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>
+          <path d="M126 70h12c10 0 18 8 18 18v0c0 10-8 18-18 18h-12"/>
+          <path d="M70 28c-3 6 3 12 0 18"/>
+          <path d="M83 22c-3 6 3 12 0 18"/>
+          <path d="M96 28c-3 6 3 12 0 18"/>
+        </g>
+      </svg>
+      <div>
+        <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:600;margin-bottom:5px;">ITC1 Deggendorf · B4Y3RW4LD</div>
+        <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;">Kaffeelisten</div>
+      </div>
     </div>
     <div style="text-align:right;">
       <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px;">Monatsbericht</div>

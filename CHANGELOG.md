@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — hotfix/unified-logo
+
+### Added
+- `apps/web/public/logo.svg`: amber rounded-square app icon built from the same cappuccino-with-steam paths (white stroke) — used only where a solid-background icon is required (favicon, PWA install)
+- `tools/generate-icons.mjs`: renders `logo.svg` via Puppeteer + local Chrome to produce correctly sized PWA PNGs
+
+### Changed
+- `favicon.svg`: replaced ☕ emoji with the proper amber-square cappuccino logo mark
+- `pwa-192x192.png` / `pwa-512x512.png`: regenerated from `logo.svg`
+- `index.html`: added `<link rel="apple-touch-icon">` pointing at `pwa-192x192.png` for iOS home-screen installs
+- `vite.config.ts`: fixed `includeAssets` to reference files that actually exist on disk
+- PDF report header: cappuccino-with-steam SVG paths inlined directly in the amber band with `stroke="white"` — the illustration appears as-is beside the "Kaffeelisten" wordmark, no square background
+- Email HTML: cappuccino-with-steam SVG embedded as a `data:image/svg+xml;base64` `<img>` in the email body (stone-700 stroke on white background, above the summary table); SVG inline tags are stripped by major email clients so base64 `<img>` is used instead
+
+---
+
 ## [Unreleased] — feat/gdpr-notice
 
 ### Added
