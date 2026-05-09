@@ -15,6 +15,7 @@ import AdminIcon from '../components/admin/AdminIcon'
 import ItemsPage from './admin/ItemsPage'
 import CompaniesPage from './admin/CompaniesPage'
 import MembersPage from './admin/MembersPage'
+import SettingsPage from './admin/SettingsPage'
 
 type PageId = 'dashboard' | 'log' | 'companies' | 'members' | 'items' | 'settings'
 
@@ -467,16 +468,7 @@ export default function AdminDashboard() {
 
         {/* ── Settings ── */}
         {activePage === 'settings' && (
-          <>
-            <Topbar title="Einstellungen" onMenuClick={() => setSidebarOpen(true)} />
-            <div className="p-4 md:p-8">
-              <DataTable
-                columns={[{ key: 'k', label: '' }]}
-                rows={[]}
-                empty={{ title: 'Einstellungen', body: 'Konfiguration folgt in einer späteren Version.' }}
-              />
-            </div>
-          </>
+          <SettingsPage onToast={showToast} onMenuClick={() => setSidebarOpen(true)} />
         )}
       </main>
 
