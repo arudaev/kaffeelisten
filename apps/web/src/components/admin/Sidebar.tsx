@@ -51,9 +51,9 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
         <div className="px-5 py-6 border-b border-stone-200">
           <div className="flex items-center gap-2.5">
             <img
-              src="/assets/illustrations/cappuccino-with-steam.svg"
-              alt=""
-              className="h-8 w-auto"
+              src="/logo.svg"
+              alt="Kaffeelisten"
+              className="h-8 w-8 rounded-lg"
             />
             <div>
               <p className="text-[15px] font-bold text-stone-900 tracking-tight">Kaffeelisten</p>
