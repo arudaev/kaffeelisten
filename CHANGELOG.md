@@ -10,29 +10,32 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased] — feat/send-report-pdf-mobile + feat/admin-crud
 
 ### Added
-- `/api/send-report` — POST endpoint that computes the full month’s transactions, generates a PDF report and an Excel workbook, sends both as email attachments via Resend, archives all transactions to `transactions_archive`, and clears the live `transactions` table
-- `/api/cron/monthly-report` — Vercel Cron wrapper (fires 22:00 UTC on days 28–31); verifies `CRON_SECRET` header and only runs on the actual last day of the month
-- PDF report generated from styled HTML via puppeteer + `@sparticuz/chromium-min`; matches project design language (amber header, stone palette, company sections, member tables)
-- Excel report (`.xlsx`) with two sheets: `Zusammenfassung` (company totals) and `Alle Einträge` (full transaction log with date, person, item, quantity, price)
-- Email body includes summary metrics and per-company breakdown table; attachments named `kaffeelisten-YYYY-MM.pdf/.xlsx`
-- `vercel.json` cron configuration: `0 22 28-31 * *`
+- `/api/send-report` — POST endpoint; generates branded PDF + Excel, sends both via Resend, archives to `transactions_archive`; PIN-protected via `x-admin-pin` header; accepts `month` body param for historical reports
+- `/api/cron/monthly-report` — Vercel Cron wrapper (schedule `0 22 28-31 * *`); verifies `Authorization: Bearer {CRON_SECRET}`; last-day-of-month guard prevents false fires
+- PDF report: flat amber-600 header, white KPI strip (entries, total, consumers, companies), company overview table, per-company member breakdown; generated via puppeteer + `@sparticuz/chromium-min`
+- Excel report (`.xlsx`, 3 sheets): `Zusammenfassung` (company totals), `Pro Unternehmen` (member breakdown with subtotals), `Alle Einträge` (full log); brand-styled headers via `exceljs`
+- Email body includes summary metrics and per-company breakdown; attachments named `kaffeelisten-YYYY-MM.pdf/.xlsx`
+- Admin month selector: filters all dashboard views (log, summary cards, CSV export) to the selected month; manual report trigger sends the report for the selected month; cron always uses current month
+- Data retention: transactions are no longer deleted after a report send; `transactions` table keeps a rolling 3-month window; `pruneOldTransactions()` removes rows older than the start of 3 months ago after each report
 - Admin Items page: full table (name, category, unit, price, status badge) with add/edit modal and toggle-active per row; name search, category filter, status filter, sort by name/price/category
 - Admin Companies page: full table with add/edit modal and toggle-active per row; status filter, name A→Z/Z→A sort
 - Admin Members page: full table with company join, add/edit modal, and toggle-active per row; name search, company filter, status filter, sort by name or company
 - Log page: client-side filter bar — company dropdown, name search, item dropdown, date sort direction toggle; results count shown live
 - Log page: CSV export — downloads filtered transactions as UTF-8 BOM CSV (semicolon-delimited, German decimal)
-- Dashboard: CSV export button now exports current month’s full transaction list
-- Sidebar: distinct icons for Unternehmen (building) and Mitarbeitende (users) — previously both used the report icon
-- Supabase migration 005: anon `INSERT`/`UPDATE` grants and RLS policies for companies, members, items (admin writes via anon key; hardened in Phase 1)
+- Sidebar: distinct icons for Unternehmen (building) and Mitarbeitende (users)
+- Supabase migration 005: anon `INSERT`/`UPDATE` grants and RLS policies for companies, members, items
 
 ### Fixed
-- Member item grid (`grid-cols-3`) now collapses to `1 col` on mobile and `2 col` on tablet — previously completely broken on phones
-- Member name grid (`grid-cols-2`) now always starts at 1 column on mobile (`sm:grid-cols-2`)
-- FlowShell padding reduced on narrow screens (`px-8` → `px-4 md:px-8`) across top bar, content area, and footer
-- Start screen heading (`text-5xl`) and illustration (`w-40`) now scale down on small screens
-- SuccessScreen circle and heading size now scale down on small screens
-- Admin layout: left sidebar is now fixed/non-scrolling; each content area scrolls independently; topbar stays sticky at the top of the content pane
-- Member self-registration now stores the full name (e.g. "Anna Müller") in the database; the abbreviated "Anna M." form is computed on-the-fly for display only, ensuring uniqueness per company roster
+- `/api/send-report` was publicly accessible; now requires `x-admin-pin` header matching `ADMIN_PIN` env var
+- Vercel Cron was sending `Authorization: Bearer` but handler was checking `x-cron-secret`; corrected
+- Excel headers were unstyled because `eachCell` skips cells not yet created; switched to explicit `addRow()` + index-based styling
+- Excel file triggered "repair" dialog in desktop Excel due to missing `bgColor` on fill definitions; added
+- Replaced `xlsx` (SheetJS community — no cell styling) with `exceljs` for brand-styled workbooks
+- Member item grid (`grid-cols-3`) collapses to 1 col mobile / 2 col tablet
+- Member name grid always starts at 1 column on mobile
+- FlowShell padding reduced on narrow screens; start screen hero and SuccessScreen scale down
+- Admin layout: sidebar fixed/non-scrolling; content pane scrolls independently; topbar stays sticky
+- Member self-registration stores full name in DB; abbreviated form computed on-the-fly for display
 
 ## [Unreleased] — feat/implement-design (PR #4)
 
