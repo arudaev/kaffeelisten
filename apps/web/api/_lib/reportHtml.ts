@@ -1,5 +1,8 @@
-// Self-contained HTML report template — inline styles mirror docs/design-system.md
-// Rendered to PDF by puppeteer in report.ts
+// Self-contained HTML report template — inline styles, flows naturally across pages.
+// Rendered to PDF by Puppeteer. Three print-specific fixes applied:
+//   1. Footer is position:fixed so Puppeteer pins it to the bottom of every page.
+//   2. Company blocks carry both legacy + modern break-inside:avoid so no block splits mid-table.
+//   3. Google Fonts replaced with system font stack — no network dependency during render.
 
 export interface EnrichedTransaction {
   id: string
@@ -30,19 +33,17 @@ export interface CompanySummary {
   total_entries: number
 }
 
-function formatEuro(cents: number): string {
-  return '€ ' + (cents / 100).toFixed(2).replace('.', ',')
+export function formatEuro(cents: number): string {
+  return '€ ' + (cents / 100).toFixed(2).replace('.', ',')
 }
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function consolidatedItems(entries: EnrichedTransaction[]): string {
   const map: Record<string, number> = {}
-  for (const e of entries) {
-    map[e.item_name] = (map[e.item_name] ?? 0) + e.quantity
-  }
+  for (const e of entries) map[e.item_name] = (map[e.item_name] ?? 0) + e.quantity
   return Object.entries(map).map(([name, qty]) => `${qty}× ${name}`).join(', ')
 }
 
@@ -52,9 +53,10 @@ export function buildReportHtml(
   monthLabel: string,
   reportMonth: string,
 ): string {
-  const totalCents = transactions.reduce((s, t) => s + t.total_cents, 0)
-  const topCompany = summaries[0]?.company_name ?? '—'
-  const createdAt = new Date().toLocaleDateString('de-DE')
+  const totalCents  = transactions.reduce((s, t) => s + t.total_cents, 0)
+  const topCompany  = summaries[0]?.company_name ?? '—'
+  const uniqueUsers = new Set(transactions.map(t => t.member_name)).size
+  const createdAt   = new Date().toLocaleDateString('de-DE')
 
   const companySections = summaries.map(company => {
     const memberRows = company.members.map((m, i) => `
@@ -66,7 +68,7 @@ export function buildReportHtml(
       </tr>`).join('')
 
     return `
-    <div style="margin-bottom:28px;page-break-inside:avoid;">
+    <div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">
       <div style="background:#D97706;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0;">
         <span style="font-size:14px;font-weight:700;">${company.company_name}</span>
         <span style="font-size:14px;font-weight:700;">${formatEuro(company.total_cents)}</span>
@@ -82,7 +84,7 @@ export function buildReportHtml(
         </thead>
         <tbody>
           ${memberRows}
-          <tr style="background:#FFFBEB;border-top:2px solid #D97706;">
+          <tr style="background:#FFFBEB;border-top:2px solid #D97706;page-break-before:avoid;break-before:avoid;">
             <td colspan="2" style="padding:9px 16px;font-size:13px;font-weight:700;color:#1C1917;">Gesamt</td>
             <td style="padding:9px 16px;text-align:right;font-size:13px;font-weight:700;color:#D97706;">${formatEuro(company.total_cents)}</td>
             <td></td>
@@ -96,16 +98,24 @@ export function buildReportHtml(
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #FAFAF9; color: #1C1917; font-size: 14px; line-height: 1.5; }
-    @page { size: A4; margin: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Helvetica, Arial, sans-serif;
+      background: #FAFAF9;
+      color: #1C1917;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Reserve bottom margin so fixed footer never overlaps content */
+    @page { size: A4 portrait; margin: 0 0 13mm 0; }
+
     @media print { body { background: #fff; } }
   </style>
 </head>
 <body>
+
   <!-- Header bar -->
   <div style="background:#D97706;padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-end;">
     <div>
@@ -118,7 +128,7 @@ export function buildReportHtml(
     </div>
   </div>
 
-  <!-- Summary metrics -->
+  <!-- Summary metric cards -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#E7E5E4;margin-bottom:36px;">
     <div style="background:#fff;padding:20px 28px;">
       <div style="font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.08em;">Einträge gesamt</div>
@@ -128,7 +138,7 @@ export function buildReportHtml(
     <div style="background:#fff;padding:20px 28px;">
       <div style="font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.08em;">Gesamtbetrag</div>
       <div style="font-size:28px;font-weight:700;color:#1C1917;margin-top:6px;">${formatEuro(totalCents)}</div>
-      <div style="font-size:12px;color:#A8A29E;margin-top:2px;">${new Set(transactions.map(t => t.member_name)).size} Konsumierende</div>
+      <div style="font-size:12px;color:#A8A29E;margin-top:2px;">${uniqueUsers} Konsumierende</div>
     </div>
     <div style="background:#fff;padding:20px 28px;">
       <div style="font-size:10px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.08em;">Größtes Unternehmen</div>
@@ -138,18 +148,23 @@ export function buildReportHtml(
   </div>
 
   <!-- Company sections -->
-  <div style="padding:0 40px 40px;">
+  <div style="padding:0 40px;">
     <h2 style="font-size:13px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">Aufschlüsselung nach Unternehmen</h2>
     ${companySections}
   </div>
 
-  <!-- Footer -->
-  <div style="margin:0 40px;padding:16px 0;border-top:1px solid #E7E5E4;display:flex;justify-content:space-between;align-items:center;">
+  <!-- Grand total -->
+  <div style="margin:8px 40px 40px;padding:14px 16px;background:#292524;border-radius:8px;display:flex;justify-content:space-between;align-items:center;page-break-inside:avoid;break-inside:avoid;">
+    <span style="color:#fff;font-size:15px;font-weight:700;">Gesamtbetrag</span>
+    <span style="color:#fff;font-size:15px;font-weight:700;">${formatEuro(totalCents)}</span>
+  </div>
+
+  <!-- Footer: position:fixed pins it to the bottom of every PDF page -->
+  <div style="position:fixed;bottom:0;left:0;right:0;height:13mm;padding:0 40px;border-top:1px solid #E7E5E4;display:flex;justify-content:space-between;align-items:center;background:#fff;">
     <span style="color:#A8A29E;font-size:11px;">Kaffeelisten · ${monthLabel} · ${transactions.length} Einträge · ${formatEuro(totalCents)}</span>
     <span style="color:#A8A29E;font-size:11px;">Erstellt am ${createdAt}</span>
   </div>
+
 </body>
 </html>`
 }
-
-export { formatEuro, formatDate }
