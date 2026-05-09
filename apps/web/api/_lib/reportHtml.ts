@@ -67,8 +67,10 @@ export function buildReportHtml(
         <td style="padding:9px 16px;color:#57534E;font-size:12px;">${consolidatedItems(m.entries)}</td>
       </tr>`).join('')
 
+    // padding is on each block (not a wrapper div) so no container padding
+    // bleeds onto the top of a new page after a page break.
     return `
-    <div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">
+    <div style="margin:0 40px 28px;page-break-inside:avoid;break-inside:avoid;">
       <div style="background:#D97706;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0;">
         <span style="font-size:14px;font-weight:700;">${company.company_name}</span>
         <span style="font-size:14px;font-weight:700;">${formatEuro(company.total_cents)}</span>
@@ -147,17 +149,9 @@ export function buildReportHtml(
     </div>
   </div>
 
-  <!-- Company sections -->
-  <div style="padding:0 40px;">
-    <h2 style="font-size:13px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">Aufschlüsselung nach Unternehmen</h2>
-    ${companySections}
-  </div>
-
-  <!-- Grand total -->
-  <div style="margin:8px 40px 40px;padding:14px 16px;background:#292524;border-radius:8px;display:flex;justify-content:space-between;align-items:center;page-break-inside:avoid;break-inside:avoid;">
-    <span style="color:#fff;font-size:15px;font-weight:700;">Gesamtbetrag</span>
-    <span style="color:#fff;font-size:15px;font-weight:700;">${formatEuro(totalCents)}</span>
-  </div>
+  <!-- Company sections — no wrapper div, each block carries its own horizontal margin -->
+  <h2 style="font-size:13px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.08em;margin:0 40px 16px;">Aufschlüsselung nach Unternehmen</h2>
+  ${companySections}
 
   <!-- Footer: position:fixed pins it to the bottom of every PDF page -->
   <div style="position:fixed;bottom:0;left:0;right:0;height:13mm;padding:0 40px;border-top:1px solid #E7E5E4;display:flex;justify-content:space-between;align-items:center;background:#fff;">

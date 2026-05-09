@@ -296,18 +296,23 @@ export async function archiveTransactions(
   const supabase = makeSupabase()
   const now = new Date().toISOString()
 
+  // upsert with ignoreDuplicates so re-sending the same month's report
+  // never fails — rows already archived are simply skipped.
   const { error: archErr } = await supabase
     .from('transactions_archive')
-    .insert(transactions.map(t => ({
-      id: t.id,
-      member_id: t.member_id,
-      company_id: t.company_id,
-      item_id: t.item_id,
-      quantity: t.quantity,
-      logged_at: t.logged_at,
-      archived_at: now,
-      report_month: reportMonth,
-    })))
+    .upsert(
+      transactions.map(t => ({
+        id: t.id,
+        member_id: t.member_id,
+        company_id: t.company_id,
+        item_id: t.item_id,
+        quantity: t.quantity,
+        logged_at: t.logged_at,
+        archived_at: now,
+        report_month: reportMonth,
+      })),
+      { onConflict: 'id,report_month', ignoreDuplicates: true },
+    )
 
   if (archErr) throw new Error(`Archive insert failed: ${archErr.message}`)
 }
