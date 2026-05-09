@@ -363,11 +363,11 @@ export async function sendEmail(
   const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
     .toLocaleDateString('de-DE', { month: 'long' })
 
-  // Absolute URL for the cappuccino illustration — Gmail and Outlook block data: URIs
-  // but load plain HTTPS <img> tags fine. APP_URL is set in Vercel env vars;
-  // falls back to the production domain so existing deployments work without config change.
+  // Absolute URLs — Gmail/Outlook block data: URIs, plain HTTPS <img> loads fine.
+  // APP_URL falls back to the production domain so no config change needed on existing deploys.
   const appUrl = (process.env.APP_URL ?? 'https://kaffeelisten.vercel.app').replace(/\/$/, '')
-  const cappuccinoSrc = `${appUrl}/assets/illustrations/cappuccino-with-steam.svg`
+  // White-stroke version of the illustration for use on the amber header background
+  const cappuccinoWhiteSrc = `${appUrl}/assets/illustrations/cappuccino-white.svg`
 
   const companyRows = summaries
     .map(c => `
@@ -383,12 +383,14 @@ export async function sendEmail(
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:system-ui,sans-serif;background:#FAFAF9;margin:0;padding:32px;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E7E5E4;">
-    <div style="background:#D97706;padding:24px 32px;">
-      <p style="color:#fff;margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;">Kaffeelisten · ITC1 Deggendorf</p>
-      <h1 style="color:#fff;margin:8px 0 0;font-size:22px;font-weight:700;">Monatsbericht ${monthLabel}</h1>
+    <div style="background:#D97706;padding:22px 32px;display:flex;align-items:center;gap:20px;">
+      <img src="${cappuccinoWhiteSrc}" width="72" height="58" alt="" style="flex-shrink:0;opacity:.92;">
+      <div>
+        <p style="color:rgba(255,255,255,.8);margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Kaffeelisten · ITC1 Deggendorf</p>
+        <h1 style="color:#fff;margin:6px 0 0;font-size:22px;font-weight:700;">Monatsbericht ${monthLabel}</h1>
+      </div>
     </div>
     <div style="padding:28px 32px;">
-      <img src="${cappuccinoSrc}" width="120" height="96" alt="" style="display:block;margin:0 auto 24px;opacity:.75;">
       <p style="color:#57534E;margin:0 0 20px;">Anbei der Monatsbericht für <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Einträgen des ITC1-Campus.</p>
       <table style="width:100%;border-collapse:collapse;background:#FAFAF9;border-radius:8px;overflow:hidden;margin-bottom:24px;">
         <tr>
