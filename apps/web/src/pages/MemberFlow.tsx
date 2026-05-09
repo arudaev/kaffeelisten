@@ -52,18 +52,6 @@ function getLetterColor(name: string): string {
   return '#78716C'
 }
 
-function CompanyInitial({ name }: { name: string }) {
-  return (
-    <span
-      style={{ backgroundColor: getLetterColor(name) }}
-      className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base select-none"
-      aria-hidden="true"
-    >
-      {name[0] ?? '?'}
-    </span>
-  )
-}
-
 // localStorage-backed "Meine Firma" shortcut — only surfaces when ≥90% of
 // last 10 choices are the same company (self-suppresses on shared iPads).
 const HISTORY_KEY = 'kl_company_history'
@@ -367,7 +355,7 @@ export default function MemberFlow() {
                   <Tile
                     key={`shortcut-${suggested.id}`}
                     label={suggested.name}
-                    leading={<CompanyInitial name={suggested.name} />}
+                    accentColor={getLetterColor(suggested.name)}
                     onClick={() => selectCompany(suggested)}
                   />
                   <hr className="border-stone-200" />
@@ -377,7 +365,7 @@ export default function MemberFlow() {
                 <Tile
                   key={c.id}
                   label={c.name}
-                  leading={<CompanyInitial name={c.name} />}
+                  accentColor={getLetterColor(c.name)}
                   onClick={() => selectCompany(c)}
                 />
               ))}
