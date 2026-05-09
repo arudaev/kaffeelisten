@@ -5,10 +5,12 @@ interface TileProps {
   sub?: string
   selected?: boolean
   leading?: ReactNode
+  accentColor?: string
   onClick: () => void
 }
 
-export default function Tile({ label, sub, selected = false, leading, onClick }: TileProps) {
+export default function Tile({ label, sub, selected = false, leading, accentColor, onClick }: TileProps) {
+  const arrowColor = selected ? '#b45309' : accentColor ?? undefined
   return (
     <button
       type="button"
@@ -29,7 +31,7 @@ export default function Tile({ label, sub, selected = false, leading, onClick }:
         <span className="text-lg sm:text-xl font-semibold text-stone-900">{label}</span>
         {sub && <span className="text-sm text-stone-600">{sub}</span>}
       </div>
-      <span className={selected ? 'text-amber-700' : 'text-stone-400'}>
+      <span style={arrowColor ? { color: arrowColor } : undefined} className={!arrowColor ? 'text-stone-400' : undefined}>
         <svg
           width="18"
           height="18"
