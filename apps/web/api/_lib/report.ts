@@ -178,6 +178,11 @@ const rowBorder: Partial<ExcelJS.Borders> = {
   bottom: { style: 'thin', color: { argb: STONE_200 } },
 }
 
+function addReportWorksheet(wb: ExcelJS.Workbook, name: string): ExcelJS.Worksheet {
+  // Excel desktop can collapse custom row heights when sheetViews is omitted.
+  return wb.addWorksheet(name, { views: [{ state: 'normal' }] })
+}
+
 function styleHeaderRow(row: ExcelJS.Row, colCount: number): void {
   for (let i = 1; i <= colCount; i++) {
     const cell = row.getCell(i)
@@ -208,7 +213,7 @@ export async function generateExcel(
   wb.created = new Date()
 
   // ── Sheet 1: Zusammenfassung ──────────────────────────────────────────────
-  const ws1 = wb.addWorksheet('Zusammenfassung')
+  const ws1 = addReportWorksheet(wb, 'Zusammenfassung')
   ws1.columns = [
     { key: 'company', width: 34 },
     { key: 'entries', width: 14 },
@@ -246,7 +251,7 @@ export async function generateExcel(
   tot1.getCell(3).alignment = { horizontal: 'right' }
 
   // ── Sheet 2: Pro Unternehmen ──────────────────────────────────────────────
-  const ws2 = wb.addWorksheet('Pro Unternehmen')
+  const ws2 = addReportWorksheet(wb, 'Pro Unternehmen')
   ws2.columns = [
     { key: 'company', width: 26 },
     { key: 'person',  width: 26 },
@@ -289,7 +294,7 @@ export async function generateExcel(
   })
 
   // ── Sheet 3: Alle Einträge ────────────────────────────────────────────────
-  const ws3 = wb.addWorksheet('Alle Einträge')
+  const ws3 = addReportWorksheet(wb, 'Alle Einträge')
   ws3.columns = [
     { key: 'date',       width: 13 },
     { key: 'time',       width: 9  },
