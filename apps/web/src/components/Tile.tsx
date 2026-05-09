@@ -1,11 +1,16 @@
+import type { ReactNode } from 'react'
+
 interface TileProps {
   label: string
   sub?: string
   selected?: boolean
+  leading?: ReactNode
+  accentColor?: string
   onClick: () => void
 }
 
-export default function Tile({ label, sub, selected = false, onClick }: TileProps) {
+export default function Tile({ label, sub, selected = false, leading, accentColor, onClick }: TileProps) {
+  const arrowColor = selected ? '#b45309' : accentColor ?? undefined
   return (
     <button
       type="button"
@@ -21,18 +26,25 @@ export default function Tile({ label, sub, selected = false, onClick }: TileProp
       ]
         .join(' ')}
     >
+      {leading}
       <div className="flex flex-col gap-0.5 flex-1">
         <span className="text-lg sm:text-xl font-semibold text-stone-900">{label}</span>
         {sub && <span className="text-sm text-stone-600">{sub}</span>}
       </div>
-      <span className={selected ? 'text-amber-700' : 'text-stone-400'}>
+      <span
+        style={arrowColor ? { backgroundColor: arrowColor + '18', color: arrowColor } : undefined}
+        className={[
+          'flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg',
+          !arrowColor ? 'text-stone-400' : '',
+        ].join(' ')}
+      >
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"

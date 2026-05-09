@@ -15,6 +15,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - **239 members**: 10–12 per established company, 2–5 per startup; realistic German names with `vorname.nachname@company-domain` work emails
   - **12 items**: Filterkaffee, Espresso, Cappuccino, Latte Macchiato, Wasser, Cola, Radler, Apfelsaft, Donut, Croissant, Brezel, Müsliriegel — with correct categories and prices
   - **391 transactions**: May 2026 (7 working days); 78 % member attendance; first transaction per member always coffee; morning-biased timestamps
+- Company selector: colored letter-band chevrons for faster visual scanning when scrolling through a long company list
+- "Meine Firma" shortcut: appears on the start/company screen when 90 %+ of recent on-device selections (localStorage) are the same company — one tap skips the company step entirely
+
+### Fixed
+- TÜV NORD Diagnostics GmbH: corrected garbled `Ü` encoding in the database (was stored as mojibake from the initial seed run)
 
 ---
 
