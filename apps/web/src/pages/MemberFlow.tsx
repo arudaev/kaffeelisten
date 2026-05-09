@@ -426,7 +426,7 @@ export default function MemberFlow() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-stone-700" htmlFor="self-email">
-                    Arbeits-E-Mail <span className="text-stone-400 font-normal">(optional)</span>
+                    Arbeits-E-Mail
                   </label>
                   <input
                     id="self-email"
