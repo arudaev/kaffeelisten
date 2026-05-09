@@ -155,52 +155,47 @@ export async function generatePdf(
   }
 }
 
-// ─── Excel (ExcelJS — full brand styling) ─────────────────────────────────────
+// ─── Excel ────────────────────────────────────────────────────────────────────
 
-// Brand palette
-const AMBER       = 'FFD97706'  // amber-600
-const AMBER_DARK  = 'FFB45309'  // amber-700
-const AMBER_LIGHT = 'FFFFFBEB'  // amber-50
-const STONE_900   = 'FF1C1917'
-const STONE_600   = 'FF57534E'
-const STONE_200   = 'FFE7E5E4'
-const STONE_50    = 'FFFAFAF9'
-const WHITE       = 'FFFFFFFF'
+const AMBER      = 'FFD97706'
+const AMBER_DARK = 'FFB45309'
+const AMBER_50   = 'FFFFFBEB'
+const STONE_200  = 'FFE7E5E4'
+const STONE_50   = 'FFFAFAF9'
+const WHITE      = 'FFFFFFFF'
 
-type Fill   = ExcelJS.Fill
-type Border = Partial<ExcelJS.Borders>
-type Font   = Partial<ExcelJS.Font>
+type Fill = ExcelJS.Fill
+type Font = Partial<ExcelJS.Font>
 
-const headerFill:  Fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } }
-const totalFill:   Fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER_LIGHT } }
-const altFill:     Fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: STONE_50 } }
-const darkFill:    Fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: STONE_900 } }
+const headerFill: Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER },     bgColor: { argb: WHITE } }
+const altFill:    Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STONE_50 },  bgColor: { argb: WHITE } }
+const totalFill:  Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER_50 },  bgColor: { argb: WHITE } }
 
-const headerFont:  Font   = { bold: true, color: { argb: WHITE },     size: 11 }
-const totalFont:   Font   = { bold: true, color: { argb: AMBER_DARK }, size: 11 }
-const labelFont:   Font   = { bold: true, color: { argb: WHITE },     size: 10 }
+const headerFont: Font = { bold: true, color: { argb: WHITE },     size: 11 }
+const totalFont:  Font = { bold: true, color: { argb: AMBER_DARK }, size: 11 }
 
-const thinBorder: ExcelJS.BorderStyle = 'thin'
-const gridBorder: Border = {
-  bottom: { style: thinBorder, color: { argb: STONE_200 } },
+const rowBorder: Partial<ExcelJS.Borders> = {
+  bottom: { style: 'thin', color: { argb: STONE_200 } },
 }
 
-function applyHeaderRow(row: ExcelJS.Row): void {
-  row.eachCell(cell => {
-    cell.fill = headerFill
-    cell.font = headerFont
+function styleHeaderRow(row: ExcelJS.Row, colCount: number): void {
+  for (let i = 1; i <= colCount; i++) {
+    const cell = row.getCell(i)
+    cell.fill      = headerFill
+    cell.font      = headerFont
     cell.alignment = { vertical: 'middle', wrapText: false }
-    cell.border = { bottom: { style: 'medium', color: { argb: AMBER_DARK } } }
-  })
+    cell.border    = { bottom: { style: 'medium', color: { argb: AMBER_DARK } } }
+  }
   row.height = 22
 }
 
-function applyTotalRow(row: ExcelJS.Row): void {
-  row.eachCell(cell => {
-    cell.fill = totalFill
-    cell.font = totalFont
+function styleTotalRow(row: ExcelJS.Row, colCount: number): void {
+  for (let i = 1; i <= colCount; i++) {
+    const cell = row.getCell(i)
+    cell.fill   = totalFill
+    cell.font   = totalFont
     cell.border = { top: { style: 'medium', color: { argb: AMBER } } }
-  })
+  }
   row.height = 20
 }
 
@@ -209,77 +204,60 @@ export async function generateExcel(
   transactions: EnrichedTransaction[],
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook()
-  wb.creator  = 'Kaffeelisten'
-  wb.created  = new Date()
+  wb.creator = 'Kaffeelisten'
+  wb.created = new Date()
 
   // ── Sheet 1: Zusammenfassung ──────────────────────────────────────────────
-  const ws1 = wb.addWorksheet('Zusammenfassung', {
-    properties: { tabColor: { argb: AMBER } },
-    pageSetup:  { paperSize: 9, orientation: 'portrait' },
-  })
-
+  const ws1 = wb.addWorksheet('Zusammenfassung')
   ws1.columns = [
-    { header: 'Unternehmen',    key: 'company',  width: 34 },
-    { header: 'Einträge',       key: 'entries',  width: 14 },
-    { header: 'Gesamtbetrag',   key: 'total',    width: 20 },
+    { key: 'company', width: 34 },
+    { key: 'entries', width: 14 },
+    { key: 'total',   width: 20 },
   ]
 
-  // Header row
-  applyHeaderRow(ws1.getRow(1))
-  ws1.getRow(1).getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
-  ws1.getRow(1).getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
+  const hdr1 = ws1.addRow(['Unternehmen', 'Einträge', 'Gesamtbetrag'])
+  styleHeaderRow(hdr1, 3)
+  hdr1.getCell(2).alignment = { horizontal: 'center',  vertical: 'middle' }
+  hdr1.getCell(3).alignment = { horizontal: 'right',   vertical: 'middle' }
 
-  // Data rows
   summaries.forEach((c, i) => {
     const row = ws1.addRow([
       c.company_name,
       c.total_entries,
       Number((c.total_cents / 100).toFixed(2)),
     ])
-    if (i % 2 === 1) row.eachCell(cell => { cell.fill = altFill })
+    if (i % 2 === 1) { for (let j = 1; j <= 3; j++) row.getCell(j).fill = altFill }
     row.getCell(2).alignment = { horizontal: 'center' }
     row.getCell(3).numFmt    = '#,##0.00 "€"'
     row.getCell(3).alignment = { horizontal: 'right' }
-    row.eachCell(cell => { cell.border = gridBorder })
+    for (let j = 1; j <= 3; j++) row.getCell(j).border = rowBorder
     row.height = 18
   })
 
-  // Total row
   const grandTotal = summaries.reduce((s, c) => s + c.total_cents, 0)
-  const totalRow1  = ws1.addRow([
+  const tot1 = ws1.addRow([
     'Gesamt',
     summaries.reduce((s, c) => s + c.total_entries, 0),
     Number((grandTotal / 100).toFixed(2)),
   ])
-  applyTotalRow(totalRow1)
-  totalRow1.getCell(2).alignment = { horizontal: 'center' }
-  totalRow1.getCell(3).numFmt    = '#,##0.00 "€"'
-  totalRow1.getCell(3).alignment = { horizontal: 'right' }
-  totalRow1.getCell(1).font      = { ...totalFont, size: 12 }
+  styleTotalRow(tot1, 3)
+  tot1.getCell(2).alignment = { horizontal: 'center' }
+  tot1.getCell(3).numFmt    = '#,##0.00 "€"'
+  tot1.getCell(3).alignment = { horizontal: 'right' }
 
   // ── Sheet 2: Pro Unternehmen ──────────────────────────────────────────────
-  const ws2 = wb.addWorksheet('Pro Unternehmen', {
-    properties: { tabColor: { argb: AMBER_DARK } },
-  })
-
+  const ws2 = wb.addWorksheet('Pro Unternehmen')
   ws2.columns = [
-    { header: 'Unternehmen', key: 'company', width: 26 },
-    { header: 'Person',      key: 'person',  width: 26 },
-    { header: 'Einträge',    key: 'entries', width: 12 },
-    { header: 'Betrag',      key: 'total',   width: 18 },
+    { key: 'company', width: 26 },
+    { key: 'person',  width: 26 },
+    { key: 'entries', width: 12 },
+    { key: 'total',   width: 18 },
   ]
 
-  // Dark header for this sheet
-  const hdr2 = ws2.getRow(1)
-  hdr2.eachCell(cell => {
-    cell.fill      = darkFill
-    cell.font      = labelFont
-    cell.alignment = { vertical: 'middle' }
-    cell.border    = { bottom: { style: 'medium', color: { argb: AMBER } } }
-  })
+  const hdr2 = ws2.addRow(['Unternehmen', 'Person', 'Einträge', 'Betrag'])
+  styleHeaderRow(hdr2, 4)
   hdr2.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }
   hdr2.getCell(4).alignment = { horizontal: 'right',  vertical: 'middle' }
-  hdr2.height = 22
 
   let rowIdx = 0
   summaries.forEach(company => {
@@ -290,49 +268,43 @@ export async function generateExcel(
         member.entries.length,
         Number((member.subtotal_cents / 100).toFixed(2)),
       ])
-      if (rowIdx % 2 === 1) row.eachCell(cell => { cell.fill = altFill })
+      if (rowIdx % 2 === 1) { for (let j = 1; j <= 4; j++) row.getCell(j).fill = altFill }
       row.getCell(3).alignment = { horizontal: 'center' }
       row.getCell(4).numFmt    = '#,##0.00 "€"'
       row.getCell(4).alignment = { horizontal: 'right' }
-      row.eachCell(cell => { cell.border = gridBorder })
+      for (let j = 1; j <= 4; j++) row.getCell(j).border = rowBorder
       row.height = 18
       rowIdx++
     })
-    // Company subtotal
-    const subRow = ws2.addRow([
-      `${company.company_name} — Gesamt`,
-      '',
+    const sub = ws2.addRow([
+      `${company.company_name} — Gesamt`, '',
       company.total_entries,
       Number((company.total_cents / 100).toFixed(2)),
     ])
-    applyTotalRow(subRow)
-    subRow.getCell(3).alignment = { horizontal: 'center' }
-    subRow.getCell(4).numFmt    = '#,##0.00 "€"'
-    subRow.getCell(4).alignment = { horizontal: 'right' }
+    styleTotalRow(sub, 4)
+    sub.getCell(3).alignment = { horizontal: 'center' }
+    sub.getCell(4).numFmt    = '#,##0.00 "€"'
+    sub.getCell(4).alignment = { horizontal: 'right' }
     rowIdx++
   })
 
   // ── Sheet 3: Alle Einträge ────────────────────────────────────────────────
-  const ws3 = wb.addWorksheet('Alle Einträge', {
-    properties: { tabColor: { argb: 'FF78716C' } },
-  })
-
+  const ws3 = wb.addWorksheet('Alle Einträge')
   ws3.columns = [
-    { header: 'Datum',          key: 'date',       width: 13 },
-    { header: 'Uhrzeit',        key: 'time',        width: 9  },
-    { header: 'Person',         key: 'person',      width: 26 },
-    { header: 'Unternehmen',    key: 'company',     width: 26 },
-    { header: 'Item',           key: 'item',        width: 22 },
-    { header: 'Kategorie',      key: 'category',    width: 14 },
-    { header: 'Menge',          key: 'quantity',    width: 9  },
-    { header: 'Einzelpreis',    key: 'unit_price',  width: 16 },
-    { header: 'Betrag',         key: 'total',       width: 14 },
+    { key: 'date',       width: 13 },
+    { key: 'time',       width: 9  },
+    { key: 'person',     width: 26 },
+    { key: 'company',    width: 26 },
+    { key: 'item',       width: 22 },
+    { key: 'category',   width: 14 },
+    { key: 'quantity',   width: 9  },
+    { key: 'unit_price', width: 16 },
+    { key: 'total',      width: 14 },
   ]
 
-  applyHeaderRow(ws3.getRow(1))
-  ;[7, 8, 9].forEach(i => {
-    ws3.getRow(1).getCell(i).alignment = { horizontal: 'right', vertical: 'middle' }
-  })
+  const hdr3 = ws3.addRow(['Datum', 'Uhrzeit', 'Person', 'Unternehmen', 'Item', 'Kategorie', 'Menge', 'Einzelpreis', 'Betrag'])
+  styleHeaderRow(hdr3, 9)
+  ;[7, 8, 9].forEach(i => { hdr3.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
 
   transactions.forEach((t, i) => {
     const row = ws3.addRow([
@@ -346,13 +318,13 @@ export async function generateExcel(
       Number((t.price_cents / 100).toFixed(2)),
       Number((t.total_cents  / 100).toFixed(2)),
     ])
-    if (i % 2 === 1) row.eachCell(cell => { cell.fill = altFill })
+    if (i % 2 === 1) { for (let j = 1; j <= 9; j++) row.getCell(j).fill = altFill }
     row.getCell(7).alignment = { horizontal: 'right' }
     row.getCell(8).numFmt    = '#,##0.00 "€"'
     row.getCell(8).alignment = { horizontal: 'right' }
     row.getCell(9).numFmt    = '#,##0.00 "€"'
     row.getCell(9).alignment = { horizontal: 'right' }
-    row.eachCell(cell => { cell.border = gridBorder })
+    for (let j = 1; j <= 9; j++) row.getCell(j).border = rowBorder
     row.height = 18
   })
 
