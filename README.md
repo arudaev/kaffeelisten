@@ -9,7 +9,7 @@ Built by **HuggyWuggies** for the
 [ITC1 Deggendorf](https://www.itc-deggendorf.de/).
 
 **Live app:** [kaffeelisten.vercel.app](https://kaffeelisten.vercel.app)  
-**Pitch deck:** [docs/index.html](docs/index.html)
+**Pitch deck:** [arudaev.github.io/kaffeelisten](https://arudaev.github.io/kaffeelisten/)
 
 ## What It Does
 
@@ -39,7 +39,9 @@ archives the live transactions, and resets the current-month table.
 
 ### Landing
 
-<img src="docs/screenshots/landing.png" alt="Kaffeelisten landing page" width="690">
+<a href="https://kaffeelisten.vercel.app">
+  <img src="docs/screenshots/landing.png" alt="Kaffeelisten landing page" width="690">
+</a>
 
 ### Member Flow
 
@@ -223,7 +225,7 @@ wall-mounted member terminal.
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
 - [Roadmap](docs/roadmap.md)
-- [Pitch deck](docs/index.html)
+- [Pitch deck](https://arudaev.github.io/kaffeelisten/)
 
 ## License
 
