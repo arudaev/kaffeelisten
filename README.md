@@ -229,4 +229,9 @@ wall-mounted member terminal.
 
 ## License
 
-No license file is currently included.
+Copyright 2026 HuggyWuggies. Licensed under the
+[Apache License 2.0](LICENSE).
+
+This license applies to the source code in this repository. Third-party names,
+logos, and event or campus branding, including ITC1 Deggendorf and B4Y3RW4LD
+Hackathon references, remain the property of their respective owners.
