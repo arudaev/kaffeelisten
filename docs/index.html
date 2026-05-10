@@ -1,0 +1,1335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kaffeelisten — HuggyWuggies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stone-50:  #FAFAF9;
+    --stone-100: #F5F5F4;
+    --stone-200: #E7E5E4;
+    --stone-300: #D6D3D1;
+    --stone-400: #A8A29E;
+    --stone-500: #78716C;
+    --stone-600: #57534E;
+    --stone-700: #44403C;
+    --stone-800: #292524;
+    --stone-900: #1C1917;
+    --amber-50:  #FFFBEB;
+    --amber-100: #FEF3C7;
+    --amber-600: #D97706;
+    --amber-700: #B45309;
+    --green-600: #16A34A;
+    --red-600:   #DC2626;
+    --blue-600:  #2563EB;
+
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    --pad-top:    96px;
+    --pad-bottom: 88px;
+    --pad-x:      112px;
+  }
+
+  html, body { margin: 0; padding: 0; background: #000; color: var(--stone-900); }
+  body { font-family: var(--font-sans); font-feature-settings: "ss01", "cv11"; }
+
+  deck-stage section {
+    background: var(--stone-50);
+    color: var(--stone-900);
+    overflow: hidden;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  .frame {
+    width: 100%; height: 100%;
+    box-sizing: border-box;
+    padding: var(--pad-top) var(--pad-x) var(--pad-bottom);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .frame.dark { background: var(--stone-900); color: var(--stone-50); }
+  .frame.amber { background: var(--amber-600); color: #fff; }
+  .frame.cream { background: var(--amber-50); }
+
+  .topbar {
+    position: absolute;
+    top: 48px; left: var(--pad-x); right: var(--pad-x);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--stone-400);
+    text-transform: uppercase;
+  }
+  .frame.dark .topbar  { color: var(--stone-500); }
+  .frame.amber .topbar { color: rgba(255,255,255,0.78); }
+  .topbar .lockup { display: flex; align-items: center; gap: 12px; }
+  .topbar .mark {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--amber-600);
+    display: grid; place-items: center;
+    color: #fff;
+    overflow: hidden;
+  }
+  .frame.amber .topbar .mark { background: rgba(255,255,255,0.18); }
+  .topbar .mark img { width: 22px; height: 22px; filter: brightness(0) invert(1); }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--amber-700);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .frame.dark .eyebrow { color: var(--amber-600); }
+  .frame.amber .eyebrow { color: rgba(255,255,255,0.85); }
+
+  h1.slide-title {
+    margin: 0;
+    font-size: 84px;
+    line-height: 1.02;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    text-wrap: pretty;
+  }
+  h2.slide-subtitle {
+    margin: 28px 0 0;
+    font-size: 36px;
+    line-height: 1.3;
+    font-weight: 400;
+    color: var(--stone-600);
+    text-wrap: pretty;
+    max-width: 1300px;
+  }
+  .frame.dark h2.slide-subtitle { color: var(--stone-300); }
+  .frame.amber h2.slide-subtitle { color: rgba(255,255,255,0.86); }
+
+  .footnote {
+    position: absolute;
+    bottom: 48px; left: var(--pad-x); right: var(--pad-x);
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--stone-400);
+    letter-spacing: 0.06em;
+  }
+  .frame.dark .footnote  { color: var(--stone-500); }
+  .frame.amber .footnote { color: rgba(255,255,255,0.65); }
+
+  .accent { color: var(--amber-600); }
+  .rule { height: 1px; background: var(--stone-200); width: 100%; }
+  .frame.dark .rule { background: var(--stone-700); }
+  .deck-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .deck-link:visited { color: inherit; }
+  .deck-link:focus-visible {
+    outline: 2px solid var(--amber-600);
+    outline-offset: 6px;
+    border-radius: 8px;
+  }
+
+  /* ---------- SLIDE 1 — Cover ---------- */
+  .cover { padding: 0 var(--pad-x); height: 100%; display: grid; grid-template-columns: 1.15fr 1fr; gap: 80px; align-items: stretch; }
+  .cover .left { display: flex; flex-direction: column; justify-content: space-between; padding: 88px 0 80px; }
+  .cover .corner {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--font-mono); font-size: 18px;
+    color: var(--stone-400); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .cover .corner .m {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--amber-600); display: grid; place-items: center;
+  }
+  .cover .corner .m img { width: 26px; height: 26px; filter: brightness(0) invert(1); }
+  .cover h1 {
+    margin: 0;
+    font-size: 232px;
+    line-height: 0.88;
+    font-weight: 700;
+    letter-spacing: -0.045em;
+  }
+  .cover h1 .dot { color: var(--amber-600); }
+  .cover .tag {
+    font-size: 34px;
+    font-weight: 400;
+    color: var(--stone-600);
+    margin-top: 32px;
+    max-width: 700px;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+  }
+  .cover .meta {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    column-gap: 64px;
+    font-family: var(--font-mono);
+    color: var(--stone-700);
+    font-size: 22px;
+  }
+  .cover .meta .k { text-transform: uppercase; font-size: 14px; color: var(--stone-400); margin-bottom: 8px; letter-spacing: 0.08em; }
+  .cover .right {
+    background: var(--amber-600);
+    color: #fff;
+    display: grid; place-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover .right .cup { width: 78%; color: #fff; display: block; }
+  .cover .right .cup img { width: 100%; height: auto; filter: brightness(0) invert(1); }
+  .cover .right .pine {
+    position: absolute; right: 0; bottom: 0; width: 56%; opacity: 0.18;
+  }
+  .cover .right .pine img { width: 100%; filter: brightness(0) invert(1); }
+  .cover .right .meta-r {
+    position: absolute; bottom: 56px; left: 56px; right: 56px;
+    display: flex; justify-content: space-between; align-items: end;
+    font-family: var(--font-mono); font-size: 18px; letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.8); text-transform: uppercase;
+  }
+  .cover .right .meta-r .badge {
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 999px; padding: 8px 14px;
+    font-size: 16px;
+  }
+
+  /* ---------- SLIDE 2 — Quote / paper ---------- */
+  .quote-slide {
+    display: grid; grid-template-columns: 1fr 0.95fr; gap: 100px;
+    align-items: center; height: 100%;
+  }
+  .quote-slide .q {
+    font-size: 64px; line-height: 1.18; font-weight: 500;
+    letter-spacing: -0.02em; color: var(--stone-900); text-wrap: balance;
+  }
+  .quote-slide .q .em { color: var(--amber-700); font-style: normal; }
+  .quote-slide .who {
+    margin-top: 40px; font-family: var(--font-mono); font-size: 20px;
+    color: var(--stone-500); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .paper {
+    background: #FFFCF6;
+    border: 1px solid var(--stone-200);
+    border-radius: 4px;
+    padding: 44px 52px 56px;
+    transform: rotate(-1.6deg);
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.22), 0 8px 16px -8px rgba(0,0,0,0.08);
+    position: relative;
+  }
+  .paper:before {
+    content: ""; position: absolute; left: 88px; top: 32px; bottom: 32px; width: 1px;
+    background: var(--red-600); opacity: 0.5;
+  }
+  .paper h3 {
+    margin: 0 0 24px 0;
+    font-family: var(--font-mono);
+    font-size: 18px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--stone-700);
+    border-bottom: 2px solid var(--stone-900); padding-bottom: 12px;
+  }
+  .paper .row {
+    display: grid;
+    grid-template-columns: 0.8fr 1.6fr 1.2fr 0.6fr;
+    gap: 20px;
+    align-items: end;
+    padding: 14px 0 8px;
+    border-bottom: 1px dashed var(--stone-300);
+    font-family: 'Caveat', cursive;
+    font-size: 30px;
+    color: var(--stone-700);
+  }
+  .paper .row.head {
+    font-family: var(--font-mono); font-size: 12px; color: var(--stone-500);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .paper .row .scribble { color: var(--stone-400); font-style: italic; }
+  .paper .smudge {
+    position: absolute; bottom: 64px; right: 80px;
+    width: 78px; height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(180,83,9,0.42), rgba(180,83,9,0) 70%);
+    transform: rotate(-12deg);
+  }
+  .paper .strike {
+    position: relative;
+  }
+  .paper .strike:after {
+    content: ""; position: absolute;
+    left: -4px; right: -4px; top: 60%;
+    height: 2px; background: var(--red-600); transform: rotate(-3deg);
+  }
+
+  /* ---------- SLIDE 3 — Compare cost ---------- */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 56px; flex: 1; }
+  .compare .col {
+    background: #fff; border: 1px solid var(--stone-200); border-radius: 20px;
+    padding: 48px; display: flex; flex-direction: column;
+  }
+  .compare .col.bad { background: var(--stone-100); }
+  .compare .col.good { border-color: var(--amber-600); border-width: 2px; }
+  .compare .col .label {
+    font-family: var(--font-mono); font-size: 18px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--stone-500);
+  }
+  .compare .col.good .label { color: var(--amber-700); }
+  .compare .col h3 { margin: 18px 0 14px; font-size: 52px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  .compare .col p { font-size: 24px; line-height: 1.45; color: var(--stone-600); margin: 0 0 28px; max-width: 560px; }
+  .compare .col .price {
+    margin-top: auto; display: flex; align-items: baseline; gap: 14px;
+    font-family: var(--font-mono);
+  }
+  .compare .col .price .num { font-size: 88px; font-weight: 600; letter-spacing: -0.03em; color: var(--stone-900); }
+  .compare .col.bad .price .num { color: var(--red-600); }
+  .compare .col.good .price .num { color: var(--green-600); }
+  .compare .col .price .unit { font-size: 22px; color: var(--stone-500); }
+
+  /* ---------- SLIDE 4 — Solution / device ---------- */
+  .solution { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; height: 100%; }
+  .solution h1 { font-size: 96px; line-height: 1.0; font-weight: 700; letter-spacing: -0.03em; margin: 0; }
+  .solution .sub { font-size: 32px; line-height: 1.4; color: var(--stone-600); margin-top: 32px; max-width: 720px; }
+  .solution .stat-row {
+    margin-top: 48px; display: flex; gap: 48px;
+    border-top: 1px solid var(--stone-200);
+    padding-top: 32px;
+  }
+  .solution .stat-row .s .v { font-size: 56px; font-weight: 700; letter-spacing: -0.03em; }
+  .solution .stat-row .s .v .accent { color: var(--amber-600); }
+  .solution .stat-row .s .l { font-family: var(--font-mono); color: var(--stone-500); font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 6px;}
+
+  .device {
+    background: var(--stone-900); border-radius: 32px; padding: 14px;
+    aspect-ratio: 4 / 3;
+    box-shadow: 0 40px 80px -40px rgba(0,0,0,0.35);
+  }
+  .device .scrn {
+    background: var(--stone-50); border-radius: 20px; height: 100%;
+    box-sizing: border-box; padding: 36px 40px;
+    display: flex; flex-direction: column;
+  }
+  .device .scrn .h { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--stone-900); }
+  .device .scrn .h .sm { color: var(--stone-500); font-weight: 400; font-size: 18px; display: block; margin-top: 4px; }
+  .device .scrn .grid { margin-top: 24px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; flex: 1; }
+  .device .scrn .tile {
+    background: #fff; border: 1px solid var(--stone-200); border-radius: 12px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+    font-size: 18px; font-weight: 600; color: var(--stone-900);
+  }
+  .device .scrn .tile.sel {
+    background: var(--amber-50); border-color: var(--amber-600);
+    box-shadow: 0 0 0 3px rgba(217,119,6,0.18);
+  }
+  .device .scrn .tile .ic { width: 24px; height: 24px; color: var(--stone-500); }
+  .device .scrn .tile.sel .ic { color: var(--amber-700); }
+  .device .scrn .tile img { width: 24px; height: 24px; }
+  .device .scrn .footer {
+    margin-top: 16px; display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; background: var(--stone-900); color: #fff; border-radius: 12px;
+    font-size: 17px;
+  }
+  .device .scrn .footer .total { font-family: var(--font-mono); }
+  .device .scrn .footer .cta {
+    background: var(--amber-600); color: #fff;
+    padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 14px;
+  }
+
+  /* ---------- SLIDE 5 — Three taps ---------- */
+  .three-step { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 56px; flex: 1; }
+  .three-step .step {
+    background: #fff; border: 1px solid var(--stone-200); border-radius: 20px;
+    padding: 36px 32px 36px; display: flex; flex-direction: column; position: relative;
+  }
+  .three-step .step .n {
+    font-family: var(--font-mono); font-size: 18px; color: var(--amber-700);
+    letter-spacing: 0.08em; margin-bottom: 22px;
+  }
+  .three-step .step h3 {
+    margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1;
+  }
+  .three-step .step .ger {
+    margin-top: 8px; font-size: 20px; color: var(--stone-500); font-style: italic;
+  }
+  .three-step .step .preview {
+    margin-top: 24px; flex: 1;
+    background: var(--stone-100); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .three-step .step .row {
+    background: #fff; border: 1px solid var(--stone-200); border-radius: 8px;
+    padding: 10px 12px; font-size: 16px; color: var(--stone-800); font-weight: 500;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .three-step .step .row.active { background: var(--amber-50); border-color: var(--amber-600); }
+  .three-step .step .row .meta { font-family: var(--font-mono); color: var(--stone-500); font-size: 13px; font-weight: 400; }
+  .three-step .step .row.active .meta { color: var(--amber-700); }
+
+  /* ---------- SLIDE 6 — Admin panel ---------- */
+  .admin {
+    margin-top: 48px; display: grid; grid-template-columns: 240px 1fr;
+    flex: 1; border: 1px solid var(--stone-200); border-radius: 16px;
+    overflow: hidden; background: #fff;
+  }
+  .admin .side {
+    background: var(--stone-100); padding: 24px 18px; border-right: 1px solid var(--stone-200);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .admin .side .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; padding: 8px; }
+  .admin .side .brand .m { width: 28px; height: 28px; background: var(--amber-600); border-radius: 6px; display: grid; place-items: center; }
+  .admin .side .brand .m img { width: 22px; height: 22px; filter: brightness(0) invert(1); }
+  .admin .side .brand .name { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .admin .side .nav-item {
+    padding: 10px 12px; font-size: 16px; color: var(--stone-700); border-radius: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .admin .side .nav-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--stone-400); }
+  .admin .side .nav-item.active { background: #fff; color: var(--stone-900); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .admin .side .nav-item.active .dot { background: var(--amber-600); }
+  .admin .side .footer {
+    margin-top: auto; padding: 12px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--stone-400);
+    letter-spacing: 0.05em;
+  }
+  .admin .main { padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .admin .main .ph { display: flex; justify-content: space-between; align-items: center; }
+  .admin .main .ph h3 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em; }
+  .admin .main .ph .sub { font-family: var(--font-mono); font-size: 13px; color: var(--stone-500); margin-top: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .admin .main .ph .send {
+    background: var(--amber-600); color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .admin .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .admin .stat {
+    border: 1px solid var(--stone-200); border-left: 3px solid var(--amber-600);
+    border-radius: 10px; padding: 14px 16px; background: #fff;
+  }
+  .admin .stat .k { font-size: 11px; color: var(--stone-500); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .admin .stat .v { margin-top: 4px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .admin .stat .v small { font-size: 13px; color: var(--stone-500); font-weight: 500; }
+  .admin .table { border: 1px solid var(--stone-200); border-radius: 10px; overflow: hidden; flex: 1; }
+  .admin .table .th, .admin .table .tr {
+    display: grid; grid-template-columns: 0.8fr 1.4fr 1.6fr 1.0fr 0.5fr;
+    padding: 10px 16px; font-size: 14px; align-items: center;
+  }
+  .admin .table .th { background: var(--stone-50); color: var(--stone-500); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .admin .table .tr { border-top: 1px solid var(--stone-200); color: var(--stone-800); }
+  .admin .table .tr .qty { font-family: var(--font-mono); color: var(--stone-500); }
+
+  .device.real-ipad {
+    width: min(560px, 100%);
+    aspect-ratio: 3 / 4;
+    justify-self: center;
+    padding: 14px;
+    border-radius: 40px;
+  }
+  .device.real-ipad img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    border-radius: 28px;
+    background: #fff;
+  }
+  .device.real-ipad > :not(img) { display: none; }
+
+  .three-step.real-flow {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+    gap: 32px;
+    margin-top: 36px;
+  }
+  .three-step.real-flow .flow-shot {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+  }
+  .three-step.real-flow > .step { display: none; }
+  .three-step.real-flow .flow-shot .n {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--amber-700);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .three-step.real-flow .flow-shot .micro {
+    color: var(--stone-500);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .three-step.real-flow .flow-shot .shot-frame {
+    height: 520px;
+    padding: 0;
+    border: none;
+    border-radius: 18px;
+    background: transparent;
+    overflow: hidden;
+    box-shadow:
+      0 34px 76px -48px rgba(28,25,23,0.58),
+      0 12px 28px -26px rgba(28,25,23,0.35);
+  }
+  .three-step.real-flow .flow-shot img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 18px;
+    background: #fff;
+  }
+
+  .admin.real-admin-shot {
+    display: block;
+    width: min(1500px, 100%);
+    height: 620px;
+    margin: 40px auto 0;
+    border: 1px solid var(--stone-200);
+    border-radius: 18px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 28px 70px -44px rgba(0,0,0,0.42);
+  }
+  .admin.real-admin-shot img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: top;
+  }
+  .admin.real-admin-shot > :not(img) { display: none; }
+
+  /* ---------- SLIDE 7 — Pipeline ---------- */
+  .pipeline {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+    margin-top: 64px; flex: 1; align-items: stretch;
+  }
+  .pipeline .step {
+    position: relative; padding: 36px 28px 36px 32px;
+    border-right: 1px dashed var(--stone-700);
+    display: flex; flex-direction: column;
+  }
+  .pipeline .step:first-child { padding-left: 0; }
+  .pipeline .step:last-child { border-right: none; padding-right: 0; }
+  .pipeline .step .ix { font-family: var(--font-mono); color: var(--amber-600); font-size: 18px; letter-spacing: 0.08em; }
+  .pipeline .step h3 { margin: 14px 0 10px; font-size: 28px; font-weight: 700; letter-spacing: -0.015em; color: #fff; line-height: 1.15; }
+  .pipeline .step p { color: var(--stone-400); font-size: 18px; line-height: 1.5; margin: 0; }
+  .pipeline .step .when {
+    margin-top: auto; font-family: var(--font-mono); color: var(--stone-500);
+    font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 24px;
+  }
+  .pipeline .arrow {
+    position: absolute; right: -10px; top: 36px;
+    width: 20px; height: 20px; color: var(--amber-600);
+  }
+
+  /* ---------- SLIDE 8 — Numbers ---------- */
+  .numbers {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+    background: var(--stone-200); border: 1px solid var(--stone-200);
+    border-radius: 20px; overflow: hidden; margin-top: 56px; flex: 1;
+  }
+  .numbers .cell {
+    background: var(--stone-50); padding: 36px 48px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    gap: 14px; min-height: 0;
+  }
+  .numbers .cell .label {
+    font-family: var(--font-mono); font-size: 18px; color: var(--stone-500);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .numbers .cell .num { font-size: 128px; font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; color: var(--stone-900); }
+  .numbers .cell .num .u { font-size: 44px; color: var(--amber-600); margin-left: 8px; font-weight: 600; letter-spacing: -0.02em; }
+  .numbers .cell p { margin: 0; font-size: 22px; color: var(--stone-600); line-height: 1.4; max-width: 520px; }
+
+  /* ---------- SLIDE 9 — Stack ---------- */
+  .stack { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 56px; margin-top: 48px; flex: 1; align-items: stretch; }
+  .stack-flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--stone-200);
+    border-radius: 20px;
+    overflow: hidden;
+    background: #fff;
+    min-height: 500px;
+  }
+  .stack-node {
+    position: relative;
+    padding: 34px 24px 28px;
+    border-right: 1px solid var(--stone-200);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .stack-node:last-child { border-right: none; }
+  .stack-node:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    right: -18px;
+    top: 56px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--stone-50);
+    border: 1px solid var(--stone-200);
+    color: var(--amber-700);
+    font-family: var(--font-mono);
+    font-size: 20px;
+  }
+  .stack-node .ix {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--stone-500);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .stack-node h3 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+  }
+  .stack-node p {
+    margin: 0;
+    color: var(--stone-600);
+    font-size: 17px;
+    line-height: 1.45;
+  }
+  .stack-node .tier {
+    margin-top: auto;
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    color: var(--green-600);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--green-600);
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+  .stack .totals {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 32px 0;
+  }
+  .stack .totals .big { font-size: 150px; font-weight: 700; letter-spacing: -0.04em; line-height: 0.95; }
+  .stack .totals .big .small { font-size: 34px; color: var(--stone-500); display: block; margin-top: 18px; font-weight: 500; letter-spacing: -0.01em; }
+  .stack .totals .note { font-size: 22px; color: var(--stone-600); line-height: 1.5; max-width: 540px; }
+  .stack .totals .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--amber-50); color: var(--amber-700);
+    border: 1px solid var(--amber-100); padding: 8px 14px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.05em;
+    margin-bottom: 24px; align-self: flex-start;
+  }
+
+  /* ---------- SLIDE 10 — Roadmap ---------- */
+  .roadmap {
+    margin-top: 62px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    position: relative;
+  }
+  .roadmap:before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 42px;
+    height: 2px;
+    background: var(--stone-200);
+  }
+  .roadmap .phase {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 86px 28px 0 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .roadmap .phase:before {
+    content: "";
+    position: absolute;
+    top: 31px;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--stone-50);
+    border: 2px solid var(--stone-300);
+    box-shadow: 0 0 0 10px var(--stone-50);
+  }
+  .roadmap .phase .ix { font-family: var(--font-mono); font-size: 14px; color: var(--stone-500); letter-spacing: 0.08em; }
+  .roadmap .phase h3 { margin: 12px 0 16px; font-size: 25px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  .roadmap .phase ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+  .roadmap .phase li {
+    color: var(--stone-600); font-size: 17px; line-height: 1.4;
+    padding-left: 14px; position: relative;
+  }
+  .roadmap .phase li:before {
+    content: ""; position: absolute; left: 0; top: 10px; width: 6px; height: 1px; background: var(--stone-400);
+  }
+  .roadmap .phase.now { color: var(--stone-900); }
+  .roadmap .phase.now:before {
+    background: var(--amber-600);
+    border-color: var(--amber-600);
+    box-shadow: 0 0 0 10px var(--amber-50);
+  }
+  .roadmap .phase.now .ix { color: var(--amber-700); padding-right: 72px; }
+  .roadmap .phase.now .badge {
+    position: absolute; top: 24px; left: 42px;
+    background: var(--amber-600); color: #fff;
+    padding: 4px 10px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* ---------- SLIDE 11 — Closing ---------- */
+  .closing { height: 100%; display: grid; grid-template-rows: 1fr auto; align-items: end; padding-top: 32px; }
+  .closing .big {
+    font-size: 168px; line-height: 0.95; font-weight: 700;
+    letter-spacing: -0.045em; color: var(--stone-50); margin: 0;
+    text-wrap: balance;
+  }
+  .closing .big .em { color: var(--amber-600); }
+  .closing .strap {
+    margin-top: 48px; font-size: 32px; color: var(--stone-400);
+    max-width: 1100px; line-height: 1.4;
+  }
+  .closing .meta {
+    margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--stone-700);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+    font-family: var(--font-mono); font-size: 18px; color: var(--stone-300); letter-spacing: 0.04em;
+  }
+  .closing .meta .k { font-size: 13px; color: var(--stone-500); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+  /* ---------- helpers ---------- */
+  .row-flex { display: flex; align-items: center; gap: 12px; }
+  .seg {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 14px;
+    background: var(--amber-50); color: var(--amber-700);
+    border: 1px solid var(--amber-100);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .frame.dark .seg { background: rgba(217,119,6,0.12); border-color: rgba(217,119,6,0.3); color: var(--amber-600); }
+
+  /* deck-stage chrome tweaks */
+  deck-stage::part(counter) { font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080">
+
+<!-- ============================================================
+     SLIDE 1 — COVER
+     ============================================================ -->
+<section data-screen-label="01 Cover">
+  <div class="cover">
+    <div class="left">
+      <div class="corner">
+        <a class="m deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a>
+        <span>HuggyWuggies&nbsp;·&nbsp;<a class="deck-link" href="https://www.bayerwald-hackathon.de/" target="_blank" rel="noopener">B4Y3RW4LD&nbsp;Hackathon&nbsp;2026</a></span>
+      </div>
+      <div>
+        <h1>Kaffee<span class="dot">.</span><br>listen<span class="dot">.</span></h1>
+        <div class="tag">Der Zettel an der Wand ist nicht mehr zeitgemäß. Wir haben ihn digitalisiert — in unter 15&nbsp;Sekunden pro Kaffee.</div>
+      </div>
+      <div class="meta">
+        <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener"><div class="k">Team</div>HuggyWuggies</a>
+        <a class="deck-link" href="https://www.itc-deggendorf.de/" target="_blank" rel="noopener"><div class="k">Campus</div>ITC1 Deggendorf</a>
+        <a class="deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener"><div class="k">Live</div>kaffeelisten.vercel.app</a>
+      </div>
+    </div>
+    <div class="right">
+      <a class="cup deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/cappuccino-with-steam.svg" alt=""></a>
+      <div class="pine"><img src="assets/pine-silhouette.svg" alt=""></div>
+      <div class="meta-r">
+        <span><a class="deck-link" href="https://www.bayerwald-hackathon.de/" target="_blank" rel="noopener">Bayerischer&nbsp;Wald</a> · Mai&nbsp;2026</span>
+        <span class="badge">Pitch&nbsp;Deck&nbsp;v1</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 2 — THE PROBLEM (paper sheet)
+     ============================================================ -->
+<section data-screen-label="02 Problem">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Problem</span>
+    </div>
+
+    <div class="quote-slide">
+      <div>
+        <div class="eyebrow">Status quo</div>
+        <div class="q">
+          Auf einem Zettel an der Wand: <span class="em">Name. Firma. Was getrunken. Unterschrift.</span>
+          Am Monatsende sammelt der Geschäftsführer alles ein — und tippt es ab.
+        </div>
+        <div class="who"><a class="deck-link" href="https://www.itc-deggendorf.de/" target="_blank" rel="noopener">ITC1 Deggendorf</a> · 28&nbsp;Firmen · 239&nbsp;Mitglieder</div>
+      </div>
+
+      <div class="paper">
+        <h3>Kaffeeliste — Mai 2026</h3>
+        <div class="row head">
+          <span>Name</span><span>Firma</span><span>Produkt</span><span>✓</span>
+        </div>
+        <div class="row">
+          <span>Anna&nbsp;K.</span><span>Loop&nbsp;GmbH</span><span>Cappuccino</span><span class="scribble">a&nbsp;k</span>
+        </div>
+        <div class="row">
+          <span>Markus</span><span>—</span><span class="strike">Espresso&nbsp;×2</span><span class="scribble">m</span>
+        </div>
+        <div class="row">
+          <span class="scribble">unleserlich</span><span>?</span><span>Wasser</span><span class="scribble">…</span>
+        </div>
+        <div class="row">
+          <span>Lisa&nbsp;B.</span><span>FRWLD</span><span>Snack</span><span class="scribble">l&nbsp;b</span>
+        </div>
+        <div class="row">
+          <span>Tom</span><span>Loop</span><span>Latte&nbsp;Macc.</span><span class="scribble">✓</span>
+        </div>
+        <div class="row">
+          <span class="scribble">…</span><span class="scribble">…</span><span class="scribble">…</span><span></span>
+        </div>
+        <div class="smudge"></div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>02&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 3 — THE TWO PATHS
+     ============================================================ -->
+<section data-screen-label="03 Two paths">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Optionen</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Was hätte man tun können</div>
+    <h1 class="slide-title">Magnetknöpfe&nbsp;an&nbsp;der&nbsp;Wand —<br>oder eine&nbsp;<span class="accent">Webseite</span>.</h1>
+
+    <div class="compare">
+      <div class="col bad">
+        <div class="label">Option&nbsp;A — Hardware</div>
+        <h3>Pro Person ein Magnetknopf, verbunden mit einer Box am Kühlschrank.</h3>
+        <p>Anschaffung, Installation, defekte Sensoren, neue Mitarbeitende, kaputte Magnete. Wartung vom ersten Tag an.</p>
+        <div class="price">
+          <span class="num">~&nbsp;3 000&nbsp;€</span>
+          <span class="unit">+ jährliche Wartung</span>
+        </div>
+      </div>
+      <div class="col good">
+        <div class="label">Option&nbsp;B — Eine&nbsp;PWA</div>
+        <h3>Ein iPad an der Wand. Ein QR-Code daneben. Fertig.</h3>
+        <p>Läuft komplett auf Free-Tier-Diensten. Keine Konten, keine App-Stores, keine Hardware. Updates über Git Push.</p>
+        <div class="price">
+          <span class="num">0&nbsp;€</span>
+          <span class="unit">/&nbsp;Monat&nbsp;Infrastruktur</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>03&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 4 — SOLUTION
+     ============================================================ -->
+<section data-screen-label="04 Solution">
+  <div class="frame cream">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Lösung</span>
+    </div>
+
+    <div class="solution">
+      <div>
+        <div class="eyebrow">Die Lösung</div>
+        <h1>Tippen.<br>Tippen.<br><span class="accent">Tippen.</span></h1>
+        <div class="sub">Eine PWA, die an einer Wand klebt. Kein Login. Kein Konto. Keine App. Drei Bildschirme zwischen Tasse und Eintrag.</div>
+        <div class="stat-row">
+          <div class="s"><div class="v">&lt;&nbsp;15<span class="accent">s</span></div><div class="l">Pro&nbsp;Eintrag</div></div>
+          <div class="s"><div class="v">0<span class="accent">×</span></div><div class="l">Tippfehler&nbsp;auf&nbsp;Papier</div></div>
+          <div class="s"><div class="v">5<span class="accent">min</span></div><div class="l">Admin&nbsp;pro&nbsp;Monat</div></div>
+        </div>
+      </div>
+      <div class="device real-ipad">
+        <img src="screenshots/deck/item-selection.png" alt="Kaffeelisten item selection on iPad">
+        <div class="scrn" hidden>
+          <div class="h">Was hast du genommen?<span class="sm">Anna&nbsp;K. · Loop&nbsp;GmbH</span></div>
+          <div class="grid">
+            <div class="tile sel"><img src="assets/icon-cappuccino.svg" alt="">Cappuccino</div>
+            <div class="tile"><img src="assets/icon-coffee-cup.svg" alt="">Espresso</div>
+            <div class="tile"><img src="assets/icon-takeaway.svg" alt="">To-Go</div>
+            <div class="tile"><img src="assets/icon-drink.svg" alt="">Wasser</div>
+            <div class="tile"><img src="assets/icon-snack.svg" alt="">Snack</div>
+            <div class="tile sel"><img src="assets/icon-food.svg" alt="">Brezn</div>
+          </div>
+          <div class="footer">
+            <span class="total">2 Artikel · 3,40&nbsp;€</span>
+            <span class="cta">Bestätigen →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>04&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 5 — THREE TAPS
+     ============================================================ -->
+<section data-screen-label="05 Three taps">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Member Flow</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Der gesamte Flow</div>
+    <h1 class="slide-title">Drei Taps.<br>Keine&nbsp;Erklärung&nbsp;nötig.</h1>
+
+    <div class="three-step real-flow">
+      <div class="flow-shot">
+        <div class="n"><span>01&nbsp;&mdash;&nbsp;Firma</span><span class="micro">Unternehmen wählen</span></div>
+        <div class="shot-frame">
+          <img src="screenshots/deck/company-selection.png" alt="Company selection screen">
+        </div>
+      </div>
+      <div class="flow-shot">
+        <div class="n"><span>02&nbsp;&mdash;&nbsp;Mitglied</span><span class="micro">Namen antippen</span></div>
+        <div class="shot-frame">
+          <img src="screenshots/deck/member-selection.png" alt="Member selection screen">
+        </div>
+      </div>
+      <div class="flow-shot">
+        <div class="n"><span>03&nbsp;&mdash;&nbsp;Artikel</span><span class="micro">Kaffee buchen</span></div>
+        <div class="shot-frame">
+          <img src="screenshots/deck/item-selection.png" alt="Item selection screen">
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">01 — Firma</div>
+        <h3>Wer bist du?</h3>
+        <div class="ger">Welche Firma?</div>
+        <div class="preview">
+          <div class="row">Loop&nbsp;GmbH<span class="meta">14&nbsp;Mitgl.</span></div>
+          <div class="row active">FRWLD&nbsp;Studio<span class="meta">9&nbsp;Mitgl.</span></div>
+          <div class="row">Pinecone&nbsp;Labs<span class="meta">22&nbsp;Mitgl.</span></div>
+          <div class="row">Holzner&nbsp;Tech<span class="meta">7&nbsp;Mitgl.</span></div>
+          <div class="row">Itzlinger&nbsp;UG<span class="meta">5&nbsp;Mitgl.</span></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">02 — Mitglied</div>
+        <h3>Welcher Name?</h3>
+        <div class="ger">Vorname N.</div>
+        <div class="preview">
+          <div class="row">Anna&nbsp;K.<span class="meta">aktiv</span></div>
+          <div class="row">Markus&nbsp;P.<span class="meta">aktiv</span></div>
+          <div class="row active">Lisa&nbsp;B.<span class="meta">aktiv</span></div>
+          <div class="row">Tom&nbsp;S.<span class="meta">aktiv</span></div>
+          <div class="row">+ Ich&nbsp;bin&nbsp;noch&nbsp;nicht&nbsp;dabei<span class="meta">→</span></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="n">03 — Artikel</div>
+        <h3>Was hattest du?</h3>
+        <div class="ger">Multi-Item Warenkorb</div>
+        <div class="preview">
+          <div class="row active">Cappuccino<span class="meta">×&nbsp;1 · 1,80&nbsp;€</span></div>
+          <div class="row">Espresso<span class="meta">1,40&nbsp;€</span></div>
+          <div class="row active">Brezn<span class="meta">×&nbsp;2 · 3,00&nbsp;€</span></div>
+          <div class="row">Wasser<span class="meta">0,80&nbsp;€</span></div>
+          <div class="row">Snack<span class="meta">1,20&nbsp;€</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>05&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 6 — ADMIN PANEL
+     ============================================================ -->
+<section data-screen-label="06 Admin">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Admin</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Für den Geschäftsführer</div>
+    <h1 class="slide-title">Ein Tab. Ein&nbsp;Knopf. <span class="accent">Bericht&nbsp;senden.</span></h1>
+
+    <div class="admin real-admin-shot">
+      <img src="screenshots/deck/admin-dashboard.png" alt="Kaffeelisten admin dashboard">
+      <div class="side">
+        <div class="brand">
+          <span class="m"><img src="assets/logo.svg" alt=""></span>
+          <span class="name">Kaffeelisten</span>
+        </div>
+        <div class="nav-item active"><span class="dot"></span>Übersicht</div>
+        <div class="nav-item"><span class="dot"></span>Alle Einträge</div>
+        <div class="nav-item"><span class="dot"></span>Firmen</div>
+        <div class="nav-item"><span class="dot"></span>Mitglieder</div>
+        <div class="nav-item"><span class="dot"></span>Artikel</div>
+        <div class="nav-item"><span class="dot"></span>Bericht</div>
+        <div class="footer">v0.1 · Mai&nbsp;2026</div>
+      </div>
+      <div class="main">
+        <div class="ph">
+          <div>
+            <h3>Monatsübersicht</h3>
+            <div class="sub">Mai&nbsp;2026 · live</div>
+          </div>
+          <div class="send">→ Bericht senden</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k">Einträge</div><div class="v">1 284</div></div>
+          <div class="stat"><div class="k">Firmen aktiv</div><div class="v">28 <small>/&nbsp;28</small></div></div>
+          <div class="stat"><div class="k">Top-Artikel</div><div class="v" style="font-size:18px;">Cappuccino<br><small>412 ×</small></div></div>
+          <div class="stat"><div class="k">Umsatz</div><div class="v">2 137&nbsp;€</div></div>
+        </div>
+        <div class="table">
+          <div class="th">
+            <span>Datum</span><span>Mitglied</span><span>Firma</span><span>Artikel</span><span>Anz.</span>
+          </div>
+          <div class="tr">
+            <span>09.05 · 14:32</span><span>Anna K.</span><span>Loop GmbH</span><span>Cappuccino</span><span class="qty">× 1</span>
+          </div>
+          <div class="tr">
+            <span>09.05 · 14:31</span><span>Lisa B.</span><span>FRWLD Studio</span><span>Brezn</span><span class="qty">× 2</span>
+          </div>
+          <div class="tr">
+            <span>09.05 · 13:18</span><span>Tom S.</span><span>Pinecone Labs</span><span>Espresso</span><span class="qty">× 1</span>
+          </div>
+          <div class="tr">
+            <span>09.05 · 12:54</span><span>Markus P.</span><span>Holzner Tech</span><span>Latte Macchiato</span><span class="qty">× 1</span>
+          </div>
+          <div class="tr">
+            <span>09.05 · 11:09</span><span>Sofia R.</span><span>Itzlinger UG</span><span>Wasser</span><span class="qty">× 3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>06&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 7 — MONTHLY PIPELINE (dark)
+     ============================================================ -->
+<section data-screen-label="07 Pipeline">
+  <div class="frame dark">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Monatsbericht</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Was am Monatsende passiert</div>
+    <h1 class="slide-title">Cron um <span class="accent">22:00</span> UTC.<br>Niemand muss daran denken.</h1>
+
+    <div class="pipeline">
+      <div class="step">
+        <div class="ix">01 — Trigger</div>
+        <h3>Vercel Cron feuert</h3>
+        <p>Letzter Tag des Monats, 22:00 UTC. Oder Admin drückt manuell auf „Bericht senden".</p>
+        <div class="when">Automatisch</div>
+      </div>
+      <div class="step">
+        <div class="ix">02 — Aggregate</div>
+        <h3>SQL gruppiert nach Firma → Person → Artikel</h3>
+        <p>Postgres zählt Einträge, summiert Beträge, sortiert nach Firma.</p>
+        <div class="when">~&nbsp;200 ms</div>
+      </div>
+      <div class="step">
+        <div class="ix">03 — Render</div>
+        <h3>PDF + Excel werden gebaut</h3>
+        <p>Ein PDF pro Firma als Anhang. Excel-Workbook mit Pivot-fähiger Rohdatensicht.</p>
+        <div class="when">~&nbsp;2 s</div>
+      </div>
+      <div class="step">
+        <div class="ix">04 — Send</div>
+        <h3>Resend liefert eine E-Mail aus</h3>
+        <p>Empfänger: Geschäftsführer. Betreff: „Kaffeelisten — Mai 2026". Anhänge dabei.</p>
+        <div class="when">Free Tier</div>
+      </div>
+      <div class="step">
+        <div class="ix">05 — Reset</div>
+        <h3>Live-Tabelle wird archiviert &amp; geleert</h3>
+        <p>Daten landen in <code style="font-family:var(--font-mono);color:var(--amber-600);">transactions_archive</code>. Neuer Monat startet bei Null.</p>
+        <div class="when">3-Mon. rolling</div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>07&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 8 — NUMBERS
+     ============================================================ -->
+<section data-screen-label="08 Numbers">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Wirkung</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Vorher → Nachher</div>
+    <h1 class="slide-title">Aus 60&nbsp;Minuten<br>werden <span class="accent">5</span>.</h1>
+
+    <div class="numbers">
+      <div class="cell">
+        <div class="label">Admin-Aufwand am Monatsende</div>
+        <div class="num">−92<span class="u">%</span></div>
+        <p>60+&nbsp;Min Zettel-Auszählen ersetzt durch eine&nbsp;E-Mail mit&nbsp;PDF und Excel im&nbsp;Posteingang.</p>
+      </div>
+      <div class="cell">
+        <div class="label">Onboarding eines neuen Mitglieds</div>
+        <div class="num">15<span class="u">s</span></div>
+        <p>Self-Registration im Member-Flow. Name eintippen, Standardisierung „Vorname&nbsp;N." automatisch.</p>
+      </div>
+      <div class="cell" style="background:var(--stone-900); color:#fff;">
+        <div class="label" style="color:var(--stone-400);">Infrastruktur-Kosten / Monat</div>
+        <div class="num" style="color:#fff;">0<span class="u">€</span></div>
+        <p style="color:var(--stone-400);">Supabase, Vercel, Resend — alles Free-Tier.</p>
+      </div>
+      <div class="cell" style="background:var(--amber-600); color:#fff;">
+        <div class="label" style="color:rgba(255,255,255,0.8);">Mitglieder im Seed</div>
+        <div class="num" style="color:#fff;">239<span class="u" style="color:#fff;opacity:0.7;">×</span></div>
+        <p style="color:rgba(255,255,255,0.85);">Echte <a class="deck-link" href="https://www.itc-deggendorf.de/" target="_blank" rel="noopener">ITC1</a>-Mitglieder über 28&nbsp;Firmen. Direkt startklar für den Live-Betrieb.</p>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>08&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 9 — STACK
+     ============================================================ -->
+<section data-screen-label="09 Stack">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Stack</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Technik</div>
+    <h1 class="slide-title">Ein gerader Stack.<br><span class="accent">Kein Betriebsteam</span> nötig.</h1>
+
+    <div class="stack">
+      <div class="stack-flow">
+        <div class="stack-node">
+          <div class="ix">01 — PWA</div>
+          <h3>React + Vite</h3>
+          <p>Installierbar auf dem Wand-iPad. Große Touch-Ziele, kein Login im Member-Flow.</p>
+          <span class="tier">OSS</span>
+        </div>
+        <div class="stack-node">
+          <div class="ix">02 — Daten</div>
+          <h3>Supabase</h3>
+          <p>PostgreSQL, RLS und ein Seed mit echten <a class="deck-link" href="https://www.itc-deggendorf.de/" target="_blank" rel="noopener">ITC1</a>-Firmen und Mitgliedern.</p>
+          <span class="tier">FREE</span>
+        </div>
+        <div class="stack-node">
+          <div class="ix">03 — Betrieb</div>
+          <h3>Vercel Cron</h3>
+          <p>Monatslauf automatisch. Admin kann den Bericht manuell auslösen.</p>
+          <span class="tier">FREE</span>
+        </div>
+        <div class="stack-node">
+          <div class="ix">04 — Export</div>
+          <h3>PDF + Excel</h3>
+          <p>Lesbarer Firmenbericht plus Rohdaten-Workbook für Pivot-Auswertung.</p>
+          <span class="tier">NODE</span>
+        </div>
+        <div class="stack-node">
+          <div class="ix">05 — Versand</div>
+          <h3>Resend</h3>
+          <p>Eine E-Mail pro Monat an den Geschäftsführer. Anhänge dabei.</p>
+          <span class="tier">FREE</span>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div>
+          <span class="badge">→ Eine E-Mail pro Monat</span>
+          <div class="big">0&nbsp;€<span class="small">Monatliche&nbsp;Betriebskosten</span></div>
+        </div>
+        <div class="note">Kein App-Store, kein lokaler Server, kein Konto für den schnellen Eintrag. <code style="font-family:var(--font-mono);color:var(--amber-700);">npm run dev</code> reicht für lokale Entwicklung.</div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>09&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — ROADMAP
+     ============================================================ -->
+<section data-screen-label="10 Roadmap">
+  <div class="frame">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Roadmap</span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:24px;">Was als Nächstes kommt</div>
+    <h1 class="slide-title">Vom Hackathon-MVP<br>zur <span class="accent">offenen Plattform</span>.</h1>
+
+    <div class="roadmap">
+      <div class="phase now">
+        <span class="badge">Live</span>
+        <div class="ix">Phase&nbsp;0</div>
+        <h3>Hackathon-MVP</h3>
+        <ul>
+          <li>Member-Flow komplett</li>
+          <li>Admin CRUD + Bericht</li>
+          <li>PDF + Excel + Cron</li>
+          <li>239 Mitglieder im Seed</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ix">Phase&nbsp;1</div>
+        <h3>Wartungsarm</h3>
+        <ul>
+          <li>10-Sekunden Undo</li>
+          <li>Health-Check + Fehlerlog</li>
+          <li>Custom Domain</li>
+          <li>Berichtsvorschau vor Versand</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ix">Phase&nbsp;2</div>
+        <h3>Auswertung</h3>
+        <ul>
+          <li>Trend-Charts pro Monat</li>
+          <li>Top-Artikel nach Stunde</li>
+          <li>Item-Performance</li>
+          <li>Analytics-Export</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ix">Phase&nbsp;3</div>
+        <h3>Self-Service</h3>
+        <ul>
+          <li>Firmen-Portal (Magic Link)</li>
+          <li>Approval-Queue</li>
+          <li>Pro-Firma Preise</li>
+          <li>On-demand Reports</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="ix">Phase&nbsp;4–5</div>
+        <h3>Offene Plattform</h3>
+        <ul>
+          <li>One-Click Deploy</li>
+          <li>Setup-Wizard</li>
+          <li>Multi-Campus Schema</li>
+          <li>Public REST API</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>10&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 — CLOSING
+     ============================================================ -->
+<section data-screen-label="11 Closing">
+  <div class="frame dark">
+    <div class="topbar">
+      <div class="lockup"><a class="mark deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener" aria-label="Kaffeelisten live app"><img src="assets/logo.svg" alt=""></a><span>Kaffeelisten</span></div>
+      <span>Danke</span>
+    </div>
+
+    <div class="closing">
+      <div>
+        <span class="seg">Pitch&nbsp;ende</span>
+        <h1 class="big">Nicht noch ein Tool.<br><span class="em">Kaffee digital.</span></h1>
+        <div class="strap">Kein Login. Kein App-Store. Kein Papier. Eine&nbsp;E-Mail pro Monat — der Rest läuft von selbst.</div>
+      </div>
+      <div class="meta">
+        <a class="deck-link" href="https://kaffeelisten.vercel.app" target="_blank" rel="noopener"><div class="k">Live</div>kaffeelisten.vercel.app</a>
+        <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener"><div class="k">Repo</div>github.com/arudaev/kaffeelisten</a>
+        <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener"><div class="k">Team</div>HuggyWuggies</a>
+        <div><div class="k">Hackathon</div><a class="deck-link" href="https://www.bayerwald-hackathon.de/" target="_blank" rel="noopener">B4Y3RW4LD</a> · <a class="deck-link" href="https://www.itc-deggendorf.de/" target="_blank" rel="noopener">ITC1</a> · 2026</div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <a class="deck-link" href="https://github.com/arudaev/kaffeelisten" target="_blank" rel="noopener">HuggyWuggies&nbsp;//&nbsp;Kaffeelisten</a>
+      <span>11&nbsp;/&nbsp;11</span>
+    </div>
+  </div>
+</section>
+
+</deck-stage>
+
+<script src="deck-stage.js"></script>
+</body>
+</html>

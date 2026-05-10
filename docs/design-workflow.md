@@ -1,6 +1,6 @@
-# Claude Design Workflow — Kaffeelisten
+# Design Workflow — Kaffeelisten
 
-Use this workflow when generating or iterating on the Kaffeelisten UI with Claude Design.
+Use this workflow when creating or iterating on the Kaffeelisten UI.
 
 ---
 
@@ -12,10 +12,6 @@ Do not wait until after the member flow is built. The design system needs to exi
 
 ---
 
-## Claude Design setup form
-
-URL: `https://claude.ai/design` → "Set up your design system"
-
 **Company name and blurb:**
 ```
 Kaffeelisten — digital coffee and snack consumption logger for ITC1 Deggendorf 
@@ -26,17 +22,7 @@ protected, professional internal tool. Warm, minimal, readable. Bavarian Wald
 and campus atmosphere. German-first UI copy. Coffee as a playful motif.
 ```
 
-**Link code on GitHub:**
-```
-https://github.com/arudaev/kaffeelisten
-```
-Add this. Claude Design will read `docs/design-foundation.md`, `docs/design-system.md`, `tailwind.config.ts`, and the page stubs to understand the codebase.
-
-**Upload a .fig file:** Skip — none exists yet.
-
-**Add fonts, logos and assets:** Skip for now unless you have the Inter font file locally.
-
-**Any other notes:**
+**notes:**
 ```
 Design tokens are pre-specified in docs/design-system.md — use those as the 
 starting point. Stone/amber/white palette. Inter font. Member flow needs large 
@@ -44,18 +30,6 @@ tap targets (min 44px) and min 18px text for wall-mount readability. Admin panel
 uses standard product text sizes. One-line SVG illustrations for spot art. 
 Custom coffee icons. No emojis. All UI copy in German.
 ```
-
----
-
-## Before you start the generation session
-
-Read in this order:
-1. `docs/design-foundation.md` — creative brief, screen inventory, principles
-2. `docs/design-system.md` — color tokens, typography, component specs
-3. `docs/prd.md` — product requirements and user stories
-4. `docs/prompts.md` — ready-to-use Claude Design prompts
-
-Do not start generating UI until you have read all four.
 
 ---
 
