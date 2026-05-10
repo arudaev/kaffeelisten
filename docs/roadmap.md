@@ -163,7 +163,7 @@ Campus admins configure a webhook URL. The system POSTs a payload after each rep
 
 ### 5.4 — Open source release
 
-License: MIT. Published to GitHub with full docs, a demo Supabase project (read-only), and a public roadmap. Community contributions welcome for new item categories, language translations, and alternative email providers.
+License: Apache-2.0. Published to GitHub with full docs, a demo Supabase project (read-only), and a public roadmap. Community contributions welcome for new item categories, language translations, and alternative email providers.
 
 ---
 
