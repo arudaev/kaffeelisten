@@ -369,66 +369,98 @@ export async function sendEmail(
   const companyRows = summaries
     .map(c => `
       <tr>
-        <td style="padding:8px 16px;border-bottom:1px solid #E7E5E4;color:#1C1917;">${c.company_name}</td>
-        <td style="padding:8px 16px;border-bottom:1px solid #E7E5E4;text-align:right;color:#57534E;">${c.total_entries}</td>
-        <td style="padding:8px 16px;border-bottom:1px solid #E7E5E4;text-align:right;font-weight:600;color:#1C1917;">${formatEuro(c.total_cents)}</td>
+        <td style="padding:8px 16px;border-bottom:1px solid #E7E5E4;color:#1C1917;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${c.company_name}</td>
+        <td align="right" style="padding:8px 16px;border-bottom:1px solid #E7E5E4;color:#57534E;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${c.total_entries}</td>
+        <td align="right" style="padding:8px 16px;border-bottom:1px solid #E7E5E4;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${formatEuro(c.total_cents)}</td>
       </tr>`)
     .join('')
 
+  // Table-based layout — required for Outlook (Word renderer ignores div/CSS layout)
   const html = `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:system-ui,sans-serif;background:#FAFAF9;margin:0;padding:32px;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E7E5E4;">
-    <div style="background:#D97706;padding:24px 32px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+
+        <!-- HEADER -->
         <tr>
-          <td style="padding:0;vertical-align:middle;">
-            <p style="margin:0 0 8px;color:rgba(255,255,255,.84);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;line-height:1.2;">KAFFEELISTEN · ITC1 DEGGENDORF</p>
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.2;">Monatsbericht ${monthLabel}</h1>
+          <td style="background:#D97706;padding:24px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0 0 6px 0;color:#fff;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;line-height:1.2;opacity:.84;">KAFFEELISTEN &middot; ITC1 DEGGENDORF</p>
+                  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Monatsbericht ${monthLabel}</h1>
+                </td>
+                <td width="80" align="right" style="vertical-align:middle;">
+                  <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="72" height="58" alt="Kaffeelisten" style="display:block;border:0;outline:none;">
+                </td>
+              </tr>
+            </table>
           </td>
-          <td style="padding:0;text-align:right;width:88px;vertical-align:middle;">
-            <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="72" height="58" alt="Kaffeelisten" style="display:inline-block;width:72px;height:58px;border:0;outline:none;text-decoration:none;vertical-align:middle;">
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="padding:28px 32px;background:#ffffff;">
+
+            <!-- Intro -->
+            <p style="margin:0 0 20px 0;color:#57534E;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;">Anbei der Monatsbericht f&uuml;r <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Eintr&auml;gen des ITC1-Campus.</p>
+
+            <!-- KPI strip -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;margin-bottom:24px;">
+              <tr>
+                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Eintr&auml;ge gesamt</td>
+                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Gesamtbetrag</td>
+                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Unternehmen</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;font-size:28px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${transactions.length}</td>
+                <td style="padding:12px 16px;font-size:28px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${formatEuro(totalCents)}</td>
+                <td style="padding:12px 16px;font-size:22px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${summaries.length}</td>
+              </tr>
+            </table>
+
+            <!-- Section heading -->
+            <p style="margin:0 0 10px 0;font-size:12px;font-weight:bold;color:#57534E;text-transform:uppercase;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;">Nach Unternehmen</p>
+
+            <!-- Company table -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:24px;">
+              <tr style="background:#FAFAF9;">
+                <td style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Unternehmen</td>
+                <td align="right" style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Eintr&auml;ge</td>
+                <td align="right" style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Betrag</td>
+              </tr>
+              ${companyRows}
+            </table>
+
+            <!-- Attachments note -->
+            <p style="margin:0;color:#78716C;font-size:12px;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Die vollst&auml;ndigen Daten finden Sie in den beigef&uuml;gten Dateien:<br><strong>PDF</strong> &ndash; Formatierter Bericht f&uuml;r Ablage und Weitergabe.<br><strong>Excel</strong> &ndash; Alle Rohdaten f&uuml;r Auswertungen.</p>
+            <p style="margin:12px 0 0 0;color:#78716C;font-size:12px;font-family:Arial,Helvetica,sans-serif;">Die Eintr&auml;ge wurden nach dem Versand archiviert. Die Originaldaten bleiben erhalten.</p>
+
           </td>
         </tr>
-      </table>
-    </div>
-    <div style="padding:28px 32px;">
-      <p style="color:#57534E;margin:0 0 20px;">Anbei der Monatsbericht für <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Einträgen des ITC1-Campus.</p>
-      <table style="width:100%;border-collapse:collapse;background:#FAFAF9;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+
+        <!-- FOOTER -->
         <tr>
-          <td style="padding:12px 16px;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #E7E5E4;">Einträge gesamt</td>
-          <td style="padding:12px 16px;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #E7E5E4;">Gesamtbetrag</td>
-          <td style="padding:12px 16px;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #E7E5E4;">Unternehmen</td>
+          <td style="background:#FAFAF9;padding:14px 32px;border-top:1px solid #E7E5E4;">
+            <p style="margin:0;color:#A8A29E;font-size:11px;font-family:Arial,Helvetica,sans-serif;">Kaffeelisten &middot; B4Y3RW4LD Hackathon &middot; ITC1 Deggendorf</p>
+          </td>
         </tr>
-        <tr>
-          <td style="padding:12px 16px;font-size:24px;font-weight:700;color:#1C1917;">${transactions.length}</td>
-          <td style="padding:12px 16px;font-size:24px;font-weight:700;color:#1C1917;">${formatEuro(totalCents)}</td>
-          <td style="padding:12px 16px;font-size:18px;font-weight:700;color:#1C1917;">${summaries.length}</td>
-        </tr>
+
       </table>
-      <h2 style="font-size:13px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">Nach Unternehmen</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-        <thead>
-          <tr style="background:#FAFAF9;">
-            <th style="padding:8px 16px;text-align:left;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;">Unternehmen</th>
-            <th style="padding:8px 16px;text-align:right;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;">Einträge</th>
-            <th style="padding:8px 16px;text-align:right;font-size:11px;font-weight:600;color:#78716C;text-transform:uppercase;">Betrag</th>
-          </tr>
-        </thead>
-        <tbody>${companyRows}</tbody>
-      </table>
-      <p style="color:#78716C;font-size:12px;margin:0;line-height:1.6;">
-        Die vollständigen Daten finden Sie in den beigefügten Dateien:<br>
-        <strong>PDF</strong> – Formatierter Bericht für Ablage und Weitergabe.<br>
-        <strong>Excel</strong> – Alle Rohdaten für Auswertungen.
-      </p>
-      <p style="color:#78716C;font-size:12px;margin:12px 0 0;">Die Einträge wurden nach dem Versand archiviert. Die Originaldaten bleiben erhalten.</p>
-    </div>
-    <div style="background:#FAFAF9;padding:14px 32px;border-top:1px solid #E7E5E4;">
-      <p style="color:#A8A29E;font-size:11px;margin:0;">Kaffeelisten · B4Y3RW4LD Hackathon · ITC1 Deggendorf</p>
-    </div>
-  </div>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td>
+  </tr>
+</table>
 </body>
 </html>`
 
