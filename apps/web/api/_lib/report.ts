@@ -436,7 +436,7 @@ export async function sendEmail(
 
   await resend.emails.send({
     from: 'Kaffeelisten <onboarding@resend.dev>',
-    to: [adminEmail],
+    to: adminEmail.split(',').map(e => e.trim()),
     subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
     html,
     attachments: [
