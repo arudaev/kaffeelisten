@@ -435,7 +435,7 @@ export async function sendEmail(
   const filename = `kaffeelisten-${reportMonth}`
 
   await resend.emails.send({
-    from: 'Kaffeelisten <onboarding@resend.dev>',
+    from: 'Kaffeelisten <bericht@kaffeelisten.de>',
     to: adminEmail.split(',').map(e => e.trim()),
     subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
     html,
