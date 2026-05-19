@@ -1,0 +1,5 @@
+[h1] Kaffeelisten
+[p] Kaffee, Getränke, Snacks. Kurz tippen, fertig.
+[button] Eintrag starten
+[p] ITC1 Deggendorf · B4Y3RW4LD ·
+[a] Datenschutz
