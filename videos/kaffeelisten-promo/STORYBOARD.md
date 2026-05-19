@@ -1,7 +1,7 @@
 # Storyboard
 
 **Format:** 1920x1080  
-**Audio:** Music-only. Warm 96 BPM instrumental beat with soft kick, clap, hats, rounded bass, and gentle pad stabs.  
+**Audio:** Music-only. Warm 96 BPM instrumental underscore with soft kick, brush snap, quiet hats, rounded bass, and gentle pad stabs.  
 **Direction:** No spoken narration. Product meaning comes from on-screen German copy, real screenshots, and beat-synced transitions.  
 **Style basis:** `DESIGN.md` plus the captured `kaffeelisten.de` landing page and repo product screenshots.
 
@@ -22,7 +22,7 @@
 | `assets/icon-snack.svg` | SVG icon | Beat 2 | Product category accent |
 | `assets/pine-silhouette.svg` | SVG texture | Beat 1, Beat 5 | Bavarian Wald grounding |
 
-## Beat 1 - Cold Open (0.00-3.80s)
+## Beat 1 - Cold Open (0.00-3.75s)
 
 **Music cue:** Filtered intro, soft kick ghosted under a warm pad. First amber pulse at 0.70s.
 
@@ -40,13 +40,13 @@
 
 **Depth layers:** BG stone + pine, MG cup and title, FG CTA and footer metadata.
 
-## Beat 2 - Three-Tap Flow (3.80-8.00s)
+## Beat 2 - Three-Step Flow (3.75-8.125s)
 
-**Music cue:** Full beat enters: kick on one, clap on two and four, tight hats. Three amber taps land on the rhythm.
+**Music cue:** The beat opens gently on the transition: soft kick, brush snap, tight quiet hats. Three amber progress pulses land on beat subdivisions.
 
 **Concept:** The product becomes tactile. We see the iPad flow as a set of floating screens, with the amber selection state becoming the visual rhythm.
 
-**Visual description:** Three tilted product panels fan across the frame: company selection, item selection, and a close-up strip of the selected Cappuccino/Espresso cards. Coffee, drink, and snack icons orbit gently around the panels. A kinetic label "3 Taps" counts up while three amber dots light in sequence.
+**Visual description:** Three tilted product panels fan across the frame: company selection, item selection, and a close-up strip of the selected Cappuccino/Espresso cards. Coffee, drink, and snack icons sit as product-category tiles. A kinetic label "3 Schritte" lands while three amber dots light in sequence.
 
 **Mood direction:** Fast campus utility, precise touch targets, no-login simplicity.
 
@@ -58,7 +58,7 @@
 
 **Depth layers:** BG oversized amber wash circles, MG screenshots, FG counter and icons.
 
-## Beat 3 - Confirm and Done (8.00-12.20s)
+## Beat 3 - Confirm and Done (8.125-12.50s)
 
 **Music cue:** Bass line becomes warmer and more rounded. Confirmation total lands on a clap.
 
@@ -76,7 +76,7 @@
 
 **Depth layers:** BG thin path and step labels, MG receipt, FG amber chips and total.
 
-## Beat 4 - Admin Report (12.20-16.50s)
+## Beat 4 - Admin Report (12.50-16.875s)
 
 **Music cue:** Small lift with brighter hats and a short amber hit at the report-send moment.
 
@@ -94,13 +94,13 @@
 
 **Depth layers:** BG stone grid, MG dashboard, FG metric cards and report path.
 
-## Beat 5 - CTA Lockup (16.50-20.00s)
+## Beat 5 - CTA Lockup (16.875-20.00s)
 
-**Music cue:** Beat strips back to pad, bass, and final clap. Last amber underline resolves at 19.10s.
+**Music cue:** Beat strips back to pad, bass, and one final soft hit. Last amber underline resolves at 19.375s.
 
 **Concept:** Return to the simplicity of the landing page, but with the product proof now behind it. The final frame should be clean enough to screenshot.
 
-**Visual description:** Product screenshots recede into a soft stack. The coffee mark and Kaffeelisten wordmark lock up in the center. The URL appears as a strong amber underline, followed by the German promise "Kurz tippen, fertig."
+**Visual description:** Product screenshots recede into a soft stack. The one-line coffee mark and Kaffeelisten wordmark lock up in the center. The URL appears as a strong amber underline, followed by the German promise "Kurz tippen, fertig."
 
 **Mood direction:** Confident, local, ready to use.
 
@@ -120,9 +120,6 @@ kaffeelisten-promo/
 ├── DESIGN.md
 ├── SCRIPT.md
 ├── STORYBOARD.md
-├── narration.txt
-├── narration.wav
-├── transcript.json
 ├── assets/
 ├── capture/
 └── snapshots/
