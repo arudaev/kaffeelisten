@@ -1,0 +1,35 @@
+[
+  {
+    "url": "https://kaffeelisten.de/assets/illustrations/cappuccino-with-steam.svg",
+    "type": "Image",
+    "contexts": [
+      "img[src]"
+    ],
+    "notes": null,
+    "aboveFold": true
+  },
+  {
+    "url": "https://kaffeelisten.de/favicon.svg",
+    "type": "Icon",
+    "contexts": [
+      "link[rel=\"icon\"]"
+    ],
+    "notes": null
+  },
+  {
+    "url": "https://kaffeelisten.de/pwa-192x192.png",
+    "type": "Icon",
+    "contexts": [
+      "link[rel=\"apple-touch-icon\"]"
+    ],
+    "notes": null
+  },
+  {
+    "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+    "type": "Other",
+    "contexts": [
+      "css url()"
+    ],
+    "notes": null
+  }
+]

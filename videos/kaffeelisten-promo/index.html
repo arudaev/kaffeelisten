@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaffeelisten Product Promo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --stone: #fafaf9;
+        --ink: #1c1917;
+        --border: #e5e7eb;
+        --amber: #d97706;
+        --amber-dark: #b45309;
+        --amber-wash: #fffbeb;
+        --muted: #a8a29e;
+        --white: #ffffff;
+        --green: #16a34a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--stone);
+        color: var(--ink);
+        font-family: Inter, system-ui, sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--stone);
+      }
+
+      audio {
+        display: none;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--stone);
+      }
+
+      #scene2,
+      #scene3,
+      #scene4,
+      #scene5 {
+        opacity: 0;
+      }
+
+      .scene-content {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding: 92px 120px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .scene-title {
+        margin: 0;
+        color: var(--ink);
+        font-size: 96px;
+        line-height: 0.96;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .kicker {
+        color: var(--amber-dark);
+        font-size: 22px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .body-copy {
+        margin: 0;
+        max-width: 760px;
+        color: #57534e;
+        font-size: 36px;
+        line-height: 1.28;
+        font-weight: 500;
+      }
+
+      .pine {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 1920px;
+        height: 180px;
+        object-fit: cover;
+        opacity: 0.11;
+      }
+
+      .grain {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.26;
+        background-image:
+          radial-gradient(circle at 20% 20%, rgba(217, 119, 6, 0.08) 0 1px, transparent 1px),
+          radial-gradient(circle at 80% 70%, rgba(28, 25, 23, 0.05) 0 1px, transparent 1px);
+        background-size: 36px 36px, 52px 52px;
+      }
+
+      .amber-orbit {
+        position: absolute;
+        width: 560px;
+        height: 560px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(217, 119, 6, 0.14), rgba(217, 119, 6, 0));
+        pointer-events: none;
+      }
+
+      .hero-shell {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        padding-bottom: 26px;
+      }
+
+      .cup-wrap {
+        width: 154px;
+        height: 118px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cup-wrap img {
+        width: 138px;
+        height: auto;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: 112px;
+        line-height: 0.9;
+        font-weight: 800;
+      }
+
+      .hero-sub {
+        margin: 0;
+        color: #44403c;
+        font-size: 36px;
+        line-height: 1.18;
+        font-weight: 500;
+      }
+
+      .primary-cta {
+        min-width: 280px;
+        min-height: 76px;
+        padding: 0 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink);
+        background: var(--amber-dark);
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 800;
+        box-shadow: 0 18px 36px rgba(180, 83, 9, 0.18);
+      }
+
+      .footer-meta {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 38px;
+        display: flex;
+        justify-content: center;
+        color: #57534e;
+        font-size: 18px;
+        line-height: 1;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .screen-stage {
+        flex: 1;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        align-items: center;
+        gap: 80px;
+      }
+
+      .tap-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        padding-left: 22px;
+      }
+
+      .tap-count {
+        display: flex;
+        align-items: baseline;
+        gap: 18px;
+      }
+
+      .tap-number {
+        color: var(--amber);
+        font-size: 180px;
+        line-height: 0.84;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tap-label {
+        color: var(--ink);
+        font-size: 78px;
+        line-height: 0.9;
+        font-weight: 800;
+      }
+
+      .icon-row {
+        display: flex;
+        gap: 18px;
+      }
+
+      .icon-pill {
+        width: 116px;
+        height: 116px;
+        border: 1px solid var(--border);
+        border-radius: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--white);
+        box-shadow: 0 16px 34px rgba(28, 25, 23, 0.08);
+      }
+
+      .icon-pill img {
+        width: 44px;
+        height: 44px;
+      }
+
+      .progress-dots {
+        display: flex;
+        gap: 14px;
+      }
+
+      .progress-dots span {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        display: block;
+        background: var(--border);
+      }
+
+      .progress-dots span.is-on {
+        width: 68px;
+        background: var(--amber);
+      }
+
+      .screens {
+        position: relative;
+        height: 760px;
+      }
+
+      .product-screen {
+        position: absolute;
+        border: 1px solid var(--border);
+        border-radius: 26px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: 0 26px 60px rgba(28, 25, 23, 0.16);
+      }
+
+      .product-screen img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .screen-company {
+        top: 48px;
+        right: 270px;
+        width: 680px;
+        height: 478px;
+        z-index: 2;
+      }
+
+      .screen-items {
+        top: 162px;
+        right: 0;
+        width: 760px;
+        height: 534px;
+        z-index: 3;
+      }
+
+      .screen-start {
+        top: 396px;
+        right: 460px;
+        width: 460px;
+        height: 324px;
+        z-index: 1;
+      }
+
+      .path-scene {
+        justify-content: center;
+        gap: 50px;
+      }
+
+      .path-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 26px;
+        align-items: center;
+      }
+
+      .step-card {
+        min-height: 118px;
+        padding: 26px 28px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--white);
+        box-shadow: 0 14px 30px rgba(28, 25, 23, 0.08);
+      }
+
+      .step-label {
+        color: var(--ink);
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .step-value {
+        margin-top: 13px;
+        color: var(--ink);
+        font-size: 34px;
+        font-weight: 800;
+      }
+
+      .receipt-zone {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        align-items: center;
+        gap: 54px;
+      }
+
+      .receipt-screen {
+        width: 920px;
+        height: 648px;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: 0 28px 66px rgba(28, 25, 23, 0.14);
+      }
+
+      .receipt-screen img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .chip-column {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .item-chip {
+        min-height: 102px;
+        padding: 0 34px;
+        border: 2px solid var(--amber);
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--amber-wash);
+        box-shadow: 0 18px 42px rgba(217, 119, 6, 0.13);
+        color: var(--ink);
+        font-size: 32px;
+        font-weight: 800;
+      }
+
+      .item-chip span:last-child {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .total-callout {
+        min-height: 180px;
+        padding: 26px 34px;
+        border-radius: 26px;
+        border: 2px solid var(--amber);
+        background: var(--white);
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 12px;
+        box-shadow: 0 26px 60px rgba(217, 119, 6, 0.13);
+      }
+
+      .total-callout .label {
+        color: #57534e;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .total-callout .amount {
+        color: var(--ink);
+        font-size: 76px;
+        line-height: 0.95;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .admin-grid {
+        flex: 1;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 470px 1fr;
+        gap: 58px;
+        align-items: center;
+      }
+
+      .metric-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .metric-card {
+        min-height: 146px;
+        padding: 28px 30px;
+        border: 1px solid var(--border);
+        border-left: 8px solid var(--amber);
+        border-radius: 22px;
+        background: var(--white);
+        box-shadow: 0 16px 38px rgba(28, 25, 23, 0.09);
+      }
+
+      .metric-card .metric-label {
+        color: #57534e;
+        font-size: 22px;
+        font-weight: 600;
+      }
+
+      .metric-card .metric-value {
+        margin-top: 10px;
+        color: var(--ink);
+        font-size: 64px;
+        line-height: 0.95;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .metric-card .metric-value.accent {
+        color: var(--amber-dark);
+      }
+
+      .dashboard-screen {
+        width: 1080px;
+        height: 778px;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: 0 30px 68px rgba(28, 25, 23, 0.16);
+      }
+
+      .dashboard-screen img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .send-path {
+        position: absolute;
+        left: 432px;
+        top: 302px;
+        width: 620px;
+        height: 220px;
+        pointer-events: none;
+        overflow: visible;
+      }
+
+      .send-path path {
+        stroke: var(--amber);
+        stroke-width: 7;
+        stroke-linecap: round;
+        stroke-dasharray: 820;
+        stroke-dashoffset: 820;
+        fill: none;
+      }
+
+      .plane-dot {
+        position: absolute;
+        left: 1024px;
+        top: 454px;
+        width: 58px;
+        height: 58px;
+        border-radius: 16px;
+        background: var(--amber);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-size: 31px;
+        font-weight: 900;
+        box-shadow: 0 18px 44px rgba(217, 119, 6, 0.32);
+      }
+
+      .final-shell {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: center;
+        justify-items: center;
+        gap: 24px;
+        text-align: center;
+      }
+
+      .final-stack {
+        position: absolute;
+        inset: 0;
+        opacity: 0.18;
+      }
+
+      .final-stack .ghost-screen {
+        position: absolute;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: 0 20px 48px rgba(28, 25, 23, 0.1);
+      }
+
+      .final-stack img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .ghost-a {
+        left: 126px;
+        top: 138px;
+        width: 480px;
+        height: 338px;
+      }
+
+      .ghost-b {
+        right: 110px;
+        top: 156px;
+        width: 590px;
+        height: 424px;
+      }
+
+      .ghost-c {
+        left: 302px;
+        bottom: 94px;
+        width: 640px;
+        height: 450px;
+      }
+
+      .final-mark {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .final-mark img {
+        width: 138px;
+        height: auto;
+      }
+
+      .final-title {
+        margin: 0;
+        color: var(--ink);
+        font-size: 118px;
+        line-height: 0.9;
+        font-weight: 900;
+      }
+
+      .url {
+        position: relative;
+        z-index: 2;
+        color: var(--ink);
+        font-size: 56px;
+        line-height: 1;
+        font-weight: 800;
+        font-variant-ligatures: none;
+      }
+
+      .underline {
+        position: relative;
+        z-index: 2;
+        width: 620px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--amber);
+        transform-origin: left center;
+      }
+
+      .tagline {
+        position: relative;
+        z-index: 2;
+        margin: 0;
+        color: #57534e;
+        font-size: 42px;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="kaffeelisten-promo"
+      data-width="1920"
+      data-height="1080"
+      data-start="0"
+      data-duration="20"
+    >
+      <audio
+        id="music"
+        src="beat.wav"
+        data-start="0"
+        data-duration="20"
+        data-track-index="0"
+        data-volume="0.82"
+      ></audio>
+
+      <section id="scene1" class="scene">
+        <img class="pine pine-a" src="assets/pine-silhouette.svg" alt="" />
+        <div class="grain"></div>
+        <div class="scene-content">
+          <div class="hero-shell">
+            <div class="cup-wrap hero-cup">
+              <img src="capture/assets/cappuccino-with-steam.svg" alt="" />
+            </div>
+            <h1 class="hero-title">Kaffeelisten</h1>
+            <p class="hero-sub">Kaffee, Getränke, Snacks.</p>
+            <div class="primary-cta">Eintrag starten</div>
+          </div>
+          <div class="footer-meta">ITC1 Deggendorf · B4Y3RW4LD</div>
+        </div>
+      </section>
+
+      <section id="scene2" class="scene">
+        <div class="amber-orbit orbit-2a" data-layout-ignore></div>
+        <div class="amber-orbit orbit-2b" data-layout-ignore></div>
+        <div class="grain"></div>
+        <div class="scene-content">
+          <div class="screen-stage">
+            <div class="tap-copy">
+              <div class="kicker">Zero friction</div>
+              <div class="tap-count">
+                <div class="tap-number" id="tapCounter">3</div>
+                <div class="tap-label">Taps</div>
+              </div>
+              <p class="body-copy">Unternehmen wählen, Namen antippen, Kaffee oder Snack buchen.</p>
+              <div class="progress-dots">
+                <span class="dot-1 is-on"></span>
+                <span class="dot-2"></span>
+                <span class="dot-3"></span>
+              </div>
+              <div class="icon-row">
+                <div class="icon-pill"><img src="assets/icon-coffee-cup.svg" alt="" /></div>
+                <div class="icon-pill"><img src="assets/icon-drink.svg" alt="" /></div>
+                <div class="icon-pill"><img src="assets/icon-snack.svg" alt="" /></div>
+              </div>
+            </div>
+            <div class="screens">
+              <div class="product-screen screen-start">
+                <img src="assets/member-start.png" alt="" />
+              </div>
+              <div class="product-screen screen-company">
+                <img src="assets/member-company.png" alt="" />
+              </div>
+              <div class="product-screen screen-items">
+                <img src="assets/member-item-selection.png" alt="" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene3" class="scene">
+        <div class="grain"></div>
+        <div class="scene-content path-scene">
+          <div class="path-row">
+            <div class="step-card step-1">
+              <div class="step-label">Unternehmen</div>
+              <div class="step-value">Movemaster</div>
+            </div>
+            <div class="step-card step-2">
+              <div class="step-label">Person</div>
+              <div class="step-value">Alexander R.</div>
+            </div>
+            <div class="step-card step-3">
+              <div class="step-label">Artikel</div>
+              <div class="step-value">Kaffee</div>
+            </div>
+            <div class="step-card step-4">
+              <div class="step-label">Bestätigen</div>
+              <div class="step-value">Fertig</div>
+            </div>
+          </div>
+          <div class="receipt-zone">
+            <div class="receipt-screen" data-layout-allow-overflow>
+              <img src="assets/member-confirmation.png" alt="" />
+            </div>
+            <div class="chip-column">
+              <div class="item-chip chip-1"><span>1 x Cappuccino</span><span>0,50 €</span></div>
+              <div class="item-chip chip-2"><span>1 x Espresso</span><span>0,30 €</span></div>
+              <div class="total-callout">
+                <div class="label">Gesamt</div>
+                <div class="amount" id="totalCounter">0,80 €</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene4" class="scene">
+        <div class="amber-orbit orbit-4" data-layout-ignore></div>
+        <div class="grain"></div>
+        <div class="scene-content">
+          <div class="kicker">Monatsbericht bereit</div>
+          <div class="admin-grid">
+            <div class="metric-stack">
+              <div class="metric-card metric-1">
+                <div class="metric-label">Einträge diesen Monat</div>
+                <div class="metric-value" id="entriesCounter">10</div>
+              </div>
+              <div class="metric-card metric-2">
+                <div class="metric-label">Umsatz diesen Monat</div>
+                <div class="metric-value accent" id="revenueCounter">€ 4,80</div>
+              </div>
+              <div class="metric-card metric-3">
+                <div class="metric-label">Unternehmen</div>
+                <div class="metric-value" id="companyCounter">5</div>
+              </div>
+            </div>
+            <div class="dashboard-screen" data-layout-allow-overflow>
+              <img src="assets/admin-dashboard.png" alt="" />
+            </div>
+          </div>
+          <svg class="send-path" viewBox="0 0 620 220">
+            <path id="sendPath" d="M 18 180 C 150 52 318 34 594 38" />
+          </svg>
+          <div class="plane-dot">↗</div>
+        </div>
+      </section>
+
+      <section id="scene5" class="scene">
+        <img class="pine pine-final" src="assets/pine-silhouette-final.svg" alt="" />
+        <div class="grain"></div>
+        <div class="final-stack">
+          <div class="ghost-screen ghost-a"><img src="assets/member-company-final.png" alt="" /></div>
+          <div class="ghost-screen ghost-b"><img src="assets/admin-dashboard-final.png" alt="" /></div>
+          <div class="ghost-screen ghost-c"><img src="assets/member-item-selection-final.png" alt="" /></div>
+        </div>
+        <div class="scene-content final-shell">
+          <div class="final-mark">
+            <img src="assets/logo.svg" alt="" />
+            <h2 class="final-title">Kaffeelisten</h2>
+          </div>
+          <div class="url">kaffeelisten.de</div>
+          <div class="underline"></div>
+          <p class="tagline">Kurz tippen, fertig.</p>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var tl = gsap.timeline({ paused: true });
+      tl.set(["#scene2", "#scene3", "#scene4", "#scene5"], { opacity: 0 });
+      tl.set(".orbit-2a", { left: 1060, top: -170, scale: 1.2 });
+      tl.set(".orbit-2b", { left: 620, top: 580, scale: 0.82 });
+      tl.set(".orbit-4", { left: 1120, top: 180, scale: 1.35 });
+      tl.set([".screen-company", ".screen-items", ".screen-start"], {
+        transformPerspective: 1200,
+      });
+      tl.set(".screen-company", { rotationY: -9, rotationX: 3, rotation: -2 });
+      tl.set(".screen-items", { rotationY: -6, rotationX: 2, rotation: 2 });
+      tl.set(".screen-start", { rotationY: -11, rotationX: 2, rotation: -5 });
+      tl.set(".dashboard-screen", { transformPerspective: 1300, rotationY: -7, rotationX: 2 });
+      tl.set(".receipt-screen", { transformPerspective: 1100, rotationY: 4, rotationX: 2 });
+      tl.set(".underline", { scaleX: 0 });
+
+      tl.fromTo(".pine-a", { y: 30, opacity: 0 }, { y: 0, opacity: 0.11, duration: 1.2, ease: "sine.out" }, 0.1);
+      tl.fromTo(".hero-cup", { y: 26, scale: 0.8, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.65, ease: "back.out(1.7)" }, 0.22);
+      tl.fromTo(".hero-title", { y: 44, opacity: 0 }, { y: 0, opacity: 1, duration: 0.54, ease: "expo.out" }, 0.54);
+      tl.fromTo(".hero-sub", { x: -32, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.82);
+      tl.fromTo(".primary-cta", { scale: 0.86, opacity: 0, backgroundColor: "#FFFBEB", color: "#B45309" }, { scale: 1, opacity: 1, backgroundColor: "#B45309", color: "#1C1917", duration: 0.52, ease: "back.out(1.4)" }, 1.16);
+      tl.fromTo(".footer-meta", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: "sine.out" }, 1.58);
+      tl.to(".primary-cta", { scale: 1.035, duration: 0.28, yoyo: true, repeat: 1, ease: "sine.inOut" }, 2.42);
+
+      tl.set("#scene2", { opacity: 1 }, 3.52);
+      tl.fromTo("#scene2", { y: 150, filter: "blur(24px)" }, { y: 0, filter: "blur(0px)", duration: 0.74, ease: "power3.out" }, 3.52);
+      tl.to("#scene1", { y: -150, filter: "blur(24px)", duration: 0.34, ease: "power2.in" }, 3.52);
+      tl.set("#scene1", { opacity: 0, visibility: "hidden" }, 3.9);
+      tl.fromTo(".tap-copy .kicker", { x: -70, opacity: 0 }, { x: 0, opacity: 1, duration: 0.45, ease: "expo.out" }, 3.96);
+      tl.fromTo(".tap-count", { y: 70, opacity: 0 }, { y: 0, opacity: 1, duration: 0.52, ease: "back.out(1.35)" }, 4.12);
+      tl.fromTo(".body-copy", { x: 46, opacity: 0 }, { x: 0, opacity: 1, duration: 0.48, ease: "power3.out" }, 4.36);
+      tl.fromTo(".icon-pill", { y: 42, opacity: 0, scale: 0.72 }, { y: 0, opacity: 1, scale: 1, duration: 0.46, stagger: 0.08, ease: "back.out(1.6)" }, 4.68);
+      tl.fromTo(".screen-company", { x: 180, y: 58, opacity: 0, scale: 0.9 }, { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.62, ease: "power3.out" }, 4.0);
+      tl.fromTo(".screen-items", { x: 250, y: 88, opacity: 0, scale: 0.86 }, { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "expo.out" }, 4.24);
+      tl.fromTo(".screen-start", { x: 110, y: 110, opacity: 0, scale: 0.78 }, { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.54, ease: "power2.out" }, 4.48);
+      tl.fromTo("#tapCounter", { scale: 0.72, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.42, ease: "back.out(1.8)" }, 4.34);
+      tl.to(".dot-2", { backgroundColor: "#D97706", width: 68, duration: 0.18, ease: "power2.out" }, 4.72);
+      tl.to(".dot-3", { backgroundColor: "#D97706", width: 68, duration: 0.18, ease: "power2.out" }, 5.08);
+      tl.to(".orbit-2a", { x: -46, y: 24, scale: 1.28, duration: 3.1, ease: "sine.inOut" }, 4.2);
+      tl.to(".orbit-2b", { x: 72, y: -32, scale: 0.9, duration: 3.1, ease: "sine.inOut" }, 4.2);
+
+      tl.set("#scene3", { opacity: 1 }, 7.78);
+      tl.fromTo("#scene3", { opacity: 0, filter: "blur(18px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.48, ease: "power3.out" }, 7.78);
+      tl.to("#scene2", { opacity: 0, filter: "blur(18px)", duration: 0.34, ease: "power2.in" }, 7.78);
+      tl.set("#scene2", { visibility: "hidden" }, 8.16);
+      tl.fromTo(".step-card", { y: -34, opacity: 0, scale: 0.92 }, { y: 0, opacity: 1, scale: 1, duration: 0.48, stagger: 0.075, ease: "back.out(1.4)" }, 8.24);
+      tl.fromTo(".receipt-screen", { x: -110, y: 42, opacity: 0, scale: 0.92 }, { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.62, ease: "expo.out" }, 8.56);
+      tl.fromTo(".chip-1", { x: 86, opacity: 0 }, { x: 0, opacity: 1, duration: 0.42, ease: "power3.out" }, 9.02);
+      tl.fromTo(".chip-2", { x: 116, opacity: 0 }, { x: 0, opacity: 1, duration: 0.44, ease: "power2.out" }, 9.22);
+      tl.fromTo(".total-callout", { y: 70, opacity: 0, scale: 0.86 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 9.62);
+      tl.fromTo("#totalCounter", { scale: 0.82, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.42, ease: "back.out(1.5)" }, 9.78);
+      tl.to(".receipt-screen img", { scale: 1.018, duration: 3.4, ease: "sine.inOut" }, 8.56);
+
+      tl.set("#scene4", { opacity: 1 }, 12.0);
+      tl.fromTo("#scene4", { x: 220, filter: "blur(22px)" }, { x: 0, filter: "blur(0px)", duration: 0.64, ease: "power3.out" }, 12.0);
+      tl.to("#scene3", { x: -220, filter: "blur(22px)", opacity: 0, duration: 0.34, ease: "power2.in" }, 12.0);
+      tl.set("#scene3", { visibility: "hidden" }, 12.4);
+      tl.fromTo("#scene4 .kicker", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.42, ease: "expo.out" }, 12.54);
+      tl.fromTo(".metric-card", { x: -80, opacity: 0 }, { x: 0, opacity: 1, duration: 0.48, stagger: 0.08, ease: "power3.out" }, 12.76);
+      tl.fromTo(".dashboard-screen", { x: 132, y: 44, opacity: 0, scale: 0.92 }, { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.72, ease: "expo.out" }, 12.9);
+      tl.fromTo("#entriesCounter", { scale: 0.82, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, ease: "back.out(1.5)" }, 13.14);
+      tl.fromTo("#revenueCounter", { scale: 0.82, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.36, ease: "back.out(1.5)" }, 13.26);
+      tl.fromTo("#companyCounter", { scale: 0.82, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, ease: "back.out(1.5)" }, 13.42);
+      tl.to("#sendPath", { strokeDashoffset: 0, duration: 0.7, ease: "power2.out" }, 14.34);
+      tl.fromTo(".plane-dot", { scale: 0.5, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.34, ease: "back.out(1.8)" }, 14.82);
+      tl.to(".dashboard-screen img", { scale: 1.015, duration: 3.2, ease: "sine.inOut" }, 13.0);
+
+      tl.set("#scene5", { opacity: 1 }, 16.32);
+      tl.fromTo("#scene5", { y: 120, filter: "blur(20px)" }, { y: 0, filter: "blur(0px)", duration: 0.58, ease: "power3.out" }, 16.32);
+      tl.to("#scene4", { y: -120, filter: "blur(20px)", opacity: 0, duration: 0.34, ease: "power2.in" }, 16.32);
+      tl.set("#scene4", { visibility: "hidden" }, 16.72);
+      tl.fromTo(".ghost-screen", { y: 42, opacity: 0 }, { y: 0, opacity: 1, duration: 0.54, stagger: 0.08, ease: "power3.out" }, 16.74);
+      tl.fromTo(".final-mark img", { y: -26, scale: 0.78, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }, 17.04);
+      tl.fromTo(".final-title", { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.48, ease: "expo.out" }, 17.2);
+      tl.fromTo(".url", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.44, ease: "power3.out" }, 17.7);
+      tl.to(".underline", { scaleX: 1, duration: 0.52, ease: "power2.out" }, 18.08);
+      tl.fromTo(".tagline", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "sine.out" }, 18.52);
+      tl.to(".final-mark", { scale: 1.018, duration: 0.38, yoyo: true, repeat: 1, ease: "sine.inOut" }, 18.98);
+      tl.to([".final-mark", ".url", ".underline", ".tagline", ".final-stack"], { opacity: 0, duration: 0.42, ease: "sine.in" }, 19.58);
+      tl.set("#scene5", { visibility: "hidden" }, 20);
+
+      window.__timelines["kaffeelisten-promo"] = tl;
+    </script>
+  </body>
+</html>

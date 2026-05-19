@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/product-promo
+
+### Added
+- HyperFrames product promo project in `videos/kaffeelisten-promo`: 20-second music-only Kaffeelisten promo with captured `kaffeelisten.de` branding, product screenshots, animated scene choreography, and local Studio preview assets
+
+---
+
 ## [Unreleased] — hotfix/unified-logo
 
 ### Added
