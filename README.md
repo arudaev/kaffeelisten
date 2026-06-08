@@ -8,7 +8,7 @@ Built by **HuggyWuggies** for the
 [B4Y3RW4LD Hackathon](https://www.bayerwald-hackathon.de/) at
 [ITC1 Deggendorf](https://www.itc-deggendorf.de/).
 
-**Live app:** [kaffeelisten.vercel.app](https://kaffeelisten.vercel.app)  
+**Live app:** [kaffeelisten.de](https://kaffeelisten.de)  
 **Pitch deck:** [arudaev.github.io/kaffeelisten](https://arudaev.github.io/kaffeelisten/)
 
 ## What It Does
@@ -39,7 +39,7 @@ archives the live transactions, and resets the current-month table.
 
 ### Landing
 
-<a href="https://kaffeelisten.vercel.app">
+<a href="https://kaffeelisten.de">
   <img src="docs/screenshots/landing.png" alt="Kaffeelisten landing page" width="690">
 </a>
 

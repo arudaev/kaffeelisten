@@ -3,7 +3,7 @@
 **Product:** Kaffeelisten  
 **Challenge:** ITC1 Kaffeelisten Challenge (B4Y3RW4LD Hackathon)  
 **Location:** ITC1, Ulrichsberger Str. 17, 94469 Deggendorf  
-**Status:** Draft — v1.0  
+**Status:** Shipped — v1.0  
 **Date:** 2026-05-08
 
 ---
@@ -89,21 +89,21 @@ The ITC1 campus CEO or an assigned manager. They receive the monthly report and 
 
 - [x] A separate `/admin` route is protected by a simple numeric PIN (configurable in environment variables)
 - [x] Admin can view all transactions for the current month in a table: date, member name, company, item, quantity
-- [ ] Admin can manually trigger the monthly report email — UI exists; `/api/send-report.ts` not yet implemented
-- [ ] Admin can add, edit, or deactivate companies, members, and items — UI shells exist; CRUD logic not wired
+- [x] Admin can manually trigger the monthly report email via `/api/send-report`
+- [x] Admin can add, edit, or deactivate companies, members, and items
 - [x] Admin can view a company-level summary (total per company) for the current month
 
 **Monthly Report Email**
 
-- [ ] On trigger (manual or cron), the system computes the full month's transactions — `/api/send-report.ts` missing
-- [ ] Email is sent to the configured admin email address via Resend — blocked on above
-- [ ] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total — blocked on above
-- [ ] After the email is confirmed sent, the current month's records are archived and the live table is cleared — blocked on above
+- [x] On trigger (manual or cron), the system computes the full month's transactions
+- [x] Email is sent to the configured admin email address via Resend
+- [x] Email contains: reporting period, per-company breakdown, per-member breakdown within each company, item-level detail, and a total; PDF and Excel attachments included
+- [x] After the email is confirmed sent, transactions are archived to `transactions_archive`; a 90-day rolling window is maintained
 
 **PWA Baseline**
 
 - [x] The app is installable as a PWA (manifest, service worker, icon set, `lang: "de"`)
-- [ ] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling — iPad OK; phone portrait broken
+- [x] The member-facing flow is usable on a 10-inch iPad in landscape mode without horizontal scrolling; mobile portrait layout improved (1-col grids)
 - [x] The app loads and is interactive in under 3 seconds on a standard WiFi connection
 
 ---
@@ -113,8 +113,8 @@ The ITC1 campus CEO or an assigned manager. They receive the monthly report and 
 - [ ] **Quick-log shortcut**: a "same as last time" button for members who always get the same thing
 - [ ] **Undo window**: after logging, a 10-second undo button appears before the screen resets
 - [ ] **Item search / filter**: useful once the item list grows beyond ~10 entries
-- [ ] **CSV export**: admin can download current month's transactions as a CSV in addition to the email report
-- [ ] **Monthly cron fallback**: if admin forgets to trigger manually, an automated cron job sends the report on the last day of the month at 23:00 CET
+- [x] **CSV export**: admin can download current month's transactions as a CSV in addition to the email report
+- [x] **Monthly cron fallback**: automated cron job sends the report on the last day of the month at 22:00 UTC (`/api/cron/monthly-report`)
 - [ ] **Basic analytics view**: admin sees a simple chart of top consumers and top items for the month
 - [ ] **Multi-language**: German-first UI with an English toggle (member flow in German by default)
 
