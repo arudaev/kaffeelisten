@@ -4,12 +4,13 @@ Kaffeelisten is a live digital coffee and snack log for shared campus spaces.
 It replaces the paper sheet on the wall with a fast PWA flow for members and a
 PIN-protected admin panel for monthly reporting.
 
-Built by **HuggyWuggies** for the
+Originally built by **HuggyWuggies** for the
 [B4Y3RW4LD Hackathon](https://www.bayerwald-hackathon.de/) at
-[ITC1 Deggendorf](https://www.itc-deggendorf.de/).
+[ITC1 Deggendorf](https://www.itc-deggendorf.de/), the project is now being
+developed toward a production deployment for the ITC1 campus.
 
 **Live app:** [kaffeelisten.de](https://kaffeelisten.de)  
-**Pitch deck:** [arudaev.github.io/kaffeelisten](https://arudaev.github.io/kaffeelisten/)
+**Hackathon pitch deck:** [arudaev.github.io/kaffeelisten](https://arudaev.github.io/kaffeelisten/)
 
 ## What It Does
 
@@ -98,10 +99,12 @@ apps/web/
   api/                 Vercel functions: PIN check, report send, cron
   public/              App icons, illustrations, PWA assets
 docs/
-  index.html           Pitch deck
+  index.html           Hackathon pitch deck (GitHub Pages)
   design-*.md          Visual system and design notes
   prd.md               Product requirements
-  roadmap.md           Future phases
+  domain.md            Domain model
+  archive/             Hackathon-era docs (roadmap, prompts) kept for reference
+.design-sync/          Design-system sync inputs (components, tokens, previews)
 supabase/
   migrations/          Schema, grants, RLS policies
   seeds/               ITC1 seed data
@@ -226,8 +229,9 @@ wall-mounted member terminal.
 - [Domain model](docs/domain.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
-- [Roadmap](docs/roadmap.md)
-- [Pitch deck](https://arudaev.github.io/kaffeelisten/)
+- [Design workflow](docs/design-workflow.md)
+- [Hackathon pitch deck](https://arudaev.github.io/kaffeelisten/)
+- [Hackathon-era docs (archived)](docs/archive/)
 
 ## License
 

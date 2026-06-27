@@ -6,7 +6,7 @@ Context file for Claude Code. Read this before touching any file.
 
 Kaffeelisten is a PWA that replaces the paper coffee-consumption sheet at ITC1 Deggendorf campus. Campus members log what they consumed (coffee, drinks, snacks). At the end of each month, the admin receives a formatted email report grouped by company and person. The database then archives and resets.
 
-Built for the Kaffeelisten Challenge ITC1 at B4Y3RW4LD Hackathon, May 8–9 2026.
+Originally built for the Kaffeelisten Challenge ITC1 at the B4Y3RW4LD Hackathon (May 8–9 2026). The project is now being developed toward a real production deployment for the ITC1 campus, so treat it as a maintained product, not a throwaway prototype: prefer durable, well-typed, documented changes over quick hacks.
 
 ## Stack
 
@@ -96,7 +96,7 @@ fix/<slug>        — non-urgent bug fixes
 chore/<slug>      — tooling, deps, CI, docs (e.g. chore/update-deps)
 ```
 
-Always branch off `main`. Open a PR; never push directly to `main` except on a hotfix with a peer review waived only during the hackathon sprint.
+Always branch off `main`. Open a PR; never push directly to `main`. Now that the hackathon sprint is over, `main` is treated as production: PRs should be reviewed before merge, and the CI gate must pass. Reserve direct-to-`main` hotfixes for genuine production emergencies, and open a follow-up PR documenting the fix.
 
 ### Commit style (Conventional Commits)
 
@@ -153,7 +153,10 @@ When a teammate's Claude Code session starts on a fresh clone:
 
 - PRD: `docs/prd.md`
 - Design foundation: `docs/design-foundation.md`
-- Roadmap: `docs/roadmap.md`
+- Design system: `docs/design-system.md`
+- Domain model: `docs/domain.md`
+- Design-system sync inputs: `.design-sync/` (config, tokens, component previews, `NOTES.md`)
+- Hackathon-era docs (archived): `docs/archive/`
 - Supabase docs: https://supabase.com/docs
 - Resend docs: https://resend.com/docs
 - Vite PWA plugin: https://vite-pwa-org.netlify.app/

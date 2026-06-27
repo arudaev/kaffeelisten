@@ -65,6 +65,11 @@ classes, and each component's `<Name>.prompt.md` + `<Name>.d.ts` for its API bef
 - **Admin panel:** `Sidebar`, `Topbar` + `MonthSelector`, `SummaryCard` (KPI), `DataTable`
   (`columns`/`rows`, `render` per column), `Badge` (active/inactive/warn/error), `Modal`,
   `PinKeypad`, `AdminButton` (primary/secondary/ghost/destructive), `AdminIcon`.
+- **Admin form primitives** (build all admin forms from these — never raw `<input>`/`<select>`):
+  `AdminField` (labelled text/number/email input; `form` + compact `filter` variants, optional
+  leading icon, `hint`/`error`, `required` asterisk), `AdminSelect` (labelled select, same
+  variants, `options` prop), `Toggle` (on/off switch for booleans), `Toast` (`success`/`error`
+  notification), `EmptyState` (illustration + title + body + optional action).
 
 ## Idiomatic example
 

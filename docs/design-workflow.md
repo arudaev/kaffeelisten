@@ -35,7 +35,7 @@ Custom coffee icons. No emojis. All UI copy in German.
 
 ## Step 1: Design system setup
 
-Run the "Design system setup" prompt from `docs/prompts.md`.
+Run the "Design system setup" prompt from `docs/archive/prompts.md` (hackathon-era reference).
 
 Output should include:
 - Color palette (matches design-system.md tokens)
