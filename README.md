@@ -221,6 +221,8 @@ wall-mounted member terminal.
 ## Documentation
 
 - [Product requirements](docs/prd.md)
+- [ITC1 productization scope](docs/productization-scope.md)
+- [ITC1 productization meeting — 25 June 2026](docs/meetings/2026-06-25-itc1-productization.md)
 - [Domain model](docs/domain.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
