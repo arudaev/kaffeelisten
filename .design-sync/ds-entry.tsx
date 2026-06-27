@@ -23,3 +23,10 @@ export { default as PinKeypad } from '../apps/web/src/components/admin/PinKeypad
 export { default as SummaryCard } from '../apps/web/src/components/admin/SummaryCard'
 export { default as Sidebar } from '../apps/web/src/components/admin/Sidebar'
 export { Topbar, MonthSelector } from '../apps/web/src/components/admin/Topbar'
+
+// Admin form primitives
+export { default as AdminField } from '../apps/web/src/components/admin/AdminField'
+export { default as AdminSelect } from '../apps/web/src/components/admin/AdminSelect'
+export { default as Toggle } from '../apps/web/src/components/admin/Toggle'
+export { default as Toast } from '../apps/web/src/components/admin/Toast'
+export { default as EmptyState } from '../apps/web/src/components/admin/EmptyState'
