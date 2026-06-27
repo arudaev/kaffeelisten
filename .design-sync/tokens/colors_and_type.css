@@ -1,0 +1,237 @@
+/* ==========================================================================
+   Kaffeelisten — Colors & Type
+   Foundational tokens used across the member flow PWA, the admin panel,
+   and any pitch / landing surfaces.
+
+   Source of truth: docs/design-system.md, docs/design-foundation.md
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ----------------------------------------------------------------------
+     PRIMITIVE COLORS
+     Tailwind's `stone` neutral + `amber` warm + a small semantic set.
+     Stone gives a warm grey that pairs naturally with coffee tones.
+     ---------------------------------------------------------------------- */
+
+  /* Stone — neutral, warm grey (background, text, borders) */
+  --stone-50:  #FAFAF9;
+  --stone-100: #F5F5F4;
+  --stone-200: #E7E5E4;
+  --stone-300: #D6D3D1;
+  --stone-400: #A8A29E;
+  --stone-500: #78716C;
+  --stone-600: #57534E;
+  --stone-700: #44403C;
+  --stone-800: #292524;
+  --stone-900: #1C1917;
+
+  /* Amber — brand accent, "coffee warm" */
+  --amber-50:  #FFFBEB;
+  --amber-100: #FEF3C7;
+  --amber-200: #FDE68A;
+  --amber-400: #FBBF24;
+  --amber-500: #F59E0B;
+  --amber-600: #D97706;  /* brand */
+  --amber-700: #B45309;  /* brand hover */
+  --amber-800: #92400E;
+  --amber-900: #78350F;
+
+  /* Semantic accent — only used for status, links, alerts */
+  --green-50:  #F0FDF4;
+  --green-600: #16A34A;
+  --red-50:    #FEF2F2;
+  --red-600:   #DC2626;
+  --blue-600:  #2563EB;
+
+  --white: #FFFFFF;
+  --black: #000000;
+
+  /* ----------------------------------------------------------------------
+     SEMANTIC COLOR ROLES
+     Always reach for these in components rather than the primitives.
+     ---------------------------------------------------------------------- */
+
+  --bg-default:        var(--stone-50);   /* Page background */
+  --bg-subtle:         var(--stone-100);  /* Section / input bg */
+  --bg-inverse:        var(--stone-900);
+  --surface-default:   var(--white);      /* Card surface */
+  --surface-elevated:  var(--white);      /* Card + shadow */
+
+  --border-default:    var(--stone-200);
+  --border-strong:     var(--stone-400);
+  --border-focus:      var(--amber-600);
+
+  --fg-primary:        var(--stone-900);  /* Body, headings */
+  --fg-secondary:      var(--stone-600);  /* Sub-text, captions */
+  --fg-muted:          var(--stone-400);  /* Placeholder, hint */
+  --fg-inverse:        var(--white);
+
+  --brand:             var(--amber-600);
+  --brand-hover:       var(--amber-700);
+  --brand-subtle:      var(--amber-50);
+  --brand-on:          var(--white);
+
+  --success:           var(--green-600);
+  --success-subtle:    var(--green-50);
+  --error:             var(--red-600);
+  --error-subtle:      var(--red-50);
+  --info:              var(--blue-600);
+
+  --focus-ring:        var(--amber-600);
+
+  /* ----------------------------------------------------------------------
+     TYPOGRAPHY — FAMILIES & WEIGHTS
+     ---------------------------------------------------------------------- */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* ----------------------------------------------------------------------
+     TYPOGRAPHY — SCALE
+     Standard product scale + a "wall" pair for the wall-mounted iPad.
+     The member flow MUST use --fs-lg or larger for body and tap targets.
+     ---------------------------------------------------------------------- */
+  --fs-xs:   12px;  --lh-xs:  1.5;
+  --fs-sm:   14px;  --lh-sm:  1.5;
+  --fs-base: 16px;  --lh-base:1.5;
+  --fs-lg:   18px;  --lh-lg:  1.4;   /* member flow body floor */
+  --fs-xl:   20px;  --lh-xl:  1.4;
+  --fs-2xl:  24px;  --lh-2xl: 1.3;
+  --fs-3xl:  30px;  --lh-3xl: 1.2;   /* member flow heading */
+  --fs-4xl:  36px;  --lh-4xl: 1.1;   /* landing hero */
+
+  /* Letter spacing — used sparingly, only on uppercase eyebrows */
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.06em;
+
+  /* ----------------------------------------------------------------------
+     SPACING — 4px base grid
+     ---------------------------------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ----------------------------------------------------------------------
+     RADII — soft, never pill except for status dots
+     ---------------------------------------------------------------------- */
+  --radius-sm:   4px;   /* inputs, badges */
+  --radius-md:   6px;   /* buttons, small cards */
+  --radius-lg:   8px;   /* standard cards */
+  --radius-xl:   12px;  /* member-flow tiles */
+  --radius-2xl:  16px;  /* modals, elevated surfaces */
+  --radius-full: 9999px;
+
+  /* ----------------------------------------------------------------------
+     SHADOWS — light, single-layer; never colored
+     ---------------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+
+  /* ----------------------------------------------------------------------
+     MOTION — minimal, fast, no bounce
+     ---------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast:  120ms;
+  --duration-base:  180ms;
+  --duration-slow:  280ms;
+
+  /* Tap targets (member flow / wall iPad) */
+  --tap-min: 44px;
+  --tap-comfortable: 56px;
+}
+
+/* ==========================================================================
+   SEMANTIC TYPE STYLES
+   Use these by class on real elements. They are the contract for every
+   product surface; the underlying tokens above can change but these stay.
+   ========================================================================== */
+
+html { font-family: var(--font-sans); }
+body {
+  background: var(--bg-default);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.k-display {
+  font-size: var(--fs-4xl); line-height: var(--lh-4xl);
+  font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+.k-h1 {
+  font-size: var(--fs-3xl); line-height: var(--lh-3xl);
+  font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+.k-h2 {
+  font-size: var(--fs-2xl); line-height: var(--lh-2xl);
+  font-weight: var(--fw-semibold); color: var(--fg-primary);
+}
+.k-h3 {
+  font-size: var(--fs-xl); line-height: var(--lh-xl);
+  font-weight: var(--fw-semibold); color: var(--fg-primary);
+}
+.k-body-lg {
+  font-size: var(--fs-lg); line-height: var(--lh-lg);
+  font-weight: var(--fw-regular); color: var(--fg-primary);
+}
+.k-body {
+  font-size: var(--fs-base); line-height: var(--lh-base);
+  font-weight: var(--fw-regular); color: var(--fg-primary);
+}
+.k-body-sm {
+  font-size: var(--fs-sm); line-height: var(--lh-sm);
+  font-weight: var(--fw-regular); color: var(--fg-secondary);
+}
+.k-caption {
+  font-size: var(--fs-xs); line-height: var(--lh-xs);
+  font-weight: var(--fw-regular); color: var(--fg-secondary);
+}
+.k-eyebrow {
+  font-size: var(--fs-xs); line-height: var(--lh-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-wide); text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.k-label {
+  font-size: var(--fs-sm); line-height: var(--lh-sm);
+  font-weight: var(--fw-medium); color: var(--fg-primary);
+}
+.k-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm); line-height: var(--lh-sm);
+}
+
+/* Emphasis utilities — pair with the styles above */
+.k-fg-secondary { color: var(--fg-secondary); }
+.k-fg-muted     { color: var(--fg-muted); }
+.k-fg-brand     { color: var(--brand); }
+.k-fg-success   { color: var(--success); }
+.k-fg-error     { color: var(--error); }
+
+/* Focus ring — keyboard-only */
+.k-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-default), 0 0 0 4px var(--focus-ring);
+}

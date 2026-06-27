@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Design-foundation tokens (from the teammate's original DS): CSS custom
+   properties + semantic .k-* type classes. Inlined into the compiled stylesheet
+   so the values ship to designs via the styles.css import closure. */
+@import './tokens/colors_and_type.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-900;
+  }
+}
