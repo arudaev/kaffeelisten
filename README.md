@@ -102,6 +102,7 @@ docs/
   index.html           Hackathon pitch deck (GitHub Pages)
   design-*.md          Visual system and design notes
   prd.md               Product requirements
+  storybook.md         Product stories for the ITC1 productization
   domain.md            Domain model
   archive/             Hackathon-era docs (roadmap, prompts) kept for reference
 .design-sync/          Design-system sync inputs (components, tokens, previews)
@@ -224,8 +225,7 @@ wall-mounted member terminal.
 ## Documentation
 
 - [Product requirements](docs/prd.md)
-- [ITC1 productization scope](docs/productization-scope.md)
-- [ITC1 productization meeting — 25 June 2026](docs/meetings/2026-06-25-itc1-productization.md)
+- [Product Storybook](docs/storybook.md)
 - [Domain model](docs/domain.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
