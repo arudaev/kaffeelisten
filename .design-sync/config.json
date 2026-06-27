@@ -1,0 +1,41 @@
+{
+  "projectId": "18a6fa77-e528-40a0-9613-872a0f937786",
+  "shape": "package",
+  "pkg": "@kaffeelisten/web",
+  "globalName": "Kaffeelisten",
+  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css --minify",
+  "entry": ".design-sync/ds-entry.tsx",
+  "srcDir": "apps/web/src",
+  "cssEntry": ".design-sync/.cache/ds-tailwind.css",
+  "guidelinesGlob": ["docs/design-foundation.md", "docs/design-system.md", "docs/design-workflow.md", "docs/domain.md"],
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "BigButton": "apps/web/src/components/BigButton.tsx",
+    "Tile": "apps/web/src/components/Tile.tsx",
+    "ItemCard": "apps/web/src/components/ItemCard.tsx",
+    "Stepper": "apps/web/src/components/Stepper.tsx",
+    "Icon": "apps/web/src/components/Icon.tsx",
+    "FlowShell": "apps/web/src/components/FlowShell.tsx",
+    "SuccessScreen": "apps/web/src/components/SuccessScreen.tsx",
+    "AdminButton": "apps/web/src/components/admin/AdminButton.tsx",
+    "AdminIcon": "apps/web/src/components/admin/AdminIcon.tsx",
+    "Badge": "apps/web/src/components/admin/Badge.tsx",
+    "DataTable": "apps/web/src/components/admin/DataTable.tsx",
+    "Modal": "apps/web/src/components/admin/Modal.tsx",
+    "PinKeypad": "apps/web/src/components/admin/PinKeypad.tsx",
+    "SummaryCard": "apps/web/src/components/admin/SummaryCard.tsx",
+    "Sidebar": "apps/web/src/components/admin/Sidebar.tsx",
+    "Topbar": "apps/web/src/components/admin/Topbar.tsx",
+    "MonthSelector": "apps/web/src/components/admin/Topbar.tsx"
+  },
+  "overrides": {
+    "FlowShell": { "cardMode": "single", "viewport": "960x720" },
+    "SuccessScreen": { "cardMode": "single", "viewport": "760x640" },
+    "PinKeypad": { "cardMode": "single", "viewport": "600x760" },
+    "Modal": { "cardMode": "single", "viewport": "640x620" },
+    "Sidebar": { "cardMode": "single", "viewport": "880x680" },
+    "Topbar": { "cardMode": "single", "viewport": "960x150", "primaryStory": "Dashboard" },
+    "MonthSelector": { "cardMode": "single", "viewport": "820x140" },
+    "Tile": { "cardMode": "column" }
+  }
+}
