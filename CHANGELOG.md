@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/design-system-foundations
+
+### Added
+- Admin form primitives so the design system covers inputs (previously every form used ad-hoc markup):
+  - `AdminField` — labelled text/number/email input with `form` and compact `filter` variants, optional leading icon, hint/error text, and a required-field asterisk
+  - `AdminSelect` — labelled select with the same `form`/`filter` variants and `options` prop
+  - `Toggle` — accessible on/off switch (replaces the bare active/inactive checkboxes)
+  - `Toast` — extracted the bottom-right notification into a reusable component (`success`/`error`)
+  - `EmptyState` — extracted the empty-table illustration block into a reusable component
+
+### Changed
+- Admin pages (Übersicht/Einträge log, Unternehmen, Mitarbeitende, Items) now build their filter bars and modal forms from the new primitives — visually unchanged, with active/inactive now shown as a toggle and required fields marked with an asterisk
+
+---
+
 ## [Unreleased] — hotfix/unified-logo
 
 ### Added

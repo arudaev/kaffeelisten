@@ -26,7 +26,12 @@
     "SummaryCard": "apps/web/src/components/admin/SummaryCard.tsx",
     "Sidebar": "apps/web/src/components/admin/Sidebar.tsx",
     "Topbar": "apps/web/src/components/admin/Topbar.tsx",
-    "MonthSelector": "apps/web/src/components/admin/Topbar.tsx"
+    "MonthSelector": "apps/web/src/components/admin/Topbar.tsx",
+    "AdminField": "apps/web/src/components/admin/AdminField.tsx",
+    "AdminSelect": "apps/web/src/components/admin/AdminSelect.tsx",
+    "Toggle": "apps/web/src/components/admin/Toggle.tsx",
+    "Toast": "apps/web/src/components/admin/Toast.tsx",
+    "EmptyState": "apps/web/src/components/admin/EmptyState.tsx"
   },
   "overrides": {
     "FlowShell": { "cardMode": "single", "viewport": "960x720" },
@@ -36,6 +41,10 @@
     "Sidebar": { "cardMode": "single", "viewport": "880x680" },
     "Topbar": { "cardMode": "single", "viewport": "960x150", "primaryStory": "Dashboard" },
     "MonthSelector": { "cardMode": "single", "viewport": "820x140" },
-    "Tile": { "cardMode": "column" }
+    "Tile": { "cardMode": "column" },
+    "AdminField": { "cardMode": "column" },
+    "AdminSelect": { "cardMode": "column" },
+    "Toast": { "cardMode": "single", "viewport": "520x200", "primaryStory": "Success" },
+    "EmptyState": { "cardMode": "column" }
   }
 }

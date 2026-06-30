@@ -6,6 +6,8 @@ import Modal from '../../components/admin/Modal'
 import AdminButton from '../../components/admin/AdminButton'
 import Badge from '../../components/admin/Badge'
 import AdminIcon from '../../components/admin/AdminIcon'
+import AdminField from '../../components/admin/AdminField'
+import AdminSelect from '../../components/admin/AdminSelect'
 
 interface CompanyRow {
   id: string
@@ -162,15 +164,17 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
       />
       <div className="p-4 md:p-8 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <select
-            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+          <AdminSelect
+            variant="filter"
+            aria-label="Status filtern"
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-          >
-            <option value="all">Alle Status</option>
-            <option value="active">Aktiv</option>
-            <option value="inactive">Inaktiv</option>
-          </select>
+            options={[
+              { value: 'all', label: 'Alle Status' },
+              { value: 'active', label: 'Aktiv' },
+              { value: 'inactive', label: 'Inaktiv' },
+            ]}
+          />
           <button
             type="button"
             onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
@@ -230,18 +234,13 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
         }
       >
         <div className="flex flex-col gap-4 mt-1">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Name
-            </span>
-            <input
-              className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-              value={form.name}
-              onChange={e => setForm({ name: e.target.value })}
-              placeholder="z. B. Beispiel GmbH"
-              autoFocus
-            />
-          </label>
+          <AdminField
+            label="Name"
+            value={form.name}
+            onChange={e => setForm({ name: e.target.value })}
+            placeholder="z. B. Beispiel GmbH"
+            autoFocus
+          />
         </div>
       </Modal>
     </>
