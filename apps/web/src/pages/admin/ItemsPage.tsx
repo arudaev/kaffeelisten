@@ -6,6 +6,9 @@ import Modal from '../../components/admin/Modal'
 import AdminButton from '../../components/admin/AdminButton'
 import Badge from '../../components/admin/Badge'
 import AdminIcon from '../../components/admin/AdminIcon'
+import AdminField from '../../components/admin/AdminField'
+import AdminSelect from '../../components/admin/AdminSelect'
+import Toggle from '../../components/admin/Toggle'
 
 interface ItemRow {
   id: string
@@ -233,19 +236,17 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
       />
       <div className="p-4 md:p-8 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
-              <AdminIcon name="search" size={16} strokeWidth={1.5} />
-            </span>
-            <input
-              className="h-9 pl-8 pr-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors w-44"
-              placeholder="Item suchen…"
-              value={filterName}
-              onChange={e => setFilterName(e.target.value)}
-            />
-          </div>
-          <select
-            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+          <AdminField
+            variant="filter"
+            className="w-44"
+            placeholder="Item suchen…"
+            leading={<AdminIcon name="search" size={16} strokeWidth={1.5} />}
+            value={filterName}
+            onChange={e => setFilterName(e.target.value)}
+          />
+          <AdminSelect
+            variant="filter"
+            aria-label="Kategorie filtern"
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
           >
@@ -253,30 +254,34 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
             {(Object.entries(CATEGORY_LABELS) as [ItemCategory, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
-          </select>
-          <select
-            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+          </AdminSelect>
+          <AdminSelect
+            variant="filter"
+            aria-label="Status filtern"
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-          >
-            <option value="all">Alle Status</option>
-            <option value="active">Aktiv</option>
-            <option value="inactive">Inaktiv</option>
-          </select>
-          <select
-            className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+            options={[
+              { value: 'all', label: 'Alle Status' },
+              { value: 'active', label: 'Aktiv' },
+              { value: 'inactive', label: 'Inaktiv' },
+            ]}
+          />
+          <AdminSelect
+            variant="filter"
+            aria-label="Sortieren"
             value={`${sortKey}-${sortDir}`}
             onChange={e => {
               const [k, d] = e.target.value.split('-') as ['name' | 'price' | 'category', 'asc' | 'desc']
               setSortKey(k); setSortDir(d)
             }}
-          >
-            <option value="name-asc">Name A→Z</option>
-            <option value="name-desc">Name Z→A</option>
-            <option value="price-asc">Preis ↑</option>
-            <option value="price-desc">Preis ↓</option>
-            <option value="category-asc">Kategorie A→Z</option>
-          </select>
+            options={[
+              { value: 'name-asc', label: 'Name A→Z' },
+              { value: 'name-desc', label: 'Name Z→A' },
+              { value: 'price-asc', label: 'Preis ↑' },
+              { value: 'price-desc', label: 'Preis ↓' },
+              { value: 'category-asc', label: 'Kategorie A→Z' },
+            ]}
+          />
           {(filterCategory || filterStatus !== 'all' || filterName) && (
             <button
               type="button"
@@ -324,76 +329,46 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
         }
       >
         <div className="flex flex-col gap-4 mt-1">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Name
-            </span>
-            <input
-              className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="z. B. Espresso"
-              autoFocus
-            />
-          </label>
+          <AdminField
+            label="Name"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="z. B. Espresso"
+            autoFocus
+          />
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-                Einheit
-              </span>
-              <input
-                className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-                value={form.unit_label}
-                onChange={e =>
-                  setForm(f => ({ ...f, unit_label: e.target.value }))
-                }
-                placeholder="Tasse"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-                Preis (€)
-              </span>
-              <input
-                className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base font-mono focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-                value={form.price_str}
-                onChange={e =>
-                  setForm(f => ({ ...f, price_str: e.target.value }))
-                }
-                placeholder="0,00"
-              />
-            </label>
+            <AdminField
+              label="Einheit"
+              value={form.unit_label}
+              onChange={e => setForm(f => ({ ...f, unit_label: e.target.value }))}
+              placeholder="Tasse"
+            />
+            <AdminField
+              label="Preis (€)"
+              className="font-mono"
+              value={form.price_str}
+              onChange={e => setForm(f => ({ ...f, price_str: e.target.value }))}
+              placeholder="0,00"
+            />
           </div>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-              Kategorie
-            </span>
-            <select
-              className="h-11 px-3 bg-stone-100 border border-stone-200 rounded text-stone-900 text-base focus:border-amber-600 focus:ring-1 focus:ring-amber-600 focus:bg-white outline-none transition-colors"
-              value={form.category}
-              onChange={e =>
-                setForm(f => ({ ...f, category: e.target.value as ItemCategory }))
-              }
-            >
-              <option value="coffee">Kaffee</option>
-              <option value="drink">Getränk</option>
-              <option value="snack">Snack</option>
-              <option value="food">Essen</option>
-              <option value="other">Sonstiges</option>
-            </select>
-          </label>
+          <AdminSelect
+            label="Kategorie"
+            value={form.category}
+            onChange={e => setForm(f => ({ ...f, category: e.target.value as ItemCategory }))}
+            options={[
+              { value: 'coffee', label: 'Kaffee' },
+              { value: 'drink', label: 'Getränk' },
+              { value: 'snack', label: 'Snack' },
+              { value: 'food', label: 'Essen' },
+              { value: 'other', label: 'Sonstiges' },
+            ]}
+          />
           {modalMode === 'edit' && (
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="w-4 h-4 rounded accent-amber-600"
-                checked={form.active}
-                onChange={e =>
-                  setForm(f => ({ ...f, active: e.target.checked }))
-                }
-              />
-              <span className="text-sm text-stone-700">Aktiv</span>
-            </label>
+            <Toggle
+              label="Aktiv"
+              checked={form.active}
+              onChange={active => setForm(f => ({ ...f, active }))}
+            />
           )}
         </div>
       </Modal>

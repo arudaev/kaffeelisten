@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import EmptyState from './EmptyState'
 
 export interface Column<T> {
   key: string
@@ -22,20 +23,10 @@ export default function DataTable<T>({
 }: DataTableProps<T>) {
   if (rows.length === 0) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-12 flex flex-col items-center gap-3">
-        <img
-          src="/assets/illustrations/empty-cup.svg"
-          alt=""
-          className="w-24 text-stone-400"
-          style={{ color: '#A8A29E' }}
-        />
-        <p className="text-base font-semibold text-stone-900">
-          {empty?.title ?? 'Diesen Monat noch nichts.'}
-        </p>
-        <p className="text-sm text-stone-600">
-          {empty?.body ?? 'Sobald jemand etwas einträgt, erscheint es hier.'}
-        </p>
-      </div>
+      <EmptyState
+        title={empty?.title ?? 'Diesen Monat noch nichts.'}
+        body={empty?.body ?? 'Sobald jemand etwas einträgt, erscheint es hier.'}
+      />
     )
   }
 

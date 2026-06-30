@@ -12,6 +12,9 @@ import Modal from '../components/admin/Modal'
 import AdminButton from '../components/admin/AdminButton'
 import Badge from '../components/admin/Badge'
 import AdminIcon from '../components/admin/AdminIcon'
+import AdminField from '../components/admin/AdminField'
+import AdminSelect from '../components/admin/AdminSelect'
+import Toast from '../components/admin/Toast'
 import ItemsPage from './admin/ItemsPage'
 import CompaniesPage from './admin/CompaniesPage'
 import MembersPage from './admin/MembersPage'
@@ -399,19 +402,17 @@ export default function AdminDashboard() {
             <div className="p-4 md:p-8 flex flex-col gap-4">
               {/* Filter bar */}
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
-                    <AdminIcon name="search" size={16} strokeWidth={1.5} />
-                  </span>
-                  <input
-                    className="h-9 pl-8 pr-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors w-52"
-                    placeholder="Person suchen…"
-                    value={filterName}
-                    onChange={e => setFilterName(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+                <AdminField
+                  variant="filter"
+                  className="w-52"
+                  placeholder="Person suchen…"
+                  leading={<AdminIcon name="search" size={16} strokeWidth={1.5} />}
+                  value={filterName}
+                  onChange={e => setFilterName(e.target.value)}
+                />
+                <AdminSelect
+                  variant="filter"
+                  aria-label="Unternehmen filtern"
                   value={filterCompanyId}
                   onChange={e => setFilterCompanyId(e.target.value)}
                 >
@@ -419,9 +420,10 @@ export default function AdminDashboard() {
                   {logCompanyOptions.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </select>
-                <select
-                  className="h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-900 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition-colors"
+                </AdminSelect>
+                <AdminSelect
+                  variant="filter"
+                  aria-label="Items filtern"
                   value={filterItemName}
                   onChange={e => setFilterItemName(e.target.value)}
                 >
@@ -429,7 +431,7 @@ export default function AdminDashboard() {
                   {logItemOptions.map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}
-                </select>
+                </AdminSelect>
                 <button
                   type="button"
                   onClick={() => setLogSortDir(d => d === 'desc' ? 'asc' : 'desc')}
@@ -502,12 +504,7 @@ export default function AdminDashboard() {
         {formatPrice(totalCents)}) wird per E-Mail versendet. Die Einträge bleiben erhalten.
       </Modal>
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-stone-900 text-white px-4 py-3 rounded-lg text-sm font-medium shadow-lg flex items-center gap-2.5 z-50">
-          <AdminIcon name="check" size={18} strokeWidth={2.5} />
-          {toast}
-        </div>
-      )}
+      <Toast message={toast} />
     </div>
   )
 }
