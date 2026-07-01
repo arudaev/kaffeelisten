@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport } from './_lib/report'
+import { verifyAdminPin, pinFromHeader } from './_lib/adminAuth'
 
 export const config = { maxDuration: 60 }
 
@@ -8,8 +9,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const adminPin = process.env.ADMIN_PIN
-  if (!adminPin || req.headers['x-admin-pin'] !== adminPin) {
+  // Auth against the DB PIN (with ADMIN_PIN env fallback until a PIN is set),
+  // so the manual send keeps working after the admin changes their PIN.
+  if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
