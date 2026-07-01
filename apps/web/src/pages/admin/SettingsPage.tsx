@@ -20,6 +20,7 @@ interface Props {
 
 interface SettingsData {
   report_recipients: string[]
+  bootstrap_recipients: string[]
   ceo_email: string | null
   cc_ceo_on_reports: boolean
   member_statements_enabled: boolean
@@ -51,6 +52,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
 
   // Editable settings state
   const [recipients, setRecipients] = useState<string[]>([])
+  const [bootstrapRecipients, setBootstrapRecipients] = useState<string[]>([])
   const [newEmail, setNewEmail] = useState('')
   const [emailError, setEmailError] = useState('')
   const [ceoEmail, setCeoEmail] = useState('')
@@ -82,6 +84,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
 
   const applySettings = (d: SettingsData) => {
     setRecipients(d.report_recipients ?? [])
+    setBootstrapRecipients(d.bootstrap_recipients ?? [])
     setCeoEmail(d.ceo_email ?? '')
     setCeoCc(d.cc_ceo_on_reports)
     setMemberReport(d.member_statements_enabled)
@@ -261,6 +264,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     } catch { /* non-fatal */ }
   }
 
+  // Env fallback recipients not already in the editable list — shown read-only.
+  const lockedBootstrap = bootstrapRecipients.filter(e => !recipients.includes(e))
+
   const pinSubtitle = pinIsSet
     ? `PIN-Länge: ${pinLength}-stellig${pinUpdatedAt ? ` · zuletzt geändert am ${formatDay(pinUpdatedAt)}` : ''}`
     : `PIN-Länge: ${pinLength}-stellig · Standard-PIN aktiv (noch nicht geändert)`
@@ -287,24 +293,46 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   <p className="text-sm text-stone-600 leading-relaxed">Diese Adressen erhalten den monatlichen Bericht.</p>
                 </div>
 
-                {recipients.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {recipients.map(email => (
-                      <span
-                        key={email}
-                        className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200 rounded-md pl-3 pr-2 py-1.5 text-sm font-medium text-stone-900"
-                      >
-                        {email}
-                        <button
-                          type="button"
-                          onClick={() => removeRecipient(email)}
-                          aria-label={`${email} entfernen`}
-                          className="inline-flex items-center justify-center w-[22px] h-[22px] rounded text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors"
+                {recipients.length > 0 || lockedBootstrap.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {recipients.map(email => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200 rounded-md pl-3 pr-2 py-1.5 text-sm font-medium text-stone-900"
                         >
-                          <AdminIcon name="close" size={14} strokeWidth={2} />
-                        </button>
-                      </span>
-                    ))}
+                          {email}
+                          <button
+                            type="button"
+                            onClick={() => removeRecipient(email)}
+                            aria-label={`${email} entfernen`}
+                            className="inline-flex items-center justify-center w-[22px] h-[22px] rounded text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors"
+                          >
+                            <AdminIcon name="close" size={14} strokeWidth={2} />
+                          </button>
+                        </span>
+                      ))}
+                      {/* Read-only fallback recipients from the ADMIN_EMAIL env var. */}
+                      {lockedBootstrap.map(email => (
+                        <span
+                          key={email}
+                          title="Aus der Serverkonfiguration (ADMIN_EMAIL)"
+                          className="inline-flex items-center gap-2 bg-stone-50 border border-dashed border-stone-300 rounded-md pl-3 pr-2.5 py-1.5 text-sm font-medium text-stone-400"
+                        >
+                          {email}
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400 bg-stone-200/70 rounded px-1.5 py-0.5">
+                            Server
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                    {lockedBootstrap.length > 0 && (
+                      <p className="text-[13px] text-stone-500 leading-relaxed">
+                        {recipients.length > 0
+                          ? 'Grau hinterlegte Adressen stammen aus der Serverkonfiguration (ADMIN_EMAIL) und sind inaktiv, solange eigene Empfänger hinterlegt sind.'
+                          : 'Grau hinterlegte Adressen stammen aus der Serverkonfiguration (ADMIN_EMAIL) und erhalten den Bericht, bis du eigene Empfänger hinzufügst.'}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-lg px-4 py-3.5">
@@ -468,9 +496,12 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
               Wir senden einen einmaligen Code an die hinterlegten Berichts-Empfänger. Mit diesem Code kannst du eine neue PIN vergeben.
             </p>
             <div className="bg-stone-100 border border-stone-200 rounded-lg px-3.5 py-3 text-[13px] font-medium text-stone-600 leading-relaxed break-words">
-              {recipients.length > 0
-                ? `Code geht an: ${recipients.join(', ')}${ceoEmail ? `, ${ceoEmail}` : ''}`
-                : 'Keine Empfänger hinterlegt — nutze den Notfall-Code.'}
+              {(() => {
+                const codeTo = [...(recipients.length > 0 ? recipients : bootstrapRecipients), ...(ceoEmail ? [ceoEmail] : [])]
+                return codeTo.length > 0
+                  ? `Code geht an: ${codeTo.join(', ')}`
+                  : 'Keine Empfänger hinterlegt — nutze den Notfall-Code.'
+              })()}
             </div>
             <AdminButton variant="primary" onClick={sendResetCode} disabled={resetSending}>
               {resetSending ? 'Wird gesendet…' : 'Code senden'}

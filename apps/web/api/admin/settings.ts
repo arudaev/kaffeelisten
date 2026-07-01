@@ -77,8 +77,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single()
     if (error) throw new Error(error.message)
 
+    // Bootstrap recipients from the ADMIN_EMAIL env var. These are the fallback
+    // the report uses while report_recipients is empty. Surfaced (read-only) so
+    // the admin can see who currently receives reports even before configuring
+    // their own list.
+    const bootstrapRecipients = (process.env.ADMIN_EMAIL ?? '')
+      .split(',')
+      .map(e => e.trim())
+      .filter(Boolean)
+
     return res.status(200).json({
       report_recipients: data.report_recipients ?? [],
+      bootstrap_recipients: bootstrapRecipients,
       ceo_email: data.ceo_email ?? null,
       cc_ceo_on_reports: data.cc_ceo_on_reports,
       member_statements_enabled: data.member_statements_enabled,
