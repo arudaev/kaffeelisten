@@ -21,8 +21,9 @@ already implements all of it; this is for iterating on look, not net-new screens
 > BOTH light and dark.
 >
 > - **Erscheinungsbild card:** a segmented **Standard-Modus** control (Hell / Dunkel /
->   System); a **Marken-Palette** picker showing preset palettes (Bayerwald, Espresso,
->   Wald) plus **3 custom palettes**, each previewed as light + dark accent swatches;
+>   System); a **Marken-Palette** picker showing preset palettes (Standard-Amber,
+>   ITC1, Wald) plus **3 custom palettes**, each previewed as light + dark accent
+>   swatches;
 >   when a custom palette is selected, an inline editor with a name and two colour
 >   pickers (Akzent Hell / Akzent Dunkel). Selecting previews instantly.
 > - **Report-Format card:** subject + intro fields for the company report and the
