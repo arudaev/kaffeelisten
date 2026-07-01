@@ -12,6 +12,7 @@ import FlowShell from '../components/FlowShell'
 import SuccessScreen from '../components/SuccessScreen'
 import Icon from '../components/Icon'
 import CappuccinoMark from '../components/CappuccinoMark'
+import ThemeModeToggle from '../components/ThemeModeToggle'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type Member = Database['public']['Tables']['members']['Row']
@@ -310,12 +311,15 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
-        <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
-          ITC1 Deggendorf · B4Y3RW4LD ·{' '}
-          <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
-            Datenschutz
-          </Link>
-        </p>
+        <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4">
+          <ThemeModeToggle />
+          <p className="text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
+            ITC1 Deggendorf · B4Y3RW4LD ·{' '}
+            <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
+              Datenschutz
+            </Link>
+          </p>
+        </div>
       </div>
     )
   }

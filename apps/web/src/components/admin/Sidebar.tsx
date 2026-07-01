@@ -1,4 +1,6 @@
 import AdminIcon from './AdminIcon'
+import Logo from '../Logo'
+import ThemeModeToggle from '../ThemeModeToggle'
 
 type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
 
@@ -50,11 +52,7 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
         {/* Header */}
         <div className="px-5 py-6 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <img
-              src="/logo.svg"
-              alt="Kaffeelisten"
-              className="h-8 w-8 rounded-lg"
-            />
+            <Logo className="h-8 w-8 text-accent" />
             <div>
               <p className="text-[15px] font-bold text-fg tracking-tight">Kaffeelisten</p>
               <p className="text-[11px] text-fg-muted uppercase tracking-[0.06em]">Admin</p>
@@ -96,8 +94,9 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
             <AdminIcon name="send" size={16} strokeWidth={2} />
             Bericht senden
           </button>
+          <ThemeModeToggle />
           <div className="flex items-center gap-2">
-            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80" />
+            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
             <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
           </div>
         </div>

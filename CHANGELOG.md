@@ -10,8 +10,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased] — feat/admin-settings
 
 ### Added (theming foundation — dark mode)
-- **The whole app now supports Light / Dark / System.** Colors are driven by semantic CSS-variable tokens (`--bg`, `--surface`, `--fg`, `--accent`, …) mapped into Tailwind; a `ThemeProvider` resolves the mode, persists a per-device choice, and follows the OS in "System". Visitors on a dark-mode OS now get a dark UI automatically. (The in-app mode switcher and admin brand-palette controls arrive next.)
-- Light mode is visually unchanged — the light token values equal the previous stone/amber palette.
+- **The whole app now supports Light / Dark / System.** Colors are driven by semantic CSS-variable tokens (`--bg`, `--surface`, `--fg`, `--accent`, …) mapped into Tailwind; a `ThemeProvider` resolves the mode, persists a per-device choice, and follows the OS in "System".
+- **Mode switcher** (Hell / Dunkel / System) on the member start screen and in the admin sidebar, so anyone can pick their appearance per device.
+- The app logo and the landing/empty illustrations now recolor with the theme (inlined as `currentColor` SVGs instead of static `<img>`s).
+- Light mode is visually unchanged — the light token values equal the previous stone/amber palette. (Admin brand-palette / custom-palette controls arrive next.)
 
 ### Changed (Report-Format & Automatic-dispatch redesign)
 - **Send day is now a calendar-style grid** (1–28 + „Letzter Tag des Monats") instead of a dropdown.
