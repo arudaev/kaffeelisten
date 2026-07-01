@@ -11,8 +11,8 @@ export interface Palette {
 }
 
 export const PRESET_PALETTES: Palette[] = [
-  { id: 'bayerwald', name: 'Bayerwald (Standard)', lightAccent: '#D97706', darkAccent: '#F59E0B' },
-  { id: 'espresso', name: 'Espresso', lightAccent: '#8B5E34', darkAccent: '#C08457' },
+  { id: 'bayerwald', name: 'Standard (Amber)', lightAccent: '#D97706', darkAccent: '#F59E0B' },
+  { id: 'b4y3rw4ld', name: 'ITC1', lightAccent: '#018FC2', darkAccent: '#34B7E6' },
   { id: 'wald', name: 'Wald', lightAccent: '#4D7C0F', darkAccent: '#84CC16' },
 ]
 
