@@ -14,11 +14,49 @@ import Toggle from '../../components/admin/Toggle'
 import PinInput from '../../components/admin/PinInput'
 import TemplateField from '../../components/admin/TemplateField'
 import DayGridPicker from '../../components/admin/DayGridPicker'
+import SegmentedControl from '../../components/admin/SegmentedControl'
+import PalettePreviewCard from '../../components/admin/PalettePreviewCard'
 import { COMPANY_PLACEHOLDERS, MEMBER_PLACEHOLDERS } from '../../lib/reportPlaceholders'
+import { allPalettes, findPalette, customPalettes, CUSTOM_SLOTS } from '../../lib/palettes'
+import { useTheme } from '../../lib/theme-context'
+import type { ThemeMode } from '../../lib/theme-context'
 
 interface Props {
   onToast: (msg: string) => void
   onMenuClick: () => void
+}
+
+type CustomMap = Record<string, { name: string; light: string; dark: string }>
+
+const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'light', label: 'Hell' },
+  { value: 'dark', label: 'Dunkel' },
+  { value: 'system', label: 'System' },
+]
+
+// Compact colour + hex row used by the custom-palette editor.
+function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          aria-label={label}
+          className="h-11 w-14 rounded border border-border bg-surface cursor-pointer p-1"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          aria-label={`${label} Hex`}
+          className="h-11 w-28 px-3 rounded border border-border bg-surface-2 focus:bg-surface text-base text-fg outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent font-mono"
+        />
+      </div>
+    </label>
+  )
 }
 
 interface SettingsData {
@@ -95,6 +133,13 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [pinUpdatedAt, setPinUpdatedAt] = useState<string | null>(null)
   const [pinIsSet, setPinIsSet] = useState(false)
 
+  // Appearance / theme
+  const { setPalette } = useTheme()
+  const [themeDefaultMode, setThemeDefaultMode] = useState<ThemeMode>('system')
+  const [activePalette, setActivePalette] = useState('bayerwald')
+  const [customMap, setCustomMap] = useState<CustomMap>({})
+  const [themeSaving, setThemeSaving] = useState(false)
+
   // Modals
   const [modal, setModal] = useState<'change' | null>(null)
 
@@ -130,12 +175,27 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     const load = async () => {
       setLoading(true)
       try {
-        const res = await fetch('/api/admin/settings', { headers: { 'x-admin-pin': adminPin() } })
+        const [res, tRes] = await Promise.all([
+          fetch('/api/admin/settings', { headers: { 'x-admin-pin': adminPin() } }),
+          fetch('/api/admin/theme', { headers: { 'x-admin-pin': adminPin() } }),
+        ])
         if (res.ok) {
           const data = (await res.json()) as SettingsData
           if (!cancelled) applySettings(data)
         } else if (!cancelled) {
           onToast('Einstellungen konnten nicht geladen werden.')
+        }
+        if (tRes.ok && !cancelled) {
+          const t = (await tRes.json()) as {
+            default_mode: ThemeMode
+            active_palette: string
+            custom: Record<string, unknown>
+          }
+          setThemeDefaultMode(t.default_mode)
+          setActivePalette(t.active_palette)
+          const cm: CustomMap = {}
+          for (const p of customPalettes(t.custom)) cm[p.id] = { name: p.name, light: p.lightAccent, dark: p.darkAccent }
+          setCustomMap(cm)
         }
       } catch {
         if (!cancelled) onToast('Einstellungen konnten nicht geladen werden.')
@@ -146,6 +206,37 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     load()
     return () => { cancelled = true }
   }, [onToast])
+
+  // Live preview: reflect the selected palette / custom edits app-wide immediately.
+  useEffect(() => {
+    setPalette(findPalette(activePalette, customMap))
+  }, [activePalette, customMap, setPalette])
+
+  const updateCustom = (slot: string, patch: Partial<{ name: string; light: string; dark: string }>) =>
+    setCustomMap(m => {
+      const base = m[slot] ?? { name: '', light: '#D97706', dark: '#F59E0B' }
+      return { ...m, [slot]: { ...base, ...patch } }
+    })
+
+  const saveTheme = async () => {
+    setThemeSaving(true)
+    try {
+      const res = await fetch('/api/admin/theme', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+        body: JSON.stringify({
+          default_mode: themeDefaultMode,
+          active_palette: activePalette,
+          custom: customMap,
+        }),
+      })
+      onToast(res.ok ? 'Erscheinungsbild gespeichert.' : 'Speichern fehlgeschlagen.')
+    } catch {
+      onToast('Speichern fehlgeschlagen.')
+    } finally {
+      setThemeSaving(false)
+    }
+  }
 
   const addRecipient = () => {
     const v = newEmail.trim()
@@ -306,6 +397,74 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             </>
           ) : (
             <>
+              {/* Card 0 — Erscheinungsbild / Theme */}
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-5">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-fg">Erscheinungsbild</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
+                    Standard-Modus und Marken-Palette der App — gilt für den Mitglieder- und den Admin-Bereich.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Standard-Modus</span>
+                  <SegmentedControl
+                    ariaLabel="Standard-Modus"
+                    value={themeDefaultMode}
+                    onChange={setThemeDefaultMode}
+                    options={MODE_OPTIONS}
+                  />
+                  <p className="text-[13px] text-fg-muted leading-relaxed">
+                    Gilt für neue Geräte. Jede Person kann das Erscheinungsbild jederzeit selbst umschalten.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Marken-Palette</span>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {allPalettes(customMap).map(p => (
+                      <PalettePreviewCard
+                        key={p.id}
+                        palette={p}
+                        selected={activePalette === p.id}
+                        onSelect={() => setActivePalette(p.id)}
+                      />
+                    ))}
+                  </div>
+                  {(CUSTOM_SLOTS as readonly string[]).includes(activePalette) && (
+                    <div className="mt-1 flex flex-col gap-3 border border-border rounded-lg p-4 bg-surface-2">
+                      <AdminField
+                        label="Name der Palette"
+                        value={customMap[activePalette]?.name ?? ''}
+                        onChange={e => updateCustom(activePalette, { name: e.target.value })}
+                        placeholder="z. B. Firmenfarben"
+                      />
+                      <div className="flex flex-wrap gap-6">
+                        <ColorRow
+                          label="Akzent (Hell)"
+                          value={customMap[activePalette]?.light ?? '#D97706'}
+                          onChange={v => updateCustom(activePalette, { light: v })}
+                        />
+                        <ColorRow
+                          label="Akzent (Dunkel)"
+                          value={customMap[activePalette]?.dark ?? '#F59E0B'}
+                          onChange={v => updateCustom(activePalette, { dark: v })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                  <span className="text-[13px] text-fg-muted leading-relaxed">
+                    Änderungen erscheinen sofort in der Vorschau; „Speichern“ macht sie für alle wirksam.
+                  </span>
+                  <AdminButton variant="primary" onClick={saveTheme} disabled={themeSaving}>
+                    {themeSaving ? 'Speichern…' : 'Erscheinungsbild speichern'}
+                  </AdminButton>
+                </div>
+              </section>
+
               {/* Card 1 — Berichts-Empfänger */}
               <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
                 <div className="flex flex-col gap-1.5">
