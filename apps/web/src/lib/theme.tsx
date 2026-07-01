@@ -18,6 +18,30 @@ import {
   type ThemeMode,
 } from './theme-context'
 
+// Generate an accent-coloured SVG favicon (the logo mark) as a data URI and set
+// it as the tab icon + the browser theme-colour, so the favicon tracks the
+// active brand palette. The installed PWA PNG icons stay static (OS-cached).
+function applyBrandFavicon(accent: string) {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">` +
+    `<rect width="200" height="200" rx="40" fill="${accent}"/>` +
+    `<g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,20)">` +
+    `<path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/><ellipse cx="83" cy="60" rx="43" ry="6"/>` +
+    `<path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>` +
+    `<path d="M126 70h12c10 0 18 8 18 18v0c0 10-8 18-18 18h-12"/>` +
+    `<path d="M70 28c-3 6 3 12 0 18"/><path d="M83 22c-3 6 3 12 0 18"/><path d="M96 28c-3 6 3 12 0 18"/></g></svg>`
+  const href = 'data:image/svg+xml,' + encodeURIComponent(svg)
+  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  link.type = 'image/svg+xml'
+  link.href = href
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', accent)
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const stored = readStoredMode()
   const hasStoredPref = useRef(stored !== null)
@@ -38,6 +62,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement
     for (const [k, v] of Object.entries(paletteVars(palette, resolved))) root.style.setProperty(k, v)
+    applyBrandFavicon(resolved === 'dark' ? palette.darkAccent : palette.lightAccent)
     try {
       localStorage.setItem(
         'kaffeelisten-theme-vars',

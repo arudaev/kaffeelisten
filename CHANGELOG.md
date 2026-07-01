@@ -18,6 +18,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The app logo and the landing/empty illustrations now recolor with the theme (inlined as `currentColor` SVGs instead of static `<img>`s).
 - **Admin "Erscheinungsbild" settings:** set the app's default mode (Hell/Dunkel/System) and pick a **brand palette** — three presets (Standard-Amber, ITC1, Wald) plus **three custom palettes**, each with its own light and dark accent colour. Selecting/editing previews instantly; "Speichern" applies it app-wide (member flow + admin) for everyone. Stored in a new public `app_theme` table.
 - **Report and statement emails now use the brand-palette accent** (light variant — email dark-mode is unreliable). The separate accent picker in "Berichts-Format" is removed; the email accent follows the palette under "Erscheinungsbild".
+- The **browser tab favicon and theme-colour now follow the active brand palette** (generated at runtime from the accent). The installed PWA home-screen icon stays static.
 - Light mode is visually unchanged — the light token values equal the previous stone/amber palette.
 
 ### Changed (Report-Format & Automatic-dispatch redesign)
