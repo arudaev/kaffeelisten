@@ -35,8 +35,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single()
     if (error) throw new Error(error.message)
 
+    // Same recipient resolution as the report: DB list, else ADMIN_EMAIL env,
+    // plus the CEO if configured.
+    const dbRecipients = (data.report_recipients ?? []).filter(Boolean)
+    const envFallback = (process.env.ADMIN_EMAIL ?? '')
+      .split(',')
+      .map(e => e.trim())
+      .filter(Boolean)
+    const base = dbRecipients.length > 0 ? dbRecipients : envFallback
     const recipients = Array.from(
-      new Set([...(data.report_recipients ?? []), data.ceo_email].filter(Boolean) as string[]),
+      new Set([...base, data.ceo_email].filter(Boolean) as string[]),
     )
 
     const code = sixDigitCode()

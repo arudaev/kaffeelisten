@@ -1,7 +1,7 @@
 // Admin dashboard: month-to-date summary, transaction log, report trigger
 // Protected — requires valid session token from AdminLogin PIN flow
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Sidebar from '../components/admin/Sidebar'
@@ -156,10 +156,12 @@ export default function AdminDashboard() {
     fetchData()
   }, [])
 
-  const showToast = (msg: string) => {
+  // Stable identity so child effects that depend on it (e.g. SettingsPage's
+  // initial load) don't re-run every time a toast is shown/cleared.
+  const showToast = useCallback((msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
-  }
+  }, [])
 
   const handleSendReport = async () => {
     setReportSending(true)
