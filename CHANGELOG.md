@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/itc1-production-prep
+
+### Added
+- Mandatory fields when adding a member: Vorname, Nachname, Arbeits-E-Mail and Unternehmen are now all required (with email-format validation), so every member is reachable for the upcoming per-member monthly statement
+- `docs/phase-2-production.md` — the plan for moving off the hackathon demo onto an ITC1 production deployment (data reset, 6-digit PIN management, CEO report CC, per-member statements, expanded admin settings), with a migration runbook
+
+### Database (not user-visible until features ship)
+- `app_settings` table (migration 010) — single-row admin config: hashed 6-digit PIN, email-based PIN reset token, report recipients, CEO CC, and feature toggles; service-role only
+- `members.work_email` becomes mandatory (migration 011, guarded — apply after the demo data is cleared)
+- `supabase/maintenance/clear_demo_data.sql` to wipe demo data and `supabase/seed_production.template.sql` to seed the real campus data (run manually)
+
+---
+
 ## [Unreleased] — feat/design-system-foundations
 
 ### Added

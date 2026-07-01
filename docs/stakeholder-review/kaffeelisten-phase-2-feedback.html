@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaffeelisten – Feedback zur nächsten Phase</title>
+<style>
+  :root{
+    --amber:#D97706; --amber-dark:#B45309; --amber-50:#FFFBEB;
+    --stone-900:#1C1917; --stone-700:#44403C; --stone-600:#57534E;
+    --stone-500:#78716C; --stone-300:#D6D3D1; --stone-200:#E7E5E4;
+    --stone-100:#F5F5F4; --stone-50:#FAFAF9; --white:#fff;
+  }
+  *{box-sizing:border-box}
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; background:var(--stone-100);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,Helvetica,sans-serif;
+    color:var(--stone-700); line-height:1.6; font-size:16px;
+  }
+  .sheet{ max-width:760px; margin:32px auto; background:var(--white);
+    border:1px solid var(--stone-200); }
+  /* Header */
+  header{ background:var(--amber); color:#fff; padding:32px 40px; }
+  .eyebrow{ margin:0 0 8px; font-size:11px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; opacity:.85; }
+  header h1{ margin:0; font-size:26px; font-weight:800; letter-spacing:-.01em; }
+  header p{ margin:10px 0 0; font-size:15px; opacity:.95; max-width:52ch; }
+  .head-row{ display:flex; align-items:center; gap:20px; justify-content:space-between; }
+  .cup{ flex:0 0 auto; }
+  /* Body */
+  .body{ padding:32px 40px 40px; }
+  h2{ color:var(--stone-900); font-size:13px; font-weight:700; letter-spacing:1.2px;
+    text-transform:uppercase; margin:36px 0 14px; padding-bottom:8px;
+    border-bottom:2px solid var(--stone-200); }
+  h2:first-of-type{ margin-top:8px; }
+  h3{ color:var(--stone-900); font-size:16px; margin:0 0 4px; }
+  p{ margin:0 0 14px; }
+  .lead{ font-size:16px; color:var(--stone-700); }
+  .note{ background:var(--amber-50); border-left:3px solid var(--amber);
+    padding:14px 18px; font-size:14px; color:var(--stone-700); margin:0 0 8px; }
+  /* Feature list */
+  .feat{ border:1px solid var(--stone-200); border-radius:10px; padding:16px 18px;
+    margin:0 0 12px; background:var(--stone-50); }
+  .feat .tag{ display:inline-block; font-size:11px; font-weight:700; color:var(--amber-dark);
+    background:#fff; border:1px solid var(--stone-200); border-radius:999px;
+    padding:2px 9px; letter-spacing:.5px; margin-bottom:8px; }
+  .feat p{ margin:0; font-size:14.5px; }
+  /* Questions */
+  .q{ border:1px solid var(--stone-200); border-radius:10px; padding:18px 20px;
+    margin:0 0 16px; }
+  .q .qnum{ color:var(--amber-dark); font-weight:800; }
+  .q .hint{ font-size:13px; color:var(--stone-500); margin:2px 0 12px; }
+  fieldset{ border:0; margin:0 0 10px; padding:0; }
+  .opt{ display:flex; align-items:flex-start; gap:9px; padding:5px 0; font-size:14.5px; }
+  .opt input{ margin-top:4px; flex:0 0 auto; width:16px; height:16px; accent-color:var(--amber); }
+  label{ cursor:pointer; }
+  textarea{ width:100%; min-height:74px; resize:vertical; font:inherit; font-size:14px;
+    color:var(--stone-900); border:1px solid var(--stone-300); border-radius:8px;
+    padding:10px 12px; background:#fff; }
+  textarea:focus,input:focus{ outline:2px solid var(--amber); outline-offset:1px; }
+  .scale{ display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 12px; }
+  .scale label{ flex:1 1 0; min-width:120px; border:1px solid var(--stone-300);
+    border-radius:8px; padding:9px 10px; font-size:13.5px; text-align:center;
+    background:#fff; }
+  .scale input{ position:absolute; opacity:0; pointer-events:none; }
+  .scale label:has(input:checked){ border-color:var(--amber); background:var(--amber-50);
+    color:var(--amber-dark); font-weight:600; }
+  .who{ font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+    color:var(--stone-500); margin-left:6px; }
+  /* Actions */
+  .actions{ position:sticky; bottom:0; background:rgba(255,255,255,.96);
+    border-top:1px solid var(--stone-200); padding:16px 40px;
+    display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .btn{ font:inherit; font-weight:700; font-size:14px; border-radius:9px;
+    padding:11px 18px; cursor:pointer; border:1px solid transparent; }
+  .btn-primary{ background:var(--amber); color:#fff; }
+  .btn-primary:hover{ background:var(--amber-dark); }
+  .btn-secondary{ background:#fff; color:var(--stone-700); border-color:var(--stone-300); }
+  .btn-secondary:hover{ background:var(--stone-50); }
+  .actions .hint{ font-size:12.5px; color:var(--stone-500); margin:0; }
+  .who-field{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .who-field input{ flex:1 1 200px; font:inherit; font-size:14px; padding:9px 12px;
+    border:1px solid var(--stone-300); border-radius:8px; }
+  footer{ padding:18px 40px 26px; border-top:1px solid var(--stone-200);
+    color:var(--stone-500); font-size:12px; background:var(--stone-50); }
+  @media (max-width:600px){
+    header,.body,.actions,footer{ padding-left:22px; padding-right:22px; }
+    .head-row{ flex-direction:column-reverse; align-items:flex-start; }
+  }
+  @media print{
+    body{ background:#fff; } .sheet{ margin:0; border:0; max-width:none; }
+    .actions{ display:none; } textarea{ min-height:48px; }
+    .feat,.q{ break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div class="head-row">
+      <div>
+        <p class="eyebrow">Kaffeelisten · ITC1 Deggendorf</p>
+        <h1>Feedback zur nächsten Phase</h1>
+        <p>Bevor wir Kaffeelisten vom Hackathon-Prototyp zu einer echten Lösung für den
+           Campus weiterentwickeln, möchten wir kurz prüfen: Ist alles dabei, was ihr
+           braucht – und wie soll es sich anfühlen?</p>
+      </div>
+      <div class="cup" aria-hidden="true">
+        <svg width="78" height="78" viewBox="0 0 64 64" fill="none"
+             stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 28 h30 v12 a12 12 0 0 1 -12 12 H26 a12 12 0 0 1 -12 -12 Z"/>
+          <path d="M44 31 h6 a6 6 0 0 1 0 12 h-4"/>
+          <path d="M24 12 c-3 4 3 6 0 10"/>
+          <path d="M32 10 c-3 4 3 6 0 10"/>
+          <path d="M40 12 c-3 4 3 6 0 10"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <p class="lead">Diese kurze Rückmeldung hilft uns, die nächste Version genau
+       auf den Campus zuzuschneiden. Bitte beantwortet die Punkte, die für euch
+       relevant sind – mehr nicht. Am Ende könnt ihr eure Antworten mit einem Klick
+       per E-Mail zurückschicken oder das Dokument als PDF drucken.</p>
+
+    <div class="who-field">
+      <input id="who-name" type="text" placeholder="Euer Name">
+      <input id="who-role" type="text" placeholder="Rolle (z. B. Geschäftsführung / Team)">
+    </div>
+
+    <!-- ── Was Kaffeelisten heute kann ── -->
+    <h2>Worum es geht</h2>
+    <p>Kaffeelisten ersetzt die Papier-Strichliste am Campus: Jede Person trägt am
+       iPad in wenigen Sekunden ein, was sie konsumiert hat (Kaffee, Getränke, Snacks).
+       Am Monatsende erhält die Verwaltung automatisch einen sauberen Bericht je
+       Unternehmen und Person – ohne manuelles Zusammenzählen.</p>
+
+    <!-- ── Geplante Neuerungen ── -->
+    <h2>Das ist für die nächste Phase geplant</h2>
+    <p>Kurz und in Alltagssprache – die Details liegen technisch bereits vor:</p>
+
+    <div class="feat"><span class="tag">A · Echte Daten</span>
+      <p>Die Demo-Daten werden gelöscht. Stattdessen kommen die echten Firmen,
+         Personen, Produkte und Preise des Campus hinein.</p></div>
+
+    <div class="feat"><span class="tag">B · Pflichtfelder</span>
+      <p>Beim Anlegen einer Person sind Vorname, Nachname, Arbeits-E-Mail und
+         Unternehmen verpflichtend – damit wirklich jede Person erreichbar ist.</p></div>
+
+    <div class="feat"><span class="tag">C · 6-stelliger PIN</span>
+      <p>Der Admin-Zugang wird 6-stellig und lässt sich direkt im Dashboard ändern.
+         Bei Bedarf kann der PIN zurückgesetzt werden (Code per E-Mail, plus ein
+         Notfall-Code als Rückfallebene).</p></div>
+
+    <div class="feat"><span class="tag">D · Geschäftsführung in CC</span>
+      <p>Die Geschäftsführung wird bei jedem Monatsbericht automatisch in Kopie
+         gesetzt – ohne dass jemand daran denken muss.</p></div>
+
+    <div class="feat"><span class="tag">E · E-Mail an jede Person</span>
+      <p>Zusätzlich zum Firmenbericht erhält jede Person, die im Monat etwas
+         konsumiert hat, am Monatsende ihre eigene Aufstellung per E-Mail.</p></div>
+
+    <div class="feat"><span class="tag">F · Mehr Einstellungen</span>
+      <p>Empfänger, CEO-Adresse, PIN und Berichts-Optionen lassen sich künftig
+         selbst im Dashboard verwalten – kein Entwickler mehr nötig.</p></div>
+
+    <!-- ── Fragen ── -->
+    <h2>Eure Rückmeldung</h2>
+
+    <div class="q">
+      <h3><span class="qnum">1.</span> Fehlt etwas? <span class="who">alle</span></h3>
+      <p class="hint">Gibt es etwas, das Kaffeelisten unbedingt können sollte und oben
+         nicht auftaucht?</p>
+      <fieldset>
+        <div class="opt"><input type="checkbox" id="m1" name="missing" value="weitere Produkte / Sorten"><label for="m1">Weitere Produkte oder Sorten</label></div>
+        <div class="opt"><input type="checkbox" id="m2" name="missing" value="Mengen / Korrektur nachträglich ändern"><label for="m2">Einträge nachträglich korrigieren können</label></div>
+        <div class="opt"><input type="checkbox" id="m3" name="missing" value="Auswertungen / Statistiken"><label for="m3">Mehr Auswertungen / Statistiken</label></div>
+        <div class="opt"><input type="checkbox" id="m4" name="missing" value="mehrere Standorte"><label for="m4">Mehrere Standorte / Räume</label></div>
+      </fieldset>
+      <textarea id="q1" placeholder="Was fehlt sonst noch? (frei)"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">2.</span> Monatliche E-Mail an die Personen <span class="who">CEO · Team</span></h3>
+      <p class="hint">Wie ausführlich soll die persönliche Monats-E-Mail sein?</p>
+      <fieldset>
+        <div class="opt"><input type="radio" name="membermail" id="mm1" value="nur Gesamtsumme"><label for="mm1">Nur die Gesamtsumme („Dein Konsum im Mai: 4,80 €“)</label></div>
+        <div class="opt"><input type="radio" name="membermail" id="mm2" value="itemisiert (geplant)"><label for="mm2">Detailliert mit Einzelpositionen (aktuell geplant)</label></div>
+        <div class="opt"><input type="radio" name="membermail" id="mm3" value="keine Mitglieder-E-Mail"><label for="mm3">Lieber gar keine E-Mail an einzelne Personen</label></div>
+      </fieldset>
+      <textarea id="q2" placeholder="Tonfall / Wünsche zur persönlichen E-Mail?"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">3.</span> Admin-Zugang &amp; PIN <span class="who">CEO · Team</span></h3>
+      <p class="hint">Wer verwaltet Kaffeelisten – und reicht ein gemeinsamer PIN?</p>
+      <fieldset>
+        <div class="opt"><input type="radio" name="pin" id="p1" value="ein gemeinsamer PIN"><label for="p1">Ein gemeinsamer PIN für alle Admins reicht</label></div>
+        <div class="opt"><input type="radio" name="pin" id="p2" value="getrennte Zugänge je Person"><label for="p2">Wir brauchen getrennte Zugänge je Person</label></div>
+      </fieldset>
+      <textarea id="q3" placeholder="Wer soll Admin-Rechte haben? (Namen / Rollen)"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">4.</span> Berichte &amp; Empfänger <span class="who">CEO</span></h3>
+      <p class="hint">An welche Adresse(n) sollen Monatsbericht und CEO-Kopie gehen?</p>
+      <textarea id="q4" placeholder="E-Mail-Adresse(n) für Bericht und CC der Geschäftsführung"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">5.</span> Wie soll sich das Eintragen anfühlen? <span class="who">CEO · Team</span></h3>
+      <p class="hint">Der Moment, in dem jemand am iPad eine Tasse einträgt.</p>
+      <fieldset class="scale">
+        <label><input type="radio" name="feel" value="schnell & nüchtern">Schnell &amp; nüchtern</label>
+        <label><input type="radio" name="feel" value="warm & freundlich">Warm &amp; freundlich</label>
+        <label><input type="radio" name="feel" value="verspielt & charmant">Verspielt &amp; charmant</label>
+      </fieldset>
+      <textarea id="q5" placeholder="Was wäre euch beim Ablauf wichtig? (Sprache, Geschwindigkeit, Bestätigung …)"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">6.</span> Abrechnung &amp; Datenschutz <span class="who">CEO</span></h3>
+      <p class="hint">Bisher stellt die Geschäftsführung die Rechnungen selbst – Kaffeelisten
+         liefert nur die Daten. Soll das so bleiben? Und sind persönliche E-Mails an die
+         Mitarbeitenden für euch in Ordnung?</p>
+      <textarea id="q6" placeholder="Anmerkungen zu Abrechnung und Datenschutz"></textarea>
+    </div>
+
+    <div class="q">
+      <h3><span class="qnum">7.</span> Sonstiges <span class="who">alle</span></h3>
+      <textarea id="q7" placeholder="Alles Weitere, das uns helfen würde …"></textarea>
+    </div>
+
+    <p class="note">Vielen Dank fürs Mitdenken. Eure Antworten fließen direkt in die
+       Planung der nächsten Version ein.</p>
+
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" type="button" onclick="sendAnswers()">Antworten per E-Mail senden</button>
+    <button class="btn btn-secondary" type="button" onclick="window.print()">Als PDF drucken / speichern</button>
+    <p class="hint">Es wird nichts automatisch gespeichert oder verschickt – ihr behaltet die Kontrolle.</p>
+  </div>
+
+  <footer>
+    Kaffeelisten · ITC1 Deggendorf · Interne Abstimmung zur Produktivversion ·
+    Stand Juni 2026
+  </footer>
+
+</div>
+
+<script>
+  // ── Adjust this if feedback should go to a different inbox ──────────────────
+  var REPLY_TO = "hlexhelftd@gmail.com";
+
+  function val(id){ var el=document.getElementById(id); return el ? el.value.trim() : ""; }
+  function radio(name){ var el=document.querySelector('input[name="'+name+'"]:checked'); return el ? el.value : ""; }
+  function checks(name){
+    return Array.prototype.slice.call(document.querySelectorAll('input[name="'+name+'"]:checked'))
+      .map(function(e){ return e.value; }).join(", ");
+  }
+  function line(label, value){ return value ? (label + ":\n" + value + "\n\n") : ""; }
+
+  function sendAnswers(){
+    var body = "";
+    var name = val("who-name"), role = val("who-role");
+    body += line("Name", name);
+    body += line("Rolle", role);
+    body += "──────────────────────────\n\n";
+    body += line("1. Fehlt etwas (Auswahl)", checks("missing"));
+    body += line("1. Fehlt etwas (frei)", val("q1"));
+    body += line("2. Monatliche Mitglieder-E-Mail", radio("membermail"));
+    body += line("2. Anmerkung", val("q2"));
+    body += line("3. Admin-Zugang / PIN", radio("pin"));
+    body += line("3. Wer soll Admin sein", val("q3"));
+    body += line("4. Empfänger / CEO-CC", val("q4"));
+    body += line("5. Gefühl beim Eintragen", radio("feel"));
+    body += line("5. Anmerkung", val("q5"));
+    body += line("6. Abrechnung & Datenschutz", val("q6"));
+    body += line("7. Sonstiges", val("q7"));
+
+    var subject = "Kaffeelisten – Feedback" + (name ? " von " + name : "");
+    var href = "mailto:" + REPLY_TO
+      + "?subject=" + encodeURIComponent(subject)
+      + "&body=" + encodeURIComponent(body);
+    window.location.href = href;
+  }
+</script>
+</body>
+</html>
