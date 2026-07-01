@@ -5,7 +5,9 @@ import ExcelJS from 'exceljs'
 import { Resend } from 'resend'
 import {
   buildReportHtml,
+  buildCompanyEmailHtml,
   buildMemberStatementHtml,
+  renderTemplate,
   formatEuro,
   formatDate,
   type EnrichedTransaction,
@@ -15,8 +17,8 @@ import {
 
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
-const EMAIL_LOGO_CONTENT_ID = 'kaffeelisten-logo'
-const EMAIL_LOGO_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAGAAAABNCAYAAABZqmHQAAAFhElEQVR4nOycW4xdUxzGvzOM6ZS2o6j77aE0LlHULdEQEhKhiLsHIqQkqFDxJKlHmnjxUNKQIOJFSLRumYgH16pqk5aQKo5rVA2j2k61Osf3Weukx2SfOVusddbqnv8v+bJm9t5zztr/b6/72tMDIyk9MJJiBiTGDEiMGZAYMyAxZkBizIDEmAGJMQMSYwYkJmsDGo1GnTocFWZvZAoDP5VJX61W+wEVJucSsIOaVHSC5tyNipDcAAZzNrVy7HE++duZbOC5OQV/dj6PX4YKkEMJOIz6ps25ZdS8guNHUF+jAuRgwFZqSptzH1EnFRzfQk1FBcjBgLXUWaxS9ik4p3ag6PjH1LmoAMkNYF3/G5O3qEsKTs+ivio4/jJ1KSpALr2gddRxYw/SnCVM3iy4fg11AipALuOABlUrOkETlrW5vhLkUgJOpL74D9efQn2OClBDJrARnsKn/Q9MMLIxYKJis6GJidIIszq5AK5e72853ON/lzTH0+elfn6vz4u0l9fY0jlK7fL6y2uH159emr4Y8WrlF2oVq7i1yIygVRADfzaTR6l9qTpccAeoaXCjXWky3Oh3G1zAJAVPgdyJ3UFWwBst+WwaI5N6/WfLQJnZ7z9XxzRKVluymfqdGvbXq+F+nZpPI0aRCcEMYPCPZfIe3BzNUdRGagXcdMJq3vQ6dAk16HABP506kzoHzhDxPfOSzSAupAEaNN1KzeUNrkSGMI8PMlnE/PUiE0I2wir6qpfn8Uaz610xTxo5z0FmhGyEP4Qr6qpf3+ANq/jX4SbbPqE+o9bz6fsSkeB3qh2YSR0PN1WhmdTZ/rSqwneoC5ERIasgTabdwgBfw5/VCB9DHU0dSWld91DqYGoGdSA1Hc4s1c1qNNUoq/fSbJCbDbHyqJKqh6XZ8CrQ+g7V9dP83w3B9XZ+pn6ifqS0nPkt3HpD3X/GJuZxAJkQpRvKG1Qv51Ovf0FzFEzN5St4+8EFs9k1be2S6rrmA6LeULP72ex2Nruc+q5/ej783i3j5Yvfjdzo+mSc7wIOe6Wgj0a8W3BcD0QdbmZ2kPl8G10g210REVEpKlrU19qDqrHTqMU0SQ/IQzRiBSIyEQ3YxaCuKTjePDZIPUwDbmb6KtP7eP0ziMRENKAUCjqDrx7ci0y38fcXEAGbjBsHX1JUEh6jCYcgAmZAB2iCxg5PUQsRATOgHEupGxEBM6AELAUazGmj8BkIjBlQng1wo/ugWC+oPBp1T0JgzIDy7A+3wBMUM6A8JyPCVhgzoARsfLUPdSsb4/UIjBlQjgVwY4HgmAEd4NN/D5MBPv1PIAIhDVAjNRl5o/WG0otQDP5dTG6nor2NE9IAbSPvR95ozn+o00UMvHZUaOpBq3mXx1xGDW3ATOSN1opHGeBFBee0lUZ9fa0hH0QtZeBvQmSCGcDMbuSNbaJObTPfngNz4Va9RgrO6Zjy/VzsRZhWQjfCr1BXYffiRm5cSd3ZzQB3IvRckFaO5rMUTEdmME/XMhnKKfgi+AYq3ugjTPp5owuQCcyTtrKsohYyX4PIiBgGaFuJ9ogu4c0+jQxgnp5kMsz83I/MCD4Q403u5A3fwR9fY7qZv7+EhPgSeQDzcRsyJNbGrNW+zn2e6YxYo8jx8BvAHofbjXc9MiXagozf2HQRdR2D8Sw1C13C/x8J7dDeznxc4f/vRJZ0ZRczA/IAk3vh3vldTn3AoHyHQPDz9eKGNuOeR10NV7IXt3nFNSu6to2cQdJq0g3UxXAvTmiDrnapjeD/oVKsDbqaKn6fWp5bT2c8ku3j94Zo+N9xbqbTRzHgv2IPxV5TTYztikiMGZAYMyAxZkBizIDEmAGJMQMSYwYkxgxIjBmQGDMgMWZAYsyAxJgBifkbAAD//3bPWa4AAAAGSURBVAMAqkWL0ctGfuYAAAAASUVORK5CYII='
+export const EMAIL_LOGO_CONTENT_ID = 'kaffeelisten-logo'
+export const EMAIL_LOGO_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAGAAAABNCAYAAABZqmHQAAAFhElEQVR4nOycW4xdUxzGvzOM6ZS2o6j77aE0LlHULdEQEhKhiLsHIqQkqFDxJKlHmnjxUNKQIOJFSLRumYgH16pqk5aQKo5rVA2j2k61Osf3Weukx2SfOVusddbqnv8v+bJm9t5zztr/b6/72tMDIyk9MJJiBiTGDEiMGZAYMyAxZkBizIDEmAGJMQMSYwYkJmsDGo1GnTocFWZvZAoDP5VJX61W+wEVJucSsIOaVHSC5tyNipDcAAZzNrVy7HE++duZbOC5OQV/dj6PX4YKkEMJOIz6ps25ZdS8guNHUF+jAuRgwFZqSptzH1EnFRzfQk1FBcjBgLXUWaxS9ik4p3ag6PjH1LmoAMkNYF3/G5O3qEsKTs+ivio4/jJ1KSpALr2gddRxYw/SnCVM3iy4fg11AipALuOABlUrOkETlrW5vhLkUgJOpL74D9efQn2OClBDJrARnsKn/Q9MMLIxYKJis6GJidIIszq5AK5e72853ON/lzTH0+elfn6vz4u0l9fY0jlK7fL6y2uH159emr4Y8WrlF2oVq7i1yIygVRADfzaTR6l9qTpccAeoaXCjXWky3Oh3G1zAJAVPgdyJ3UFWwBst+WwaI5N6/WfLQJnZ7z9XxzRKVluymfqdGvbXq+F+nZpPI0aRCcEMYPCPZfIe3BzNUdRGagXcdMJq3vQ6dAk16HABP506kzoHzhDxPfOSzSAupAEaNN1KzeUNrkSGMI8PMlnE/PUiE0I2wir6qpfn8Uaz610xTxo5z0FmhGyEP4Qr6qpf3+ANq/jX4SbbPqE+o9bz6fsSkeB3qh2YSR0PN1WhmdTZ/rSqwneoC5ERIasgTabdwgBfw5/VCB9DHU0dSWld91DqYGoGdSA1Hc4s1c1qNNUoq/fSbJCbDbHyqJKqh6XZ8CrQ+g7V9dP83w3B9XZ+pn6ifqS0nPkt3HpD3X/GJuZxAJkQpRvKG1Qv51Ovf0FzFEzN5St4+8EFs9k1be2S6rrmA6LeULP72ex2Nruc+q5/ej783i3j5Yvfjdzo+mSc7wIOe6Wgj0a8W3BcD0QdbmZ2kPl8G10g210REVEpKlrU19qDqrHTqMU0SQ/IQzRiBSIyEQ3YxaCuKTjePDZIPUwDbmb6KtP7eP0ziMRENKAUCjqDrx7ci0y38fcXEAGbjBsHX1JUEh6jCYcgAmZAB2iCxg5PUQsRATOgHEupGxEBM6AELAUazGmj8BkIjBlQng1wo/ugWC+oPBp1T0JgzIDy7A+3wBMUM6A8JyPCVhgzoARsfLUPdSsb4/UIjBlQjgVwY4HgmAEd4NN/D5MBPv1PIAIhDVAjNRl5o/WG0otQDP5dTG6nor2NE9IAbSPvR95ozn+o00UMvHZUaOpBq3mXx1xGDW3ATOSN1opHGeBFBee0lUZ9fa0hH0QtZeBvQmSCGcDMbuSNbaJObTPfngNz4Va9RgrO6Zjy/VzsRZhWQjfCr1BXYffiRm5cSd3ZzQB3IvRckFaO5rMUTEdmME/XMhnKKfgi+AYq3ugjTPp5owuQCcyTtrKsohYyX4PIiBgGaFuJ9ogu4c0+jQxgnp5kMsz83I/MCD4Q403u5A3fwR9fY7qZv7+EhPgSeQDzcRsyJNbGrNW+zn2e6YxYo8jx8BvAHofbjXc9MiXagozf2HQRdR2D8Sw1C13C/x8J7dDeznxc4f/vRJZ0ZRczA/IAk3vh3vldTn3AoHyHQPDz9eKGNuOeR10NV7IXt3nFNSu6to2cQdJq0g3UxXAvTmiDrnapjeD/oVKsDbqaKn6fWp5bT2c8ku3j94Zo+N9xbqbTRzHgv2IPxV5TTYztikiMGZAYMyAxZkBizIDEmAGJMQMSYwYkxgxIjBmQGDMgMWZAYsyAxJgBifkbAAD//3bPWa4AAAAGSURBVAMAqkWL0ctGfuYAAAAASUVORK5CYII='
 
 // ─── Supabase (service role — bypasses RLS) ───────────────────────────────────
 
@@ -29,10 +31,27 @@ function makeSupabase() {
 
 // ─── Report settings (from app_settings, with env bootstrap fallbacks) ─────────
 
+export interface ReportFormat {
+  accent: string
+  reportSubject: string | null
+  reportIntro: string | null
+  includePdf: boolean
+  includeExcel: boolean
+  memberSubject: string | null
+  memberIntro: string | null
+}
+
+export interface ReportSchedule {
+  autoEnabled: boolean
+  autoDay: number | null // null = last day of month
+}
+
 export interface ReportSettings {
   recipients: string[]
   ccEmails: string[]
   memberStatementsEnabled: boolean
+  format: ReportFormat
+  schedule: ReportSchedule
 }
 
 // Reads the singleton app_settings row and resolves the effective recipients:
@@ -42,7 +61,7 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
   const supabase = makeSupabase()
   const { data, error } = await supabase
     .from('app_settings')
-    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled')
+    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro')
     .eq('id', 1)
     .maybeSingle()
 
@@ -64,6 +83,19 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
     recipients,
     ccEmails,
     memberStatementsEnabled: data?.member_statements_enabled ?? true,
+    format: {
+      accent: data?.report_accent || '#D97706',
+      reportSubject: data?.report_subject ?? null,
+      reportIntro: data?.report_intro ?? null,
+      includePdf: data?.report_include_pdf ?? true,
+      includeExcel: data?.report_include_excel ?? true,
+      memberSubject: data?.member_subject ?? null,
+      memberIntro: data?.member_intro ?? null,
+    },
+    schedule: {
+      autoEnabled: data?.auto_report_enabled ?? true,
+      autoDay: data?.auto_report_day ?? null,
+    },
   }
 }
 
@@ -388,15 +420,26 @@ export async function generateExcel(
 
 // ─── Email ────────────────────────────────────────────────────────────────────
 
+// Resolve the company report subject line from the configured template (or the
+// built-in default). Exported so the preview endpoint shows the same subject.
+export function resolveReportSubject(format: ReportFormat, monthLabel: string, reportMonth: string): string {
+  if (format.reportSubject) return renderTemplate(format.reportSubject, { monat: monthLabel })
+  const [yearStr, monStr] = reportMonth.split('-')
+  const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
+    .toLocaleDateString('de-DE', { month: 'long' })
+  return `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`
+}
+
 export async function sendEmail(
-  pdfBuffer: Buffer,
-  xlsxBuffer: Buffer,
+  pdfBuffer: Buffer | null,
+  xlsxBuffer: Buffer | null,
   summaries: CompanySummary[],
   transactions: EnrichedTransaction[],
   monthLabel: string,
   reportMonth: string,
   recipients: string[],
   ccEmails: string[],
+  format: ReportFormat,
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -405,122 +448,31 @@ export async function sendEmail(
   }
 
   const resend = new Resend(resendKey)
-  const totalCents = transactions.reduce((s, t) => s + t.total_cents, 0)
-  const [yearStr, monStr] = reportMonth.split('-')
-  const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
-    .toLocaleDateString('de-DE', { month: 'long' })
 
-  const companyRows = summaries
-    .map(c => `
-      <tr>
-        <td style="padding:8px 16px;border-bottom:1px solid #E7E5E4;color:#1C1917;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${c.company_name}</td>
-        <td align="right" style="padding:8px 16px;border-bottom:1px solid #E7E5E4;color:#57534E;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${c.total_entries}</td>
-        <td align="right" style="padding:8px 16px;border-bottom:1px solid #E7E5E4;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;font-size:14px;">${formatEuro(c.total_cents)}</td>
-      </tr>`)
-    .join('')
-
-  // Table-based layout — required for Outlook (Word renderer ignores div/CSS layout)
-  const html = `<!DOCTYPE html>
-<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head>
-<body style="margin:0;padding:0;background:#FAFAF9;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
-  <tr>
-    <td align="center" style="padding:32px 16px;">
-      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
-
-        <!-- HEADER -->
-        <tr>
-          <td style="background:#D97706;padding:24px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-              <tr>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0 0 6px 0;color:#fff;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;line-height:1.2;opacity:.84;">KAFFEELISTEN &middot; ITC1 DEGGENDORF</p>
-                  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Monatsbericht ${monthLabel}</h1>
-                </td>
-                <td width="80" align="right" style="vertical-align:middle;">
-                  <img src="cid:${EMAIL_LOGO_CONTENT_ID}" width="72" height="58" alt="Kaffeelisten" style="display:block;border:0;outline:none;">
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- BODY -->
-        <tr>
-          <td style="padding:28px 32px;background:#ffffff;">
-
-            <!-- Intro -->
-            <p style="margin:0 0 20px 0;color:#57534E;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;">Anbei der Monatsbericht f&uuml;r <strong style="color:#1C1917;">${monthLabel}</strong> mit allen Eintr&auml;gen des ITC1-Campus.</p>
-
-            <!-- KPI strip -->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;margin-bottom:24px;">
-              <tr>
-                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Eintr&auml;ge gesamt</td>
-                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Gesamtbetrag</td>
-                <td style="padding:8px 16px 4px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;">Unternehmen</td>
-              </tr>
-              <tr>
-                <td style="padding:12px 16px;font-size:28px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${transactions.length}</td>
-                <td style="padding:12px 16px;font-size:28px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${formatEuro(totalCents)}</td>
-                <td style="padding:12px 16px;font-size:22px;font-weight:bold;color:#1C1917;font-family:Arial,Helvetica,sans-serif;">${summaries.length}</td>
-              </tr>
-            </table>
-
-            <!-- Section heading -->
-            <p style="margin:0 0 10px 0;font-size:12px;font-weight:bold;color:#57534E;text-transform:uppercase;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;">Nach Unternehmen</p>
-
-            <!-- Company table -->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:24px;">
-              <tr style="background:#FAFAF9;">
-                <td style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Unternehmen</td>
-                <td align="right" style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Eintr&auml;ge</td>
-                <td align="right" style="padding:8px 16px;font-size:11px;font-weight:bold;color:#78716C;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Betrag</td>
-              </tr>
-              ${companyRows}
-            </table>
-
-            <!-- Attachments note -->
-            <p style="margin:0;color:#78716C;font-size:12px;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Die vollst&auml;ndigen Daten finden Sie in den beigef&uuml;gten Dateien:<br><strong>PDF</strong> &ndash; Formatierter Bericht f&uuml;r Ablage und Weitergabe.<br><strong>Excel</strong> &ndash; Alle Rohdaten f&uuml;r Auswertungen.</p>
-            <p style="margin:12px 0 0 0;color:#78716C;font-size:12px;font-family:Arial,Helvetica,sans-serif;">Die Eintr&auml;ge wurden nach dem Versand archiviert. Die Originaldaten bleiben erhalten.</p>
-
-          </td>
-        </tr>
-
-        <!-- FOOTER -->
-        <tr>
-          <td style="background:#FAFAF9;padding:14px 32px;border-top:1px solid #E7E5E4;">
-            <p style="margin:0;color:#A8A29E;font-size:11px;font-family:Arial,Helvetica,sans-serif;">Kaffeelisten &middot; B4Y3RW4LD Hackathon &middot; ITC1 Deggendorf</p>
-          </td>
-        </tr>
-
-      </table>
-      <!--[if mso]></td></tr></table><![endif]-->
-    </td>
-  </tr>
-</table>
-</body>
-</html>`
+  const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
+    accent: format.accent,
+    intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel }) : undefined,
+    logoSrc: `cid:${EMAIL_LOGO_CONTENT_ID}`,
+  })
 
   const filename = `kaffeelisten-${reportMonth}`
+  const attachments: Array<{ filename: string; content: string; contentType?: string; contentId?: string }> = [
+    { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
+  ]
+  if (format.includePdf && pdfBuffer) {
+    attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
+  }
+  if (format.includeExcel && xlsxBuffer) {
+    attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
+  }
 
   await resend.emails.send({
     from: 'Kaffeelisten <bericht@kaffeelisten.de>',
     to: recipients,
     ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
-    subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
+    subject: resolveReportSubject(format, monthLabel, reportMonth),
     html,
-    attachments: [
-      { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
-      { filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') },
-      { filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') },
-    ],
+    attachments,
   })
 }
 
@@ -533,6 +485,7 @@ export async function sendEmail(
 export async function sendMemberStatements(
   transactions: EnrichedTransaction[],
   monthLabel: string,
+  format: ReportFormat,
 ): Promise<number> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -549,12 +502,19 @@ export async function sendMemberStatements(
   let sent = 0
   for (const { name, email, entries } of byMember.values()) {
     if (!email) continue // no reachable address — skip silently
+    const firstName = name.trim().split(/\s+/)[0] || name
+    const subject = format.memberSubject
+      ? renderTemplate(format.memberSubject, { monat: monthLabel, name: firstName })
+      : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
+    const intro = format.memberIntro
+      ? renderTemplate(format.memberIntro, { monat: monthLabel, name: firstName })
+      : undefined
     try {
       await resend.emails.send({
         from: 'Kaffeelisten <bericht@kaffeelisten.de>',
         to: [email],
-        subject: `Kaffeelisten – Deine Aufstellung ${monthLabel}`,
-        html: buildMemberStatementHtml(name, entries, monthLabel),
+        subject,
+        html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro }),
       })
       sent++
       // Light throttle — Resend free tier limits requests/second.
@@ -665,10 +625,12 @@ export async function runMonthlyReport(forMonth?: string): Promise<void> {
   const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
   const summaries = computeSummary(transactions)
   const settings = await fetchReportSettings()
+  const { format } = settings
 
+  // Only build the attachments that will actually be sent.
   const [pdfBuffer, xlsxBuffer] = await Promise.all([
-    generatePdf(summaries, transactions, monthLabel, reportMonth),
-    generateExcel(summaries, transactions),
+    format.includePdf ? generatePdf(summaries, transactions, monthLabel, reportMonth) : Promise.resolve(null),
+    format.includeExcel ? generateExcel(summaries, transactions) : Promise.resolve(null),
   ])
   await sendEmail(
     pdfBuffer,
@@ -679,11 +641,12 @@ export async function runMonthlyReport(forMonth?: string): Promise<void> {
     reportMonth,
     settings.recipients,
     settings.ccEmails,
+    format,
   )
 
   // Per-member statements augment (never replace) the company report.
   if (settings.memberStatementsEnabled && transactions.length > 0) {
-    await sendMemberStatements(transactions, monthLabel)
+    await sendMemberStatements(transactions, monthLabel, format)
   }
 
   await archiveTransactions(transactions, reportMonth)
