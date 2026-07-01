@@ -114,7 +114,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [autoDay, setAutoDay] = useState<number | null>(null)
 
   // Format
-  const [accent, setAccent] = useState('#D97706')
   const [includePdf, setIncludePdf] = useState(true)
   const [includeExcel, setIncludeExcel] = useState(true)
   const [reportSubject, setReportSubject] = useState('')
@@ -158,7 +157,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setMemberReport(d.member_statements_enabled)
     setAutoEnabled(d.auto_report_enabled)
     setAutoDay(d.auto_report_day)
-    setAccent(d.report_accent || '#D97706')
     setIncludePdf(d.report_include_pdf)
     setIncludeExcel(d.report_include_excel)
     setReportSubject(d.report_subject ?? '')
@@ -257,7 +255,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
 
   // The format fields as the API expects them (used for both save and preview).
   const formatPayload = () => ({
-    report_accent: accent,
     report_subject: reportSubject.trim() || null,
     report_intro: reportIntro.trim() || null,
     report_include_pdf: includePdf,
@@ -637,33 +634,14 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   </p>
                 </div>
 
-                {/* Attachments + accent */}
-                <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
-                  <div className="flex flex-col gap-2 pt-0.5">
-                    <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Anhänge (Firmenbericht)</span>
-                    <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
-                    <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
-                  </div>
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Akzentfarbe</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={accent}
-                        onChange={e => setAccent(e.target.value)}
-                        aria-label="Akzentfarbe wählen"
-                        className="h-11 w-14 rounded border border-border bg-surface cursor-pointer p-1"
-                      />
-                      <input
-                        type="text"
-                        value={accent}
-                        onChange={e => setAccent(e.target.value)}
-                        aria-label="Akzentfarbe (Hex)"
-                        className="h-11 w-28 px-3 rounded border border-border bg-surface-2 focus:bg-surface text-base text-fg outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent font-mono"
-                      />
-                    </div>
-                    <span className="text-[11px] text-fg-subtle">Zieht später in die Theme-Einstellungen um.</span>
-                  </label>
+                {/* Attachments */}
+                <div className="flex flex-col gap-2 pt-0.5">
+                  <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Anhänge (Firmenbericht)</span>
+                  <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
+                  <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
+                  <p className="text-[13px] text-fg-muted leading-relaxed">
+                    Die Akzentfarbe der E-Mails folgt der Marken-Palette unter „Erscheinungsbild“.
+                  </p>
                 </div>
 
                 {/* Company report copy */}
