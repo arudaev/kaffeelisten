@@ -209,7 +209,24 @@ export type Database = {
       }
     }
     Views: { [_ in never]: never }
-    Functions: { [_ in never]: never }
+    Functions: {
+      verify_admin_pin: {
+        Args: { p_pin: string }
+        Returns: boolean
+      }
+      set_admin_pin: {
+        Args: { p_pin: string }
+        Returns: undefined
+      }
+      set_pin_reset_token: {
+        Args: { p_code: string; p_ttl_minutes?: number }
+        Returns: undefined
+      }
+      consume_pin_reset: {
+        Args: { p_code: string; p_new_pin: string }
+        Returns: boolean
+      }
+    }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
   }
