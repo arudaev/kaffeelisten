@@ -36,6 +36,12 @@ function capitalizeName(s: string): string {
   return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
 }
 
+// Basic email shape check — the server/DB is the source of truth, this just
+// catches obvious typos before save.
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
+}
+
 interface Props {
   onToast: (msg: string) => void
   onMenuClick: () => void
@@ -116,13 +122,20 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const handleSubmit = async () => {
     const firstName = capitalizeName(form.firstName)
     const lastName = capitalizeName(form.lastName)
-    if (!firstName || !form.company_id) return
-    const name = lastName ? `${firstName} ${lastName}` : firstName
+    const workEmail = form.workEmail.trim()
+    // All identity fields are mandatory: every member must be reachable for the
+    // per-member monthly statement.
+    if (!firstName || !lastName || !workEmail || !form.company_id) return
+    if (!isValidEmail(workEmail)) {
+      onToast('Bitte eine gültige E-Mail-Adresse eingeben.')
+      return
+    }
+    const name = `${firstName} ${lastName}`
     setSaving(true)
     const payload = {
       name,
       company_id: form.company_id,
-      work_email: form.workEmail.trim() || null,
+      work_email: workEmail,
       active: form.active,
     }
     const { error } =
@@ -321,7 +334,13 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             <AdminButton
               variant="primary"
               onClick={handleSubmit}
-              disabled={saving || !form.firstName.trim() || !form.company_id}
+              disabled={
+                saving ||
+                !form.firstName.trim() ||
+                !form.lastName.trim() ||
+                !form.workEmail.trim() ||
+                !form.company_id
+              }
             >
               {saving ? 'Speichern…' : 'Speichern'}
             </AdminButton>
@@ -340,6 +359,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             />
             <AdminField
               label="Nachname"
+              required
               value={form.lastName}
               onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
               placeholder="z. B. Müller"
@@ -348,6 +368,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
           <AdminField
             label="Arbeits-E-Mail"
             type="email"
+            required
             value={form.workEmail}
             onChange={e => setForm(f => ({ ...f, workEmail: e.target.value }))}
             placeholder="z. B. anna.mueller@firma.de"
