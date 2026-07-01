@@ -423,8 +423,8 @@ export async function generateExcel(
 // Resolve the company report subject line from the configured template (or the
 // built-in default). Exported so the preview endpoint shows the same subject.
 export function resolveReportSubject(format: ReportFormat, monthLabel: string, reportMonth: string): string {
-  if (format.reportSubject) return renderTemplate(format.reportSubject, { monat: monthLabel })
   const [yearStr, monStr] = reportMonth.split('-')
+  if (format.reportSubject) return renderTemplate(format.reportSubject, { monat: monthLabel, jahr: yearStr })
   const monthName = new Date(Number(yearStr), Number(monStr) - 1, 1)
     .toLocaleDateString('de-DE', { month: 'long' })
   return `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`
@@ -449,9 +449,10 @@ export async function sendEmail(
 
   const resend = new Resend(resendKey)
 
+  const [yearStr] = reportMonth.split('-')
   const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
     accent: format.accent,
-    intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel }) : undefined,
+    intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined,
     logoSrc: `cid:${EMAIL_LOGO_CONTENT_ID}`,
   })
 
@@ -485,11 +486,13 @@ export async function sendEmail(
 export async function sendMemberStatements(
   transactions: EnrichedTransaction[],
   monthLabel: string,
+  reportMonth: string,
   format: ReportFormat,
 ): Promise<number> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
   const resend = new Resend(resendKey)
+  const [yearStr] = reportMonth.split('-')
 
   // Group by member; keep the member's name + work email alongside their entries.
   const byMember = new Map<string, { name: string; email: string | null; entries: EnrichedTransaction[] }>()
@@ -503,11 +506,13 @@ export async function sendMemberStatements(
   for (const { name, email, entries } of byMember.values()) {
     if (!email) continue // no reachable address — skip silently
     const firstName = name.trim().split(/\s+/)[0] || name
+    const gesamt = formatEuro(entries.reduce((s, e) => s + e.total_cents, 0))
+    const vars = { monat: monthLabel, jahr: yearStr, name: firstName, gesamt }
     const subject = format.memberSubject
-      ? renderTemplate(format.memberSubject, { monat: monthLabel, name: firstName })
+      ? renderTemplate(format.memberSubject, vars)
       : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
     const intro = format.memberIntro
-      ? renderTemplate(format.memberIntro, { monat: monthLabel, name: firstName })
+      ? renderTemplate(format.memberIntro, vars)
       : undefined
     try {
       await resend.emails.send({
@@ -646,7 +651,7 @@ export async function runMonthlyReport(forMonth?: string): Promise<void> {
 
   // Per-member statements augment (never replace) the company report.
   if (settings.memberStatementsEnabled && transactions.length > 0) {
-    await sendMemberStatements(transactions, monthLabel, format)
+    await sendMemberStatements(transactions, monthLabel, reportMonth, format)
   }
 
   await archiveTransactions(transactions, reportMonth)

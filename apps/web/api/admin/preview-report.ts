@@ -19,6 +19,7 @@ import {
   buildCompanyEmailHtml,
   buildMemberStatementHtml,
   renderTemplate,
+  formatEuro,
 } from '../_lib/reportHtml'
 
 // A tiny stand-in dataset so the preview is meaningful even before any real
@@ -62,7 +63,8 @@ function coerceFormat(base: ReportFormat, o: unknown): ReportFormat {
   if (!o || typeof o !== 'object') return base
   const r = o as Record<string, unknown>
   const strOrNull = (v: unknown, fallback: string | null): string | null => {
-    if (v === undefined) return fallback
+    if (v === undefined) return fallback // field omitted → keep saved value
+    if (v === null) return null // field explicitly cleared → use built-in default
     const s = String(v).trim().slice(0, 1000)
     return s.length > 0 ? s : null
   }
@@ -104,6 +106,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ({ transactions, monthLabel, reportMonth } = sampleData())
     }
 
+    const [yearStr] = reportMonth.split('-')
+
     // The preview renders in an iframe where cid: images don't resolve — inline
     // the logo as a data URI instead.
     const logoSrc = `data:image/png;base64,${EMAIL_LOGO_PNG_BASE64}`
@@ -112,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const summaries = computeSummary(transactions)
       const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
         accent: format.accent,
-        intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel }) : undefined,
+        intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined,
         logoSrc,
       })
       return res.status(200).json({ subject: resolveReportSubject(format, monthLabel, reportMonth), html })
@@ -123,12 +127,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const memberName = first.member_name
     const firstName = memberName.trim().split(/\s+/)[0] || memberName
     const entries = transactions.filter(t => t.member_id === first.member_id)
+    const gesamt = formatEuro(entries.reduce((s, e) => s + e.total_cents, 0))
+    const vars = { monat: monthLabel, jahr: yearStr, name: firstName, gesamt }
     const subject = format.memberSubject
-      ? renderTemplate(format.memberSubject, { monat: monthLabel, name: firstName })
+      ? renderTemplate(format.memberSubject, vars)
       : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
     const html = buildMemberStatementHtml(memberName, entries, monthLabel, {
       accent: format.accent,
-      intro: format.memberIntro ? renderTemplate(format.memberIntro, { monat: monthLabel, name: firstName }) : undefined,
+      intro: format.memberIntro ? renderTemplate(format.memberIntro, vars) : undefined,
     })
     return res.status(200).json({ subject, html })
   } catch (err) {
