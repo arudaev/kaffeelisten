@@ -11,12 +11,33 @@ import type { Database } from '../../src/lib/database.types'
 type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
+const SUBJECT_MAX = 200
+const INTRO_MAX = 1000
 
 interface SettingsBody {
   report_recipients?: unknown
   ceo_email?: unknown
   cc_ceo_on_reports?: unknown
   member_statements_enabled?: unknown
+  auto_report_enabled?: unknown
+  auto_report_day?: unknown
+  report_accent?: unknown
+  report_subject?: unknown
+  report_intro?: unknown
+  report_include_pdf?: unknown
+  report_include_excel?: unknown
+  member_subject?: unknown
+  member_intro?: unknown
+}
+
+/** Normalize an optional text field to a trimmed string, null, or an error. */
+function optText(value: unknown, max: number): { value: string | null } | { error: string } {
+  if (value === null) return { value: null }
+  const s = String(value).trim()
+  if (s.length === 0) return { value: null }
+  if (s.length > max) return { error: `Text ist zu lang (max. ${max} Zeichen).` }
+  return { value: s }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -63,6 +84,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         update.member_statements_enabled = Boolean(body.member_statements_enabled)
       }
 
+      // ── Scheduling ──
+      if (body.auto_report_enabled !== undefined) {
+        update.auto_report_enabled = Boolean(body.auto_report_enabled)
+      }
+      if (body.auto_report_day !== undefined) {
+        if (body.auto_report_day === null || body.auto_report_day === '') {
+          update.auto_report_day = null
+        } else {
+          const day = Number(body.auto_report_day)
+          if (!Number.isInteger(day) || day < 1 || day > 28) {
+            return res.status(400).json({ error: 'Versandtag muss zwischen 1 und 28 liegen (oder leer für den letzten Tag).' })
+          }
+          update.auto_report_day = day
+        }
+      }
+
+      // ── Format ──
+      if (body.report_accent !== undefined) {
+        const accent = String(body.report_accent).trim()
+        if (!HEX_RE.test(accent)) {
+          return res.status(400).json({ error: 'Akzentfarbe muss ein Hex-Wert sein (z. B. #D97706).' })
+        }
+        update.report_accent = accent
+      }
+      if (body.report_include_pdf !== undefined) {
+        update.report_include_pdf = Boolean(body.report_include_pdf)
+      }
+      if (body.report_include_excel !== undefined) {
+        update.report_include_excel = Boolean(body.report_include_excel)
+      }
+      for (const [key, max] of [
+        ['report_subject', SUBJECT_MAX],
+        ['report_intro', INTRO_MAX],
+        ['member_subject', SUBJECT_MAX],
+        ['member_intro', INTRO_MAX],
+      ] as const) {
+        if (body[key] !== undefined) {
+          const parsed = optText(body[key], max)
+          if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+          update[key] = parsed.value
+        }
+      }
+
       const { error } = await supabase.from('app_settings').update(update).eq('id', 1)
       if (error) throw new Error(error.message)
     }
@@ -70,9 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the current non-secret settings (for both GET and after a PUT).
     const { data, error } = await supabase
       .from('app_settings')
-      .select(
-        'report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, pin_length, pin_updated_at',
-      )
+      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, pin_length, pin_updated_at')
       .eq('id', 1)
       .single()
     if (error) throw new Error(error.message)
@@ -92,6 +154,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ceo_email: data.ceo_email ?? null,
       cc_ceo_on_reports: data.cc_ceo_on_reports,
       member_statements_enabled: data.member_statements_enabled,
+      auto_report_enabled: data.auto_report_enabled,
+      auto_report_day: data.auto_report_day,
+      report_accent: data.report_accent,
+      report_subject: data.report_subject,
+      report_intro: data.report_intro,
+      report_include_pdf: data.report_include_pdf,
+      report_include_excel: data.report_include_excel,
+      member_subject: data.member_subject,
+      member_intro: data.member_intro,
       pin_length: data.pin_length,
       pin_updated_at: data.pin_updated_at,
       pin_is_set: await isDbPinSet(supabase),
