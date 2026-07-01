@@ -9,8 +9,9 @@ interface ToastProps {
 }
 
 const kindClasses: Record<ToastKind, string> = {
-  success: 'bg-stone-900 text-white',
-  error: 'bg-red-600 text-white',
+  // Inverse chip: dark-on-light in light mode, light-on-dark in dark mode.
+  success: 'bg-fg text-bg',
+  error: 'bg-error text-white',
 }
 
 export default function Toast({ message, kind = 'success' }: ToastProps) {

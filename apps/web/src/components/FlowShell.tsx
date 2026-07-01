@@ -12,7 +12,7 @@ interface FlowShellProps {
 
 export default function FlowShell({ step, totalSteps, onBack, header, children, footer }: FlowShellProps) {
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-bg flex flex-col font-sans">
       {/* Top bar */}
       <div className="flex items-center gap-4 px-4 md:px-8 py-5">
         <button
@@ -21,9 +21,9 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
           disabled={!onBack}
           className={[
             'flex items-center gap-2 h-11 px-3.5 rounded-lg text-base font-medium transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
             onBack
-              ? 'text-stone-700 hover:bg-stone-100 cursor-pointer'
+              ? 'text-fg hover:bg-surface-2 cursor-pointer'
               : 'text-transparent cursor-default',
           ].join(' ')}
         >
@@ -45,7 +45,7 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
           ))}
         </div>
 
-        <span className="w-24 text-right text-[13px] text-stone-500 tabular-nums">
+        <span className="w-24 text-right text-[13px] text-fg-muted tabular-nums">
           ITC1 · Kaffeelisten
         </span>
       </div>
@@ -60,7 +60,7 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
 
       {/* Footer */}
       {footer && (
-        <div className="px-4 md:px-8 py-4 pb-6 bg-stone-50 border-t border-stone-200">
+        <div className="px-4 md:px-8 py-4 pb-6 bg-bg border-t border-border">
           <div className="max-w-[920px] mx-auto flex items-center gap-3">{footer}</div>
         </div>
       )}

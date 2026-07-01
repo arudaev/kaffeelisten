@@ -146,25 +146,25 @@ export default function AdminLogin() {
 
   // Shared shell for the recovery steps
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-[400px] flex flex-col gap-6">
         <div className="text-center">
-          <p className="text-[12px] font-medium text-stone-500 uppercase tracking-[0.06em] mb-2">Kaffeelisten</p>
-          <h1 className="text-[26px] font-bold text-stone-900 tracking-tight">PIN zurücksetzen</h1>
+          <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">Kaffeelisten</p>
+          <h1 className="text-[26px] font-bold text-fg tracking-tight">PIN zurücksetzen</h1>
         </div>
 
         {lockedOut && (
-          <div className="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            <span className="flex-none w-5 h-5 rounded-full bg-amber-600 text-white text-[13px] font-bold leading-5 text-center">!</span>
-            <p className="text-sm font-medium text-amber-700 leading-relaxed">
+          <div className="flex gap-3 items-start bg-accent-subtle border border-accent rounded-lg px-4 py-3">
+            <span className="flex-none w-5 h-5 rounded-full bg-accent text-white text-[13px] font-bold leading-5 text-center">!</span>
+            <p className="text-sm font-medium text-accent leading-relaxed">
               Zu viele Fehlversuche. Setze die PIN über deine hinterlegte Admin-E-Mail zurück.
             </p>
           </div>
         )}
 
         {view === 'email' ? (
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
-            <p className="text-sm text-stone-600 leading-relaxed">
+          <div className="bg-surface border border-border rounded-2xl shadow-sm p-6 flex flex-col gap-4">
+            <p className="text-sm text-fg-muted leading-relaxed">
               Gib deine Admin-E-Mail ein. Wenn sie hinterlegt ist, senden wir dir einen einmaligen Code, mit dem du eine neue PIN vergeben kannst.
             </p>
             <AdminField
@@ -183,27 +183,27 @@ export default function AdminLogin() {
             <button
               type="button"
               onClick={() => setView('pin')}
-              className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors self-center"
+              className="text-sm font-medium text-fg-muted hover:text-fg transition-colors self-center"
             >
               Zurück zur PIN-Eingabe
             </button>
           </div>
         ) : (
-          <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
-            <p className="text-sm text-stone-600 leading-relaxed">
-              Wir haben — falls die Adresse hinterlegt ist — einen Code an <strong className="text-stone-900">{email.trim()}</strong> gesendet.
+          <div className="bg-surface border border-border rounded-2xl shadow-sm p-6 flex flex-col gap-4">
+            <p className="text-sm text-fg-muted leading-relaxed">
+              Wir haben — falls die Adresse hinterlegt ist — einen Code an <strong className="text-fg">{email.trim()}</strong> gesendet.
               Gib ihn ein und wähle eine neue {pinLength}-stellige PIN.
             </p>
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Einmaliger Code</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Einmaliger Code</span>
               <PinInput value={code} onChange={setCode} length={pinLength} reveal autoFocus ariaLabel="Einmaliger Code" />
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Neue PIN</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Neue PIN</span>
               <PinInput value={newPin} onChange={setNewPin} length={pinLength} ariaLabel="Neue PIN" />
             </div>
-            {resetError && <p className="text-[13px] text-red-600">{resetError}</p>}
-            <p className="text-xs text-stone-400 leading-relaxed">
+            {resetError && <p className="text-[13px] text-error">{resetError}</p>}
+            <p className="text-xs text-fg-subtle leading-relaxed">
               Kein Zugriff auf die E-Mail? Der Notfall-Code aus der Serverkonfiguration funktioniert hier ebenfalls.
             </p>
             <AdminButton variant="primary" onClick={submitReset} disabled={resetting}>
@@ -213,7 +213,7 @@ export default function AdminLogin() {
               <button
                 type="button"
                 onClick={() => setView('email')}
-                className="text-sm font-medium text-stone-500 hover:text-stone-700 transition-colors"
+                className="text-sm font-medium text-fg-muted hover:text-fg transition-colors"
               >
                 Zurück
               </button>
@@ -221,7 +221,7 @@ export default function AdminLogin() {
                 type="button"
                 onClick={requestCode}
                 disabled={sending}
-                className="text-sm font-medium text-stone-500 hover:text-amber-700 transition-colors disabled:opacity-50"
+                className="text-sm font-medium text-fg-muted hover:text-accent transition-colors disabled:opacity-50"
               >
                 Code erneut senden
               </button>

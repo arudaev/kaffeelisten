@@ -13,22 +13,22 @@ interface BigButtonProps {
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2.5 h-14 px-7 rounded-lg font-semibold text-lg transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2'
+  'inline-flex items-center justify-center gap-2.5 h-14 px-7 rounded-lg font-semibold text-lg transition-colors duration-[120ms] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2'
 
 const variants: Record<Variant, { default: string; hover: string; disabled: string }> = {
   primary: {
-    default: 'bg-amber-600 text-white border border-transparent',
-    hover: 'hover:bg-amber-700',
+    default: 'bg-accent text-white border border-transparent',
+    hover: 'hover:bg-accent-hover',
     disabled: 'opacity-40 cursor-not-allowed',
   },
   secondary: {
-    default: 'bg-white text-stone-900 border border-stone-200 font-medium',
-    hover: 'hover:bg-stone-50',
+    default: 'bg-surface text-fg border border-border font-medium',
+    hover: 'hover:bg-surface-2',
     disabled: 'opacity-40 cursor-not-allowed',
   },
   ghost: {
-    default: 'bg-transparent text-stone-700 border border-transparent font-medium',
-    hover: 'hover:bg-stone-100',
+    default: 'bg-transparent text-fg border border-transparent font-medium',
+    hover: 'hover:bg-surface-2',
     disabled: 'opacity-40 cursor-not-allowed',
   },
 }

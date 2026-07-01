@@ -34,7 +34,7 @@ export default function DataTable<T>({
     align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
@@ -43,7 +43,7 @@ export default function DataTable<T>({
               <th
                 key={col.key}
                 className={[
-                  'bg-stone-50 px-4 py-2.5 text-[11px] font-medium text-stone-600 uppercase tracking-[0.06em] border-b border-stone-200',
+                  'bg-bg px-4 py-2.5 text-[11px] font-medium text-fg-muted uppercase tracking-[0.06em] border-b border-border',
                   alignClass(col.align),
                 ].join(' ')}
               >
@@ -56,15 +56,15 @@ export default function DataTable<T>({
           {rows.map((row, i) => (
             <tr
               key={i}
-              className="bg-white hover:bg-stone-50 transition-colors"
+              className="bg-surface hover:bg-surface-2 transition-colors"
             >
               {columns.map((col, ci) => (
                 <td
                   key={col.key}
                   className={[
                     'px-4 py-3 text-sm',
-                    i < rows.length - 1 ? 'border-b border-stone-200' : '',
-                    col.muted ? 'text-stone-600' : 'text-stone-900',
+                    i < rows.length - 1 ? 'border-b border-border' : '',
+                    col.muted ? 'text-fg-muted' : 'text-fg',
                     col.mono ? 'font-mono tabular-nums' : '',
                     alignClass(col.align),
                     ci === 0 ? '' : '',
