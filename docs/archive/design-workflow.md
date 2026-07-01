@@ -1,4 +1,9 @@
-# Design Workflow — Kaffeelisten
+# Design Workflow — Kaffeelisten (archived)
+
+> **Archived (2026-07):** hackathon-era, one-time setup guide for the initial
+> claude.ai/design session. It no longer reflects how the app is built — the UI is
+> now developed in code against [`../design-system.md`](../design-system.md) and its
+> semantic token system. Kept for historical reference only.
 
 Use this workflow when creating or iterating on the Kaffeelisten UI.
 
