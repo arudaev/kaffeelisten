@@ -14,7 +14,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (theming foundation — dark mode)
 - **The whole app now supports Light / Dark / System.** Colors are driven by semantic CSS-variable tokens (`--bg`, `--surface`, `--fg`, `--accent`, …) mapped into Tailwind; a `ThemeProvider` resolves the mode, persists a per-device choice, and follows the OS in "System".
-- **Mode switcher** (Hell / Dunkel / System) in the admin sidebar. The member-facing flow follows the admin default / the visitor's OS (no member-facing switcher).
+- **Appearance mode is a single global admin setting** (Settings → Erscheinungsbild → Standard-Modus): „Hell"/„Dunkel" force that appearance for everyone (members and admins); „System" follows each device's OS. There is no per-device switcher.
 - The app logo and the landing/empty illustrations now recolor with the theme (inlined as `currentColor` SVGs instead of static `<img>`s).
 - **Admin "Erscheinungsbild" settings:** set the app's default mode (Hell/Dunkel/System) and pick a **brand palette** — three presets (Standard-Amber, ITC1, Wald) plus **three custom palettes**, each with its own light and dark accent colour. Selecting/editing previews instantly; "Speichern" applies it app-wide (member flow + admin) for everyone. Stored in a new public `app_theme` table.
 - **Report and statement emails now use the brand-palette accent** (light variant — email dark-mode is unreliable). The separate accent picker in "Berichts-Format" is removed; the email accent follows the palette under "Erscheinungsbild".

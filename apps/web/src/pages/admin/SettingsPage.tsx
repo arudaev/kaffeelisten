@@ -133,7 +133,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [pinIsSet, setPinIsSet] = useState(false)
 
   // Appearance / theme
-  const { setPalette, palette: currentPalette } = useTheme()
+  const { setPalette, setMode, palette: currentPalette } = useTheme()
   const [themeDefaultMode, setThemeDefaultMode] = useState<ThemeMode>('system')
   // Start from the currently-active palette so the picker highlights it and the
   // live-preview effect never resets to the default while the theme loads.
@@ -415,11 +415,11 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   <SegmentedControl
                     ariaLabel="Standard-Modus"
                     value={themeDefaultMode}
-                    onChange={setThemeDefaultMode}
+                    onChange={m => { setThemeDefaultMode(m); setMode(m) }}
                     options={MODE_OPTIONS}
                   />
                   <p className="text-[13px] text-fg-muted leading-relaxed">
-                    Gilt für neue Geräte. Jede Person kann das Erscheinungsbild jederzeit selbst umschalten.
+                    Gilt für alle: „Hell“ bzw. „Dunkel“ erzwingt das Erscheinungsbild für Mitglieder und Admins; „System“ folgt dem Gerät der jeweiligen Person.
                   </p>
                 </div>
 

@@ -1,6 +1,5 @@
 import AdminIcon from './AdminIcon'
 import Logo from '../Logo'
-import ThemeModeToggle from '../ThemeModeToggle'
 
 type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
 
@@ -94,7 +93,6 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
             <AdminIcon name="send" size={16} strokeWidth={2} />
             Bericht senden
           </button>
-          <ThemeModeToggle />
           <div className="flex items-center gap-2">
             <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
             <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
