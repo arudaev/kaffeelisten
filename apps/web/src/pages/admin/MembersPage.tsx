@@ -206,7 +206,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             type="button"
             onClick={() => openEdit(r)}
             title="Bearbeiten"
-            className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors"
+            className="text-fg-muted hover:text-fg p-1 rounded transition-colors"
           >
             <AdminIcon name="edit" size={16} />
           </button>
@@ -217,8 +217,8 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             className={[
               'p-1 rounded transition-colors',
               r.active
-                ? 'text-stone-500 hover:text-red-600'
-                : 'text-stone-500 hover:text-green-600',
+                ? 'text-fg-muted hover:text-error'
+                : 'text-fg-muted hover:text-success',
             ].join(' ')}
           >
             <AdminIcon name={r.active ? 'delete' : 'check'} size={16} />
@@ -294,18 +294,18 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             <button
               type="button"
               onClick={() => { setFilterCompanyId(''); setFilterStatus('all'); setFilterName('') }}
-              className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+              className="text-xs text-fg-muted hover:text-fg transition-colors"
             >
               Filter zurücksetzen
             </button>
           )}
-          <span className="ml-auto text-sm text-stone-500">
+          <span className="ml-auto text-sm text-fg-muted">
             {displayed.length} {displayed.length === 1 ? 'Person' : 'Personen'}
           </span>
         </div>
 
         {loading ? (
-          <div className="h-48 bg-stone-100 rounded-xl animate-pulse" />
+          <div className="h-48 bg-surface-2 rounded-xl animate-pulse" />
         ) : (
           <DataTable
             columns={columns}

@@ -8,6 +8,26 @@
     <meta name="theme-color" content="#D97706" />
     <meta name="description" content="Kaffee- und Snack-Verbrauch am ITC1 Campus digital erfassen" />
     <title>Kaffeelisten</title>
+    <script>
+      // Anti-FOUC: apply the stored theme mode AND the cached brand-palette accent
+      // before first paint, so a new page never flashes the default palette.
+      (function () {
+        try {
+          var m = localStorage.getItem('kaffeelisten-theme-mode') || 'system';
+          var dark = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var mode = dark ? 'dark' : 'light';
+          var root = document.documentElement;
+          root.dataset.mode = mode;
+          var raw = localStorage.getItem('kaffeelisten-theme-vars');
+          if (raw) {
+            var vars = JSON.parse(raw)[mode] || {};
+            for (var k in vars) root.style.setProperty(k, vars[k]);
+          }
+        } catch (e) {
+          document.documentElement.dataset.mode = 'light';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

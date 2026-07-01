@@ -11,6 +11,7 @@ import ItemCard from '../components/ItemCard'
 import FlowShell from '../components/FlowShell'
 import SuccessScreen from '../components/SuccessScreen'
 import Icon from '../components/Icon'
+import CappuccinoMark from '../components/CappuccinoMark'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type Member = Database['public']['Tables']['members']['Row']
@@ -18,6 +19,9 @@ type Item = Database['public']['Tables']['items']['Row']
 type Step = 'start' | 'company' | 'member' | 'item' | 'confirm' | 'success'
 
 type CartEntry = { item: Item; quantity: number }
+
+// Basic email shape check — the DB (work_email NOT NULL) is the source of truth.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const CATEGORY_LABELS: Record<string, string> = {
   coffee: 'Kaffee',
@@ -251,12 +255,15 @@ export default function MemberFlow() {
   const handleAddSelf = async () => {
     const first = selfFirstName.trim()
     const last = selfLastName.trim()
+    const email = selfEmail.trim()
     if (!first) { setAddSelfError('Vorname fehlt.'); return }
+    if (!last) { setAddSelfError('Nachname fehlt.'); return }
+    if (!email) { setAddSelfError('Arbeits-E-Mail fehlt.'); return }
+    if (!EMAIL_RE.test(email)) { setAddSelfError('Bitte eine gültige E-Mail-Adresse eingeben.'); return }
     if (!selectedCompany) return
     setAddingMember(true)
     setAddSelfError(null)
-    const storedName = last ? `${capitalizeName(first)} ${capitalizeName(last)}` : capitalizeName(first)
-    const email = selfEmail.trim() || null
+    const storedName = `${capitalizeName(first)} ${capitalizeName(last)}`
     const { data, error: err } = await supabase
       .from('members')
       .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
@@ -291,21 +298,16 @@ export default function MemberFlow() {
 
   if (step === 'start') {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
-        <img
-          src="/assets/illustrations/cappuccino-with-steam.svg"
-          alt=""
-          className="w-28 sm:w-40"
-          style={{ color: '#44403C' }}
-        />
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
+        <CappuccinoMark className="w-28 sm:w-40 h-auto text-fg-muted" />
         <div className="text-center max-w-xl">
-          <h1 className="text-3xl sm:text-5xl font-bold text-stone-900 tracking-tight">Kaffeelisten</h1>
-          <p className="text-xl text-stone-600 mt-2.5 leading-relaxed">
+          <h1 className="text-3xl sm:text-5xl font-bold text-fg tracking-tight">Kaffeelisten</h1>
+          <p className="text-xl text-fg-muted mt-2.5 leading-relaxed">
             Kaffee, Getränke, Snacks. Kurz tippen, fertig.
           </p>
         </div>
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-error bg-error-subtle px-4 py-2 rounded-lg">{error}</p>
         )}
         <BigButton
           variant="primary"
@@ -314,9 +316,13 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
-        <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-stone-400 uppercase tracking-[0.06em]">
-          ITC1 Deggendorf · B4Y3RW4LD ·{' '}
-          <Link to="/datenschutz" className="hover:text-stone-600 transition-colors">
+        <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
+          ITC1 Deggendorf ·{' '}
+          <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
+            B4Y3RW4LD
+          </Link>{' '}
+          ·{' '}
+          <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
             Datenschutz
           </Link>
         </p>
@@ -332,15 +338,15 @@ export default function MemberFlow() {
         onBack={() => setStep('start')}
         header={
           <>
-            <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Wer bist du?</h1>
-            <p className="text-lg text-stone-600">Tippe auf dein Unternehmen.</p>
+            <h1 className="text-3xl font-bold text-fg tracking-tight">Wer bist du?</h1>
+            <p className="text-lg text-fg-muted">Tippe auf dein Unternehmen.</p>
           </>
         }
       >
         {loadingCompanies ? (
           <div className="flex flex-col gap-3">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-[72px] rounded-xl bg-stone-100 animate-pulse" />
+              <div key={i} className="h-[72px] rounded-xl bg-surface-2 animate-pulse" />
             ))}
           </div>
         ) : (() => {
@@ -362,7 +368,7 @@ export default function MemberFlow() {
                     accentColor={getLetterColor(suggested.name)}
                     onClick={() => selectCompany(suggested)}
                   />
-                  <hr className="border-stone-200" />
+                  <hr className="border-border" />
                 </>
               )}
               {companies.map(c => (
@@ -401,18 +407,18 @@ export default function MemberFlow() {
           }}
           header={
             <>
-              <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
+              <p className="text-sm font-medium text-fg-muted uppercase tracking-[0.06em]">
                 {selectedCompany?.name}
               </p>
-              <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Schön, dich zu sehen.</h1>
-              <p className="text-lg text-stone-600">Wähle deinen Namen.</p>
+              <h1 className="text-3xl font-bold text-fg tracking-tight">Schön, dich zu sehen.</h1>
+              <p className="text-lg text-fg-muted">Wähle deinen Namen.</p>
             </>
           }
         >
           {loadingMembers ? (
             <div className="flex flex-col gap-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-[72px] rounded-xl bg-stone-100 animate-pulse" />
+                <div key={i} className="h-[72px] rounded-xl bg-surface-2 animate-pulse" />
               ))}
             </div>
           ) : (
@@ -434,7 +440,7 @@ export default function MemberFlow() {
               <button
                 type="button"
                 onClick={openAddSelf}
-                className="mt-2 self-start flex items-center gap-2 px-4 h-11 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                className="mt-2 self-start flex items-center gap-2 px-4 h-11 rounded-lg text-base font-medium text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <span className="text-xl leading-none">+</span>
                 Ich bin noch nicht dabei
@@ -450,15 +456,15 @@ export default function MemberFlow() {
             onClick={() => setAddSelfOpen(false)}
           >
             <div
-              className="bg-white rounded-2xl p-7 w-full max-w-[440px] shadow-lg flex flex-col gap-5"
+              className="bg-surface rounded-2xl p-7 w-full max-w-[440px] shadow-lg flex flex-col gap-5"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-4">
-                <h2 className="text-xl font-semibold text-stone-900">Namen hinzufügen</h2>
+                <h2 className="text-xl font-semibold text-fg">Namen hinzufügen</h2>
                 <button
                   type="button"
                   onClick={() => setAddSelfOpen(false)}
-                  className="text-stone-400 hover:text-stone-700 p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                  className="text-fg-subtle hover:text-fg p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   aria-label="Schließen"
                 >
                   <Icon name="close" size={20} strokeWidth={2} />
@@ -467,8 +473,8 @@ export default function MemberFlow() {
 
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-stone-700" htmlFor="self-first">
-                    Vorname
+                  <label className="text-sm font-medium text-fg" htmlFor="self-first">
+                    Vorname <span className="text-error">*</span>
                   </label>
                   <input
                     ref={firstNameRef}
@@ -479,12 +485,12 @@ export default function MemberFlow() {
                     onChange={e => setSelfFirstName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. Max"
-                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-stone-700" htmlFor="self-last">
-                    Nachname
+                  <label className="text-sm font-medium text-fg" htmlFor="self-last">
+                    Nachname <span className="text-error">*</span>
                   </label>
                   <input
                     id="self-last"
@@ -494,12 +500,12 @@ export default function MemberFlow() {
                     onChange={e => setSelfLastName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. Mustermann"
-                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-stone-700" htmlFor="self-email">
-                    Arbeits-E-Mail
+                  <label className="text-sm font-medium text-fg" htmlFor="self-email">
+                    Arbeits-E-Mail <span className="text-error">*</span>
                   </label>
                   <input
                     id="self-email"
@@ -509,34 +515,39 @@ export default function MemberFlow() {
                     onChange={e => setSelfEmail(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. max.mustermann@firma.de"
-                    className="h-12 px-4 rounded-xl border border-stone-200 text-stone-900 text-base focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-amber-600"
+                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
               </div>
 
               {previewName && (
-                <p className="text-sm text-stone-600 bg-stone-50 rounded-lg px-4 py-2.5">
-                  Dein Name in der Liste: <strong className="text-stone-900">{previewName}</strong>
+                <p className="text-sm text-fg-muted bg-bg rounded-lg px-4 py-2.5">
+                  Dein Name in der Liste: <strong className="text-fg">{previewName}</strong>
                 </p>
               )}
 
               {addSelfError && (
-                <p className="text-sm text-red-600">{addSelfError}</p>
+                <p className="text-sm text-error">{addSelfError}</p>
               )}
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setAddSelfOpen(false)}
-                  className="h-11 px-5 rounded-xl text-base font-medium text-stone-700 hover:bg-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                  className="h-11 px-5 rounded-xl text-base font-medium text-fg hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="button"
                   onClick={handleAddSelf}
-                  disabled={addingMember || !selfFirstName.trim()}
-                  className="h-11 px-5 rounded-xl text-base font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                  disabled={
+                    addingMember ||
+                    !selfFirstName.trim() ||
+                    !selfLastName.trim() ||
+                    !EMAIL_RE.test(selfEmail.trim())
+                  }
+                  className="h-11 px-5 rounded-xl text-base font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {addingMember ? 'Speichern…' : 'Hinzufügen'}
                 </button>
@@ -559,16 +570,16 @@ export default function MemberFlow() {
         }}
         header={
           <>
-            <p className="text-sm font-medium text-stone-600 uppercase tracking-[0.06em]">
+            <p className="text-sm font-medium text-fg-muted uppercase tracking-[0.06em]">
               {selectedMember ? getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)) : ''} · {selectedCompany?.name}
             </p>
-            <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Was hast du genommen?</h1>
+            <h1 className="text-3xl font-bold text-fg tracking-tight">Was hast du genommen?</h1>
           </>
         }
         footer={
           cartCount > 0 ? (
             <>
-              <span className="text-base font-medium text-stone-700">
+              <span className="text-base font-medium text-fg">
                 {cartCount} {cartCount === 1 ? 'Artikel' : 'Artikel'} · {formatPrice(cartTotal)}
               </span>
               <div className="flex-1" />
@@ -593,10 +604,10 @@ export default function MemberFlow() {
                   onClick={() => setActiveCategory(cat)}
                   className={[
                     'h-11 px-4 rounded-full text-base font-medium border transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
                     isActive
-                      ? 'bg-amber-50 text-amber-700 border-amber-600'
-                      : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50',
+                      ? 'bg-accent-subtle text-accent border-accent'
+                      : 'bg-surface text-fg border-border hover:bg-surface-2',
                   ].join(' ')}
                 >
                   {CATEGORY_LABELS[cat] ?? cat}
@@ -629,13 +640,13 @@ export default function MemberFlow() {
         totalSteps={4}
         onBack={() => setStep('item')}
         header={
-          <h1 className="text-3xl font-bold text-stone-900 tracking-tight">Alles richtig?</h1>
+          <h1 className="text-3xl font-bold text-fg tracking-tight">Alles richtig?</h1>
         }
         footer={
           <>
             <BigButton variant="secondary" onClick={() => setStep('item')}>Zurück</BigButton>
             <div className="flex-1" />
-            {error && <p className="text-sm text-red-600 mr-2">{error}</p>}
+            {error && <p className="text-sm text-error mr-2">{error}</p>}
             <BigButton
               variant="primary"
               onClick={handleConfirm}
@@ -647,28 +658,28 @@ export default function MemberFlow() {
           </>
         }
       >
-        <div className="bg-white border border-stone-200 rounded-2xl p-7 shadow-sm flex flex-col gap-4">
-          <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
-            <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Person</span>
-            <span className="text-xl font-semibold text-stone-900">{getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))}</span>
+        <div className="bg-surface border border-border rounded-2xl p-7 shadow-sm flex flex-col gap-4">
+          <div className="flex justify-between items-center border-b border-border pb-3.5">
+            <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">Person</span>
+            <span className="text-xl font-semibold text-fg">{getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))}</span>
           </div>
-          <div className="flex justify-between items-center border-b border-stone-200 pb-3.5">
-            <span className="text-sm text-stone-600 uppercase tracking-[0.06em]">Unternehmen</span>
-            <span className="text-xl font-semibold text-stone-900">{selectedCompany.name}</span>
+          <div className="flex justify-between items-center border-b border-border pb-3.5">
+            <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">Unternehmen</span>
+            <span className="text-xl font-semibold text-fg">{selectedCompany.name}</span>
           </div>
           {cartEntries.map(({ item, quantity }) => (
             <div
               key={item.id}
-              className="flex justify-between items-center border-b border-stone-200 pb-3.5 last:border-0 last:pb-0"
+              className="flex justify-between items-center border-b border-border pb-3.5 last:border-0 last:pb-0"
             >
-              <span className="text-base text-stone-700">{quantity} × {item.name}</span>
-              <span className="text-xl font-semibold text-stone-900">{formatPrice(item.price_cents * quantity)}</span>
+              <span className="text-base text-fg">{quantity} × {item.name}</span>
+              <span className="text-xl font-semibold text-fg">{formatPrice(item.price_cents * quantity)}</span>
             </div>
           ))}
           {cartEntries.length > 1 && (
-            <div className="flex justify-between items-center pt-1 border-t border-stone-200">
-              <span className="text-sm font-medium text-stone-900 uppercase tracking-[0.06em]">Gesamt</span>
-              <span className="text-xl font-bold text-stone-900">{formatPrice(cartTotal)}</span>
+            <div className="flex justify-between items-center pt-1 border-t border-border">
+              <span className="text-sm font-medium text-fg uppercase tracking-[0.06em]">Gesamt</span>
+              <span className="text-xl font-bold text-fg">{formatPrice(cartTotal)}</span>
             </div>
           )}
         </div>

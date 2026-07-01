@@ -177,6 +177,15 @@ export type Database = {
           ceo_email: string | null
           cc_ceo_on_reports: boolean
           member_statements_enabled: boolean
+          auto_report_enabled: boolean
+          auto_report_day: number | null
+          report_accent: string
+          report_subject: string | null
+          report_intro: string | null
+          report_include_pdf: boolean
+          report_include_excel: boolean
+          member_subject: string | null
+          member_intro: string | null
           updated_at: string
         }
         Insert: {
@@ -190,6 +199,15 @@ export type Database = {
           ceo_email?: string | null
           cc_ceo_on_reports?: boolean
           member_statements_enabled?: boolean
+          auto_report_enabled?: boolean
+          auto_report_day?: number | null
+          report_accent?: string
+          report_subject?: string | null
+          report_intro?: string | null
+          report_include_pdf?: boolean
+          report_include_excel?: boolean
+          member_subject?: string | null
+          member_intro?: string | null
           updated_at?: string
         }
         Update: {
@@ -203,13 +221,63 @@ export type Database = {
           ceo_email?: string | null
           cc_ceo_on_reports?: boolean
           member_statements_enabled?: boolean
+          auto_report_enabled?: boolean
+          auto_report_day?: number | null
+          report_accent?: string
+          report_subject?: string | null
+          report_intro?: string | null
+          report_include_pdf?: boolean
+          report_include_excel?: boolean
+          member_subject?: string | null
+          member_intro?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_theme: {
+        Row: {
+          id: number
+          default_mode: 'system' | 'light' | 'dark'
+          active_palette: string
+          custom: Record<string, unknown>
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          default_mode?: 'system' | 'light' | 'dark'
+          active_palette?: string
+          custom?: Record<string, unknown>
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          default_mode?: 'system' | 'light' | 'dark'
+          active_palette?: string
+          custom?: Record<string, unknown>
           updated_at?: string
         }
         Relationships: []
       }
     }
     Views: { [_ in never]: never }
-    Functions: { [_ in never]: never }
+    Functions: {
+      verify_admin_pin: {
+        Args: { p_pin: string }
+        Returns: boolean
+      }
+      set_admin_pin: {
+        Args: { p_pin: string }
+        Returns: undefined
+      }
+      set_pin_reset_token: {
+        Args: { p_code: string; p_ttl_minutes?: number }
+        Returns: undefined
+      }
+      consume_pin_reset: {
+        Args: { p_code: string; p_new_pin: string }
+        Returns: boolean
+      }
+    }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
   }

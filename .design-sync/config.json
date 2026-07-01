@@ -7,7 +7,7 @@
   "entry": ".design-sync/ds-entry.tsx",
   "srcDir": "apps/web/src",
   "cssEntry": ".design-sync/.cache/ds-tailwind.css",
-  "guidelinesGlob": ["docs/design-foundation.md", "docs/design-system.md", "docs/design-workflow.md", "docs/domain.md"],
+  "guidelinesGlob": ["docs/design-foundation.md", "docs/design-system.md", "docs/domain.md"],
   "readmeHeader": ".design-sync/conventions.md",
   "componentSrcMap": {
     "BigButton": "apps/web/src/components/BigButton.tsx",

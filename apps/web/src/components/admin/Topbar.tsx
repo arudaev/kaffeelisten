@@ -10,13 +10,13 @@ interface TopbarProps {
 
 export function Topbar({ title, eyebrow, right, onMenuClick }: TopbarProps) {
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-8 py-4 md:py-6 md:pb-5 border-b border-stone-200 bg-stone-50 gap-3 md:gap-6">
+    <div className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-8 py-4 md:py-6 md:pb-5 border-b border-border bg-bg gap-3 md:gap-6">
       <div className="flex items-center gap-3 min-w-0">
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="md:hidden p-1.5 -ml-1 rounded-md text-stone-500 hover:bg-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+            className="md:hidden p-1.5 -ml-1 rounded-md text-fg-muted hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Menü öffnen"
           >
             <AdminIcon name="menu" size={22} strokeWidth={1.5} />
@@ -24,11 +24,11 @@ export function Topbar({ title, eyebrow, right, onMenuClick }: TopbarProps) {
         )}
         <div className="min-w-0">
           {eyebrow && (
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-[0.06em] mb-1 hidden sm:block">
+            <p className="text-xs font-medium text-fg-muted uppercase tracking-[0.06em] mb-1 hidden sm:block">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-xl md:text-[26px] font-bold text-stone-900 tracking-tight truncate">{title}</h1>
+          <h1 className="text-xl md:text-[26px] font-bold text-fg tracking-tight truncate">{title}</h1>
         </div>
       </div>
       {right && (
@@ -60,7 +60,7 @@ export function MonthSelector({ value, onChange }: MonthSelectorProps) {
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="hidden md:inline-flex h-9 px-3 bg-white border border-stone-200 rounded-md text-sm font-medium text-stone-900 hover:bg-stone-50 transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none cursor-pointer"
+      className="hidden md:inline-flex h-9 px-3 bg-surface border border-border rounded-md text-sm font-medium text-fg hover:bg-surface-2 transition-colors focus:border-accent focus:ring-1 focus:ring-accent outline-none cursor-pointer"
     >
       {months.map(m => (
         <option key={m.value} value={m.value}>{m.label}</option>

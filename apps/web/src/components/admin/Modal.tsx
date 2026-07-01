@@ -18,20 +18,20 @@ export default function Modal({ open, onClose, title, children, actions }: Modal
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl p-6 w-full max-w-[480px] shadow-lg"
+        className="bg-surface rounded-2xl p-6 w-full max-w-[480px] shadow-lg"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 mb-3">
-          <h2 className="text-xl font-semibold text-stone-900">{title}</h2>
+          <h2 className="text-xl font-semibold text-fg">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+            className="text-fg-muted hover:text-fg p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <AdminIcon name="close" size={20} />
           </button>
         </div>
-        <div className="text-sm text-stone-600 leading-relaxed mb-5">{children}</div>
+        <div className="text-sm text-fg-muted leading-relaxed mb-5">{children}</div>
         {actions && (
           <div className="flex justify-end gap-2">{actions}</div>
         )}

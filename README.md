@@ -227,7 +227,6 @@ wall-mounted member terminal.
 - [Domain model](docs/domain.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
-- [Design workflow](docs/design-workflow.md)
 - [Hackathon pitch deck](https://arudaev.github.io/kaffeelisten/)
 - [Hackathon-era docs (archived)](docs/archive/)
 

@@ -19,10 +19,10 @@ const sizeClasses: Record<Size, string> = {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-amber-600 text-white border-transparent font-semibold hover:bg-amber-700',
-  secondary: 'bg-white text-stone-900 border-stone-200 font-medium hover:bg-stone-50',
-  ghost: 'bg-transparent text-stone-700 border-transparent font-medium hover:bg-stone-100',
-  destructive: 'bg-white text-red-600 border-red-600 font-medium hover:bg-red-50',
+  primary: 'bg-accent text-white border-transparent font-semibold hover:bg-accent-hover',
+  secondary: 'bg-surface text-fg border-border font-medium hover:bg-surface-2',
+  ghost: 'bg-transparent text-fg border-transparent font-medium hover:bg-surface-2',
+  destructive: 'bg-surface text-error border-error font-medium hover:bg-error-subtle',
 }
 
 export default function AdminButton({
@@ -42,7 +42,7 @@ export default function AdminButton({
       className={[
         'inline-flex items-center justify-center gap-2',
         'rounded-md border transition-colors duration-[120ms]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
         sizeClasses[size],
         variantClasses[variant],
         disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
