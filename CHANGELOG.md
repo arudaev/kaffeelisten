@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/admin-settings
+
+### Added
+- **Admin Settings page** (replaces the placeholder): manage report recipients (add/remove with inline validation and an empty-state warning), the CEO/Geschäftsführung CC address and its toggle, and the per-member monthly-statement toggle — all saved together via a "Speichern" bar
+- **6-digit admin PIN with self-service change & reset**:
+  - "PIN ändern" — verify the current PIN and set a new 6-digit PIN (segmented PIN entry, confirm field)
+  - "PIN zurücksetzen" — two-step flow: email a one-time code to the report recipients + CEO, or use the server-side emergency recovery PIN, then set a new PIN
+  - The login keypad now renders the PIN length reported by the server (6 by default) instead of a fixed 4 digits
+- **CEO copied on every monthly report** — the configured CEO address is CC'd on both the manual send and the month-end cron when the toggle is on
+- **Per-member monthly statement email** — each person who consumed that month and has a work e-mail receives their own warm, itemized statement (date, item, quantity, unit price, amount, total) in addition to the company report; can be turned off in Settings
+
+### Changed
+- Report recipients now come from the Settings page (`app_settings.report_recipients`); `ADMIN_EMAIL` is used only as a bootstrap fallback when the list is empty
+- `/api/send-report` and `/api/admin/verify-pin` now authenticate against the hashed PIN in the database, falling back to `ADMIN_PIN` only until a PIN is set from the dashboard
+
+### Database
+- Migration 012 — `pgcrypto`-backed, service-role-only functions for verifying/setting the PIN and for issuing/consuming one-time PIN-reset codes (hashes only; clear PIN/codes are never stored)
+
+---
+
 ## [Unreleased] — feat/itc1-production-prep
 
 ### Added
