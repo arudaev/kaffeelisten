@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
-import { PRESET_PALETTES, findPalette, paletteVars, type Palette } from './palettes'
+import { PRESET_PALETTES, findPalette, paletteVars, type BrandMark, type Palette } from './palettes'
 import {
   ThemeContext,
   STORAGE_KEY,
@@ -18,18 +18,33 @@ import {
   type ThemeMode,
 } from './theme-context'
 
-// Generate an accent-coloured SVG favicon (the logo mark) as a data URI and set
-// it as the tab icon + the browser theme-colour, so the favicon tracks the
-// active brand palette. The installed PWA PNG icons stay static (OS-cached).
-function applyBrandFavicon(accent: string) {
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">` +
-    `<rect width="200" height="200" rx="40" fill="${accent}"/>` +
+// Inner mark markup for the accent-coloured favicon: white strokes on the
+// accent square. Kept in sync with the <Logo> / <CappuccinoMark> / <DeathStarMark>
+// components so the tab icon matches the active brand mark.
+const FAVICON_MARKS: Record<BrandMark, string> = {
+  cappuccino:
     `<g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,20)">` +
     `<path d="M40 60c0-3 3-6 8-6h70c5 0 8 3 8 6"/><ellipse cx="83" cy="60" rx="43" ry="6"/>` +
     `<path d="M40 60v40c0 14 12 26 26 26h34c14 0 26-12 26-26V60"/>` +
     `<path d="M126 70h12c10 0 18 8 18 18v0c0 10-8 18-18 18h-12"/>` +
-    `<path d="M70 28c-3 6 3 12 0 18"/><path d="M83 22c-3 6 3 12 0 18"/><path d="M96 28c-3 6 3 12 0 18"/></g></svg>`
+    `<path d="M70 28c-3 6 3 12 0 18"/><path d="M83 22c-3 6 3 12 0 18"/><path d="M96 28c-3 6 3 12 0 18"/></g>`,
+  deathstar:
+    `<g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">` +
+    `<circle cx="100" cy="100" r="56"/>` +
+    `<circle cx="76" cy="76" r="14"/>` +
+    `<circle cx="76" cy="76" r="4" fill="#ffffff" stroke="none"/>` +
+    `<path d="M45 108 H155"/><path d="M49 122 H151"/></g>`,
+}
+
+// Generate an accent-coloured SVG favicon (the brand mark) as a data URI and set
+// it as the tab icon + the browser theme-colour, so the favicon tracks the
+// active brand palette. The installed PWA PNG icons stay static (OS-cached).
+function applyBrandFavicon(accent: string, mark: BrandMark) {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">` +
+    `<rect width="200" height="200" rx="40" fill="${accent}"/>` +
+    FAVICON_MARKS[mark] +
+    `</svg>`
   const href = 'data:image/svg+xml,' + encodeURIComponent(svg)
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
   if (!link) {
@@ -81,7 +96,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement
     for (const [k, v] of Object.entries(paletteVars(palette, resolved))) root.style.setProperty(k, v)
-    applyBrandFavicon(resolved === 'dark' ? palette.darkAccent : palette.lightAccent)
+    applyBrandFavicon(resolved === 'dark' ? palette.darkAccent : palette.lightAccent, palette.mark ?? 'cappuccino')
     try {
       localStorage.setItem(
         'kaffeelisten-theme-vars',
