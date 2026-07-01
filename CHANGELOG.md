@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — feat/admin-settings
 
+### Changed (Report-Format & Automatic-dispatch redesign)
+- **Send day is now a calendar-style grid** (1–28 + „Letzter Tag des Monats") instead of a dropdown.
+- **Subject/intro fields gained placeholder chips and a live example:** click `{monat}` / `{jahr}` / `{name}` / `{gesamt}` to insert them at the cursor, with a "Beispiel:" line showing the resolved text as you type. New `{jahr}` and `{gesamt}` placeholders (member total) are supported.
+- **Fixed:** report previews (and a real send with a blank field) no longer show the literal word "null" — an empty subject/intro now correctly falls back to the built-in default.
+
 ### Changed (PIN recovery moved to the login page)
 - **Self-service PIN reset is now on the `/admin` login screen**, not inside Settings. After 5 failed PIN attempts the keypad locks and the recovery flow opens (also reachable anytime via a "PIN vergessen?" link).
 - Recovery now asks for **your** admin email and sends the one-time code **only to that address** (if it's on the admin list), instead of broadcasting to all recipients — so a locked-out admin can regain access even when they didn't receive a shared PIN. The email instructs setting a fresh PIN immediately; entering the code + a new PIN logs you straight in.
