@@ -15,6 +15,7 @@ export const PRESET_PALETTES: Palette[] = [
   { id: 'bayerwald', name: 'Standard (Amber)', lightAccent: '#D97706', darkAccent: '#F59E0B' },
   { id: 'b4y3rw4ld', name: 'ITC1', lightAccent: '#018FC2', darkAccent: '#34B7E6' },
   { id: 'wald', name: 'Wald', lightAccent: '#4D7C0F', darkAccent: '#84CC16' },
+  { id: 'deathstar', name: 'Imperium (Death Star)', lightAccent: '#475569', darkAccent: '#64748B' },
 ]
 
 export const CUSTOM_SLOTS = ['custom-1', 'custom-2', 'custom-3'] as const
