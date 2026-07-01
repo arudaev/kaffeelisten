@@ -9,6 +9,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — feat/admin-settings
 
+### Added (report scheduling, format & preview)
+- **Automatic report schedule control** — a Settings card to turn the month-end automatic send on/off and choose the send day (a specific 1.–28. or the last day of the month). The cron now runs daily and the function enforces the chosen day.
+- **Light report-format customization** — accent colour, email subject and intro text (with `{monat}` / `{name}` placeholders), and per-report attachment toggles (attach PDF and/or Excel to the company report), applied to both the company report and the member statement
+- **Report preview** — "Vorschau" opens the company report (admin + CEO) and the member statement rendered exactly as they'll be sent, reflecting your current unsaved edits; uses this month's real data or a small sample when the month is empty
+- Report recipients now also show the `ADMIN_EMAIL` env fallback as read-only "Server" chips so you can see who currently receives reports before configuring your own list
+
+### Database
+- Migration 013 — `app_settings` gains `auto_report_enabled`, `auto_report_day`, `report_accent`, `report_subject`, `report_intro`, `report_include_pdf`, `report_include_excel`, `member_subject`, `member_intro` (all with safe defaults)
+
 ### Added
 - **Admin Settings page** (replaces the placeholder): manage report recipients (add/remove with inline validation and an empty-state warning), the CEO/Geschäftsführung CC address and its toggle, and the per-member monthly-statement toggle — all saved together via a "Speichern" bar
 - **6-digit admin PIN with self-service change & reset**:
