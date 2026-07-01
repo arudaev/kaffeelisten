@@ -7,10 +7,19 @@ dev-facing labels). No emojis in UI copy.
 
 ## Setup & wrapping
 
-No provider, theme context, or router is required — every component is a self-contained
-React component styled with Tailwind utility classes. Just render it. The shipped
-`styles.css` carries all styling (it `@import`s the compiled Tailwind layer and a remote
-Inter `@font-face`); nothing else needs wiring.
+Almost every component is a self-contained React component styled with Tailwind utility
+classes — just render it. The shipped `styles.css` carries all styling (it `@import`s the
+compiled Tailwind layer and a remote Inter `@font-face`); nothing else needs wiring.
+
+**One exception:** `Sidebar` renders a react-router `<Link>`, so it must be mounted inside
+a Router (`<BrowserRouter>` / `<MemoryRouter>` from `react-router-dom`). Every other
+component works with no provider, theme context, or router.
+
+**Theming.** The palette is driven by semantic CSS variables (`--accent`, `--fg`,
+`--surface`, `--bg`, `--border`, …) defined for light mode on `:root` and overridden under
+`[data-mode="dark"]`. Add `data-mode="dark"` to a wrapping element to preview dark mode; a
+brand palette can further override `--accent*` at runtime. Because the tokens are variables,
+you get theming for free by using the semantic classes below — never hard-code hex colors.
 
 ## Styling idiom — two layers
 
@@ -38,15 +47,19 @@ There are two ways to style, both shipped via `styles.css`:
 **Build primarily by composing the library components** — they already carry their full styling, so
 you rarely add classes at all.
 
-### The DS's class vocabulary (present in the compiled CSS)
+### The DS's class vocabulary (semantic tokens — present in the compiled CSS)
 
-- **Brand / primary:** `amber-600` (the accent `#D97706`), `amber-700` (hover), `amber-50`
-  / `amber-100` (subtle fills), `ring-amber-600` (focus). Use these for primary actions
-  and selected states.
-- **Neutrals / text:** `stone-50` (app canvas), `stone-200` (borders), `stone-400`–`stone-600`
-  (muted text), `stone-900` (primary text), `white` (surfaces).
-- **Status:** `green-50`/`green-600` (active), `red-50`/`red-500`/`red-600` (error/destructive),
-  amber for warnings.
+These map to the theme CSS variables above, so they follow light/dark and the brand palette
+automatically. Prefer them over raw color scales — this is the current idiom the components use.
+
+- **Accent / primary:** `bg-accent` (the accent, amber `#D97706` in light), `text-accent`,
+  `border-accent`, `bg-accent-subtle` (tinted fill), `ring-accent` (focus). Use for primary
+  actions and selected states. (The `--accent-hover` variable exists for hover states.)
+- **Surfaces / canvas:** `bg-bg` (app canvas), `bg-surface` (cards), `bg-surface-2` (inset/
+  input fills), `border-border`, `border-border-strong`.
+- **Text:** `text-fg` (primary), `text-fg-muted` (secondary), `text-fg-subtle` (hints/placeholder).
+- **Status:** `text-success` / `bg-success-subtle` (active/ok), `text-error` / `bg-error` /
+  `bg-error-subtle` (error/destructive). Amber accent doubles for warnings.
 - **Radius:** `rounded-md`, `rounded-lg`, `rounded-xl` (12px), `rounded-2xl` (16px), `rounded-full`.
 - **Type:** `font-medium`/`font-semibold`/`font-bold`, Inter via `font-sans`. Tabular numbers
   via `tabular-nums`.
@@ -59,17 +72,26 @@ classes, and each component's `<Name>.prompt.md` + `<Name>.d.ts` for its API bef
 
 ## Components at a glance
 
+- **Brand marks:** `Logo` (amber rounded-square cappuccino mark; follows the accent via
+  `currentColor` — wrap in a `text-accent` element), `CappuccinoMark` (line-art cup that
+  inherits `currentColor`). Size both with `w-*`/`h-*` (or inline `style`).
 - **Member flow (zero-login, iPad-first):** `FlowShell` (step shell with progress dots, back,
   footer slot), `Tile` (company/member selection row), `ItemCard` (consumable with quantity
   stepper), `Stepper`, `BigButton` (primary/secondary/ghost), `SuccessScreen`, `Icon`.
-- **Admin panel:** `Sidebar`, `Topbar` + `MonthSelector`, `SummaryCard` (KPI), `DataTable`
-  (`columns`/`rows`, `render` per column), `Badge` (active/inactive/warn/error), `Modal`,
-  `PinKeypad`, `AdminButton` (primary/secondary/ghost/destructive), `AdminIcon`.
+- **Admin panel:** `Sidebar` (needs a Router — see Setup), `Topbar` + `MonthSelector`,
+  `SummaryCard` (KPI), `DataTable` (`columns`/`rows`, `render` per column), `Badge`
+  (active/inactive/warn/error), `Modal`, `PinKeypad`, `AdminButton`
+  (primary/secondary/ghost/destructive), `AdminIcon`.
 - **Admin form primitives** (build all admin forms from these — never raw `<input>`/`<select>`):
   `AdminField` (labelled text/number/email input; `form` + compact `filter` variants, optional
   leading icon, `hint`/`error`, `required` asterisk), `AdminSelect` (labelled select, same
   variants, `options` prop), `Toggle` (on/off switch for booleans), `Toast` (`success`/`error`
-  notification), `EmptyState` (illustration + title + body + optional action).
+  notification), `EmptyState` (illustration + title + body + optional action),
+  `SegmentedControl` (radio-group of 2–4 options; `size` `sm`/`md` — used for the theme-mode
+  switcher), `PinInput` (segmented numeric entry; `length`, `reveal`, `invalid`),
+  `DayGridPicker` (day-of-month 1–28 grid + "last day" option), `TemplateField` (subject/intro
+  input with placeholder-token chips and a live "Beispiel" preview),
+  `PalettePreviewCard` (selectable brand-palette card with light/dark accent swatches).
 
 ## Idiomatic example
 
@@ -81,7 +103,7 @@ function SelectCompany() {
     <FlowShell
       step={0}
       totalSteps={4}
-      header={<h1 className="text-2xl font-bold text-stone-900 tracking-tight">Für welche Firma?</h1>}
+      header={<h1 className="text-2xl font-bold text-fg tracking-tight">Für welche Firma?</h1>}
       footer={<BigButton variant="primary" fullWidth icon={<Icon name="check" size={20} strokeWidth={2} />}>Weiter</BigButton>}
     >
       <div className="flex flex-col gap-3">
