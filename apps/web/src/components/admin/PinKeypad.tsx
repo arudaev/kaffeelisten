@@ -4,11 +4,13 @@ interface PinKeypadProps {
   onSubmit: (pin: string) => void
   error?: boolean
   onErrorAnimEnd?: () => void
+  /** Expected PIN length. Phase 2 uses 6; defaults to 6. */
+  length?: number
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, length = 6 }: PinKeypadProps) {
   const [pin, setPin] = useState('')
-  const MAX = 4
+  const MAX = length
 
   const handleKey = (k: string) => {
     if (k === 'del') {
@@ -27,7 +29,7 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
       const t = setTimeout(() => onSubmit(pin), 250)
       return () => clearTimeout(t)
     }
-  }, [pin, onSubmit])
+  }, [pin, onSubmit, MAX])
 
   // Reset pin after error
   useEffect(() => {
