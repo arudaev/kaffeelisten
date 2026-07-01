@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import AdminIcon from './AdminIcon'
 import Logo from '../Logo'
 
@@ -50,13 +51,17 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
       ].join(' ')}>
         {/* Header */}
         <div className="px-5 py-6 border-b border-border">
-          <div className="flex items-center gap-2.5">
+          <Link
+            to="/"
+            title="Zur Mitglieder-Ansicht"
+            className="flex items-center gap-2.5 -m-1 p-1 rounded-md hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
             <Logo className="h-8 w-8 text-accent" />
             <div>
               <p className="text-[15px] font-bold text-fg tracking-tight">Kaffeelisten</p>
               <p className="text-[11px] text-fg-muted uppercase tracking-[0.06em]">Admin</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Nav */}
