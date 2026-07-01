@@ -317,7 +317,11 @@ export default function MemberFlow() {
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
-          ITC1 Deggendorf · B4Y3RW4LD ·{' '}
+          ITC1 Deggendorf ·{' '}
+          <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
+            B4Y3RW4LD
+          </Link>{' '}
+          ·{' '}
           <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
             Datenschutz
           </Link>
