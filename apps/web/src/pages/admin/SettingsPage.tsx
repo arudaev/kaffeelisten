@@ -8,11 +8,13 @@ import { Topbar } from '../../components/admin/Topbar'
 import Modal from '../../components/admin/Modal'
 import AdminButton from '../../components/admin/AdminButton'
 import AdminField from '../../components/admin/AdminField'
-import AdminSelect from '../../components/admin/AdminSelect'
 import AdminIcon from '../../components/admin/AdminIcon'
 import Badge from '../../components/admin/Badge'
 import Toggle from '../../components/admin/Toggle'
 import PinInput from '../../components/admin/PinInput'
+import TemplateField from '../../components/admin/TemplateField'
+import DayGridPicker from '../../components/admin/DayGridPicker'
+import { COMPANY_PLACEHOLDERS, MEMBER_PLACEHOLDERS } from '../../lib/reportPlaceholders'
 
 interface Props {
   onToast: (msg: string) => void
@@ -457,18 +459,12 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   </p>
                 </div>
                 <Toggle checked={autoEnabled} onChange={setAutoEnabled} label="Bericht automatisch am Monatsende senden" />
-                <div className="max-w-xs">
-                  <AdminSelect
-                    label="Versandtag"
-                    value={autoDay === null ? '' : String(autoDay)}
-                    onChange={e => setAutoDay(e.target.value === '' ? null : Number(e.target.value))}
-                    disabled={!autoEnabled}
-                    hint="Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an."
-                    options={[
-                      { value: '', label: 'Letzter Tag des Monats' },
-                      ...Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}. des Monats` })),
-                    ]}
-                  />
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Versandtag</span>
+                  <DayGridPicker value={autoDay} onChange={setAutoDay} disabled={!autoEnabled} />
+                  <p className="text-[13px] text-stone-500 leading-relaxed">
+                    Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an.
+                  </p>
                 </div>
               </section>
 
@@ -477,14 +473,18 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 <div className="flex flex-col gap-1.5">
                   <h3 className="text-lg font-semibold text-stone-900">Berichts-Format</h3>
                   <p className="text-sm text-stone-600 leading-relaxed">
-                    Betreff, Einleitung, Akzentfarbe und Anhänge. Platzhalter:{' '}
-                    <code className="text-[13px] bg-stone-100 rounded px-1 py-0.5">{'{monat}'}</code> und (bei Mitgliedern){' '}
-                    <code className="text-[13px] bg-stone-100 rounded px-1 py-0.5">{'{name}'}</code>.
+                    Betreff und Einleitung der E-Mails, plus Anhänge des Firmenberichts. Klicke auf die
+                    Platzhalter, um sie einzufügen — die Beispielzeile zeigt das fertige Ergebnis.
                   </p>
                 </div>
 
-                {/* Accent + attachments */}
-                <div className="flex flex-wrap items-end gap-6">
+                {/* Attachments + accent */}
+                <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
+                  <div className="flex flex-col gap-2 pt-0.5">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Anhänge (Firmenbericht)</span>
+                    <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
+                    <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
+                  </div>
                   <label className="flex flex-col gap-1.5">
                     <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Akzentfarbe</span>
                     <div className="flex items-center gap-2">
@@ -503,12 +503,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                         className="h-11 w-28 px-3 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 font-mono"
                       />
                     </div>
+                    <span className="text-[11px] text-stone-400">Zieht später in die Theme-Einstellungen um.</span>
                   </label>
-                  <div className="flex flex-col gap-2 pt-0.5">
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Anhänge (Firmenbericht)</span>
-                    <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
-                    <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
-                  </div>
                 </div>
 
                 {/* Company report copy */}
@@ -517,22 +513,23 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                     <span className="text-sm font-semibold text-stone-900">Firmenbericht (Admin + CEO)</span>
                     <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company')}>Vorschau</AdminButton>
                   </div>
-                  <AdminField
+                  <TemplateField
                     label="Betreff"
-                    placeholder="Kaffeelisten – Monatsbericht {monat}"
                     value={reportSubject}
-                    onChange={e => setReportSubject(e.target.value)}
+                    onChange={setReportSubject}
+                    placeholders={COMPANY_PLACEHOLDERS}
+                    placeholder="Kaffeelisten – Monatsbericht {monat}"
+                    emptyExample="Kaffeelisten – Monatsbericht {monat}"
                   />
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Einleitung</span>
-                    <textarea
-                      value={reportIntro}
-                      onChange={e => setReportIntro(e.target.value)}
-                      rows={2}
-                      placeholder="Anbei der Monatsbericht für {monat} mit allen Einträgen des ITC1-Campus."
-                      className="w-full px-3 py-2.5 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 resize-y"
-                    />
-                  </label>
+                  <TemplateField
+                    label="Einleitung"
+                    multiline
+                    value={reportIntro}
+                    onChange={setReportIntro}
+                    placeholders={COMPANY_PLACEHOLDERS}
+                    placeholder="Anbei der Monatsbericht für {monat} mit allen Einträgen des ITC1-Campus."
+                    emptyExample="Anbei der Monatsbericht für {monat} mit allen Einträgen des ITC1-Campus."
+                  />
                 </div>
 
                 {/* Member statement copy */}
@@ -541,22 +538,23 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                     <span className="text-sm font-semibold text-stone-900">Mitglieder-Aufstellung</span>
                     <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member')}>Vorschau</AdminButton>
                   </div>
-                  <AdminField
+                  <TemplateField
                     label="Betreff"
-                    placeholder="Kaffeelisten – Deine Aufstellung {monat}"
                     value={memberSubject}
-                    onChange={e => setMemberSubject(e.target.value)}
+                    onChange={setMemberSubject}
+                    placeholders={MEMBER_PLACEHOLDERS}
+                    placeholder="Kaffeelisten – Deine Aufstellung {monat}"
+                    emptyExample="Kaffeelisten – Deine Aufstellung {monat}"
                   />
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Einleitung</span>
-                    <textarea
-                      value={memberIntro}
-                      onChange={e => setMemberIntro(e.target.value)}
-                      rows={2}
-                      placeholder="Hallo {name}, hier ist deine persönliche Aufstellung für {monat}."
-                      className="w-full px-3 py-2.5 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 resize-y"
-                    />
-                  </label>
+                  <TemplateField
+                    label="Einleitung (nach „Hallo {name},“)"
+                    multiline
+                    value={memberIntro}
+                    onChange={setMemberIntro}
+                    placeholders={MEMBER_PLACEHOLDERS}
+                    placeholder="hier ist deine persönliche Aufstellung für {monat}."
+                    emptyExample="hier ist deine persönliche Aufstellung für {monat}."
+                  />
                 </div>
               </section>
 
