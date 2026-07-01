@@ -197,6 +197,10 @@ apps/web/src/lib/database.types.ts                  (changed — Done; app_setti
 apps/web/.env.example                               (changed — Done; ADMIN_RECOVERY_PIN, 6-digit notes)
 
 supabase/migrations/012_pin_functions.sql           (new — Done; applied to prod; PIN/reset RPC)
+supabase/migrations/013_report_config.sql           (new — Done; apply to prod; scheduling + format)
+apps/web/api/admin/preview-report.ts                 (new — Done; company + member preview)
+apps/web/api/cron/monthly-report.ts                 (change — Done; reads enabled + day from settings)
+apps/web/vercel.json                                (change — Done; cron now daily; function guards day)
 apps/web/api/_lib/adminAuth.ts                       (new — Done; verifyAdminPin + service client)
 apps/web/api/admin/verify-pin.ts                    (change — Done; DB hash + fallback)
 apps/web/api/admin/pin-meta.ts                      (new — Done; public PIN length)
@@ -280,8 +284,14 @@ Needed from the ITC1 side before steps 3–4 above:
 - [x] E — per-member monthly statements (`sendMemberStatements` + `buildMemberStatementHtml`, gated on the toggle)
 - [x] F — real admin Settings page (`pages/admin/SettingsPage.tsx`), backed by `GET/PUT /api/admin/settings`
 
+**Also shipped on `feat/admin-settings`**
+- [x] Automatic-send scheduling (enable/disable + day of month) — cron reads it from `app_settings`
+- [x] Light report-format customization (accent, subject, intro, PDF/Excel attachment toggles)
+- [x] In-dashboard report preview (company + member), reflecting unsaved edits
+
 **Planned / manual**
 - [x] Apply migration `012_pin_functions.sql` to the live Supabase project
+- [ ] Apply migration `013_report_config.sql` to the live Supabase project
 - [ ] Run the reset + seed + `011` against production once real data arrives
 - [ ] Set the admin PIN from the dashboard once deployed (until then `ADMIN_PIN` env is in effect)
 - [ ] Fill in report recipients + CEO email from the Settings page (until then `ADMIN_EMAIL` env is the sole recipient)
