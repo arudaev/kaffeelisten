@@ -2,6 +2,7 @@
 // exports the ThemeProvider component — required for React Fast Refresh).
 
 import { createContext, useContext } from 'react'
+import type { Palette } from './palettes'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -11,6 +12,10 @@ export interface ThemeContextValue {
   mode: ThemeMode
   resolved: 'light' | 'dark'
   setMode: (mode: ThemeMode) => void
+  /** Active brand palette (from the global app_theme row). */
+  palette: Palette
+  /** Apply a palette app-wide immediately (used after saving in Settings). */
+  setPalette: (palette: Palette) => void
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -21,14 +26,15 @@ export function useTheme(): ThemeContextValue {
   return ctx
 }
 
-export function readStoredMode(): ThemeMode {
+/** Stored per-device mode, or null when the visitor hasn't chosen one. */
+export function readStoredMode(): ThemeMode | null {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
     if (v === 'light' || v === 'dark' || v === 'system') return v
   } catch {
     /* ignore */
   }
-  return 'system'
+  return null
 }
 
 export function systemPrefersDark(): boolean {

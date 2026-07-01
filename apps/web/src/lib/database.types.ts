@@ -234,6 +234,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_theme: {
+        Row: {
+          id: number
+          default_mode: 'system' | 'light' | 'dark'
+          active_palette: string
+          custom: Record<string, unknown>
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          default_mode?: 'system' | 'light' | 'dark'
+          active_palette?: string
+          custom?: Record<string, unknown>
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          default_mode?: 'system' | 'light' | 'dark'
+          active_palette?: string
+          custom?: Record<string, unknown>
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: {

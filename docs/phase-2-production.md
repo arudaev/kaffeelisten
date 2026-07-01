@@ -296,7 +296,8 @@ Needed from the ITC1 side before steps 3–4 above:
 
 **Planned / manual**
 - [x] Apply migration `012_pin_functions.sql` to the live Supabase project
-- [ ] Apply migration `013_report_config.sql` to the live Supabase project
+- [x] Apply migration `013_report_config.sql` to the live Supabase project
+- [ ] Apply migration `014_app_theme.sql` to the live Supabase project (public appearance table)
 - [ ] Run the reset + seed + `011` against production once real data arrives
 - [ ] Set the admin PIN from the dashboard once deployed (until then `ADMIN_PIN` env is in effect)
 - [ ] Fill in report recipients + CEO email from the Settings page (until then `ADMIN_EMAIL` env is the sole recipient)
