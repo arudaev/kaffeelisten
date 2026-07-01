@@ -165,6 +165,48 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          id: number
+          admin_pin_hash: string | null
+          pin_length: number
+          pin_updated_at: string | null
+          pin_reset_token_hash: string | null
+          pin_reset_expires_at: string | null
+          report_recipients: string[]
+          ceo_email: string | null
+          cc_ceo_on_reports: boolean
+          member_statements_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          admin_pin_hash?: string | null
+          pin_length?: number
+          pin_updated_at?: string | null
+          pin_reset_token_hash?: string | null
+          pin_reset_expires_at?: string | null
+          report_recipients?: string[]
+          ceo_email?: string | null
+          cc_ceo_on_reports?: boolean
+          member_statements_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          admin_pin_hash?: string | null
+          pin_length?: number
+          pin_updated_at?: string | null
+          pin_reset_token_hash?: string | null
+          pin_reset_expires_at?: string | null
+          report_recipients?: string[]
+          ceo_email?: string | null
+          cc_ceo_on_reports?: boolean
+          member_statements_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }
