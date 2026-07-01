@@ -9,6 +9,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — feat/admin-settings
 
+### Changed
+- Member self-registration ("Namen hinzufügen") now requires **Vorname, Nachname and Arbeits-E-Mail** (with email-format validation) — matching the admin-side member form, so every self-added member is reachable for the monthly statement.
+
 ### Added (theming foundation — dark mode)
 - **The whole app now supports Light / Dark / System.** Colors are driven by semantic CSS-variable tokens (`--bg`, `--surface`, `--fg`, `--accent`, …) mapped into Tailwind; a `ThemeProvider` resolves the mode, persists a per-device choice, and follows the OS in "System".
 - **Mode switcher** (Hell / Dunkel / System) on the member start screen and in the admin sidebar, so anyone can pick their appearance per device.
