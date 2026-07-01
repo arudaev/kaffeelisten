@@ -32,11 +32,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.dataset.mode = resolved
   }, [resolved])
 
-  // Apply the active palette's accent tokens for the current mode.
+  // Apply the active palette's accent tokens for the current mode, and cache both
+  // modes so the anti-FOUC script in index.html can paint the right accent on the
+  // next load without a flash of the default palette.
   useEffect(() => {
-    const vars = paletteVars(palette, resolved)
     const root = document.documentElement
-    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
+    for (const [k, v] of Object.entries(paletteVars(palette, resolved))) root.style.setProperty(k, v)
+    try {
+      localStorage.setItem(
+        'kaffeelisten-theme-vars',
+        JSON.stringify({ light: paletteVars(palette, 'light'), dark: paletteVars(palette, 'dark') }),
+      )
+    } catch {
+      /* ignore */
+    }
   }, [palette, resolved])
 
   // Follow the OS while in System.

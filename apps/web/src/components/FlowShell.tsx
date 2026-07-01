@@ -36,11 +36,11 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div
               key={i}
-              className="h-2 rounded-full transition-all duration-[180ms] ease-[cubic-bezier(0.2,0,0,1)]"
-              style={{
-                width: i === step ? 24 : 8,
-                backgroundColor: i <= step ? '#D97706' : '#E7E5E4',
-              }}
+              className={[
+                'h-2 rounded-full transition-all duration-[180ms] ease-[cubic-bezier(0.2,0,0,1)]',
+                i <= step ? 'bg-accent' : 'bg-border',
+              ].join(' ')}
+              style={{ width: i === step ? 24 : 8 }}
             />
           ))}
         </div>
