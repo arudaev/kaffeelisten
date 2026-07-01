@@ -7,6 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/deathstar-theme
+
+### Added
+- **New „Imperium (Death Star)" brand palette** (Settings → Erscheinungsbild → Marken-Palette): a cold imperial-steel accent for the Death Star cafeteria. Selecting it swaps the **landing-page illustration and the browser tab favicon to a Death Star** mark and recolors the whole app (member flow + admin) with the imperial accent (issue #16).
+
 ## [Unreleased] — feat/admin-settings
 
 ### Changed

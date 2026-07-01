@@ -3,17 +3,25 @@
 // Presets live here in code; up to three "custom" palettes are stored in the
 // app_theme.custom JSONB and edited from Settings.
 
+// The brand mark (landing illustration, app logo, favicon). Defaults to the
+// cappuccino cup; a themed palette can override it — e.g. the Death Star.
+export type BrandMark = 'cappuccino' | 'deathstar'
+
 export interface Palette {
   id: string
   name: string
   lightAccent: string // #RRGGBB used in light mode
   darkAccent: string // #RRGGBB used in dark mode
+  mark?: BrandMark // brand illustration; omitted → 'cappuccino'
 }
 
 export const PRESET_PALETTES: Palette[] = [
   { id: 'bayerwald', name: 'Standard (Amber)', lightAccent: '#D97706', darkAccent: '#F59E0B' },
   { id: 'b4y3rw4ld', name: 'ITC1', lightAccent: '#018FC2', darkAccent: '#34B7E6' },
   { id: 'wald', name: 'Wald', lightAccent: '#4D7C0F', darkAccent: '#84CC16' },
+  // Empire theme for the Death Star cafeteria — cold imperial steel + a Death
+  // Star mark on the landing page and favicon (issue #16).
+  { id: 'deathstar', name: 'Imperium (Death Star)', lightAccent: '#475569', darkAccent: '#64748B', mark: 'deathstar' },
 ]
 
 export const CUSTOM_SLOTS = ['custom-1', 'custom-2', 'custom-3'] as const
