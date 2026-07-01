@@ -1,55 +1,54 @@
-# claude.ai/design — paste-ready prompt
+# claude.ai/design — prompts
 
-Paste the prompt below into claude.ai/design. Then paste the contents of
-[`phase-2-design-brief.md`](phase-2-design-brief.md) underneath it (or attach the
-file) so it has the full brand + screen spec.
+> **Status (2026-07):** The original Phase 2 screens (Settings page, PIN flows,
+> 6-digit login, member statement email) were designed via claude.ai/design and
+> have **shipped** — see [`phase-2-design-brief.md`](phase-2-design-brief.md) for
+> what was delivered. The historical prompt is kept at the bottom for reference.
+> The app is now built directly in code against the semantic token system in
+> [`../design-system.md`](../design-system.md); a claude.ai/design pass is optional.
 
 ---
 
-## Short prompt
+## Current prompt — appearance & themable Settings (if you want a design pass)
+
+Use this only if you want fresh visual exploration of the newer surfaces. The app
+already implements all of it; this is for iterating on look, not net-new screens.
+
+> Refine the **Kaffeelisten** admin **Settings → Erscheinungsbild** section and the
+> **Report-Format** section. Kaffeelisten is a warm, minimal German PWA for the ITC1
+> Deggendorf campus with a **full theming system**: semantic tokens, **Light / Dark /
+> System** modes, and an admin **brand palette** (accent for light + dark). Design in
+> BOTH light and dark.
+>
+> - **Erscheinungsbild card:** a segmented **Standard-Modus** control (Hell / Dunkel /
+>   System); a **Marken-Palette** picker showing preset palettes (Bayerwald, Espresso,
+>   Wald) plus **3 custom palettes**, each previewed as light + dark accent swatches;
+>   when a custom palette is selected, an inline editor with a name and two colour
+>   pickers (Akzent Hell / Akzent Dunkel). Selecting previews instantly.
+> - **Report-Format card:** subject + intro fields for the company report and the
+>   member statement, each with **placeholder chips** (`{monat}`, `{jahr}`, `{name}`,
+>   `{gesamt}`) that insert at the caret and a live **"Beispiel:"** line; attachment
+>   toggles (PDF / Excel); "Vorschau" buttons opening the rendered email.
+> - **Automatischer Versand card:** an on/off toggle and a **calendar-style day grid**
+>   (1–28 + "Letzter Tag des Monats").
+>
+> German copy, no emojis, money as `€ 4,80`. Use the semantic tokens (surfaces,
+> borders, accent) so everything works in light and dark. Extend the existing
+> component vocabulary (cards, labelled inputs, toggles, segmented controls, chips,
+> preview cards) — don't reinvent it.
+
+---
+
+## Historical prompt (Phase 2 — already shipped)
 
 > Design the **admin Settings page** for **Kaffeelisten**, a warm, minimal
 > German-language PWA that replaces the paper coffee-consumption sheet at the ITC1
-> Deggendorf startup campus. It has a PIN-protected admin dashboard (left sidebar:
-> Übersicht, Einträge, Unternehmen, Mitarbeitende, Items, Einstellungen) styled in
-> calm stone neutrals with a single amber accent (`#D97706`), Inter type, 8px card
-> radius, generous whitespace — professional but warm. Match that system exactly.
+> Deggendorf startup campus. PIN-protected admin dashboard (sidebar: Übersicht,
+> Einträge, Unternehmen, Mitarbeitende, Items, Einstellungen), calm stone neutrals
+> with a single amber accent (`#D97706`), Inter type, 8px card radius.
 >
-> **Primary screen — Settings page** ("Einstellungen"), a scrollable column of
-> grouped setting cards:
-> 1. **Berichts-Empfänger** — manage the list of email addresses that receive the
->    monthly report (removable chips + add-with-validation; empty state).
-> 2. **Geschäftsführung (CEO)** — a CEO email field + a toggle "in CC bei jedem
->    Bericht" (on by default).
-> 3. **Mitglieder-Monatsbericht** — a toggle so each member gets their own itemized
->    statement at month-end.
-> 4. **Sicherheit — Admin-PIN** — shows "6-stellig", a "PIN ändern" button and a
->    "PIN zurücksetzen" link.
-> 5. **Bericht-Status** — read-only: last report sent / next automatic send.
-> Show the populated state, the recipients empty state, an inline email-validation
-> error, and a success toast.
->
-> **Then design these supporting frames:**
-> - **PIN ändern** modal (aktuelle / neue / neue bestätigen — 6-digit).
-> - **PIN zurücksetzen** flow (2 steps: send one-time code to recipients →
->   enter code + set new PIN; plus a "Notfall-Code" escape hatch).
-> - **6-stelliger PIN-Login** keypad (update of the current 4-dot keypad to 6 dots;
->   include the error-shake state).
-> - **Per-member monthly statement email** (responsive, table-based, amber header,
->   itemized lines + total; German; informational, no CTA).
->
-> German copy throughout, no emojis, money as `€ 4,80`. Keep everything within the
-> existing component vocabulary (cards, labelled inputs, toggles, modals, badges,
-> toasts) — extend the language, don't reinvent it. Full spec follows below.
-
----
-
-## Tips for driving the tool
-
-- Generate the **Settings page first** and iterate on it before asking for the
-  supporting frames — it's the screen we most need right.
-- If it drifts cold/generic, remind it: "warmer, more whitespace, amber used
-  sparingly as a single accent, stone-neutral, Bavarian-campus friendly."
-- Ask for a **desktop** frame first, then a **tablet** variant of the Settings page.
-- Hand the exported frames / redlines back here and we'll wire them to the
-  `app_settings` table and the Phase 2 API endpoints.
+> Settings cards: **Berichts-Empfänger** (removable chips + validated add; empty
+> state), **Geschäftsführung (CEO)** (email + "in CC" toggle), **Mitglieder-
+> Monatsbericht** (toggle), **Sicherheit — Admin-PIN** (6-stellig; ändern / zurücksetzen),
+> **Bericht-Status** (read-only). Plus: PIN-ändern modal, 2-step PIN-reset flow,
+> 6-digit login keypad with error-shake, and the per-member statement email.
