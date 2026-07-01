@@ -16,12 +16,12 @@ interface AdminFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 's
 }
 
 const inputBase =
-  'w-full border outline-none transition-colors text-stone-900 placeholder:text-stone-400 ' +
-  'focus:border-amber-600 focus:ring-1 focus:ring-amber-600'
+  'w-full border outline-none transition-colors text-fg placeholder:text-fg-subtle ' +
+  'focus:border-accent focus:ring-1 focus:ring-accent'
 
 const variantClasses: Record<Variant, string> = {
-  form: 'h-11 px-3 bg-stone-100 rounded text-base focus:bg-white',
-  filter: 'h-9 px-3 bg-white rounded-md text-sm',
+  form: 'h-11 px-3 bg-surface-2 rounded text-base focus:bg-surface',
+  filter: 'h-9 px-3 bg-surface rounded-md text-sm',
 }
 
 export default function AdminField({
@@ -36,12 +36,12 @@ export default function AdminField({
 }: AdminFieldProps) {
   const reactId = useId()
   const inputId = id ?? reactId
-  const border = error ? 'border-red-600' : 'border-stone-200'
+  const border = error ? 'border-error' : 'border-border'
 
   const input = (
     <div className={leading ? 'relative' : undefined}>
       {leading && (
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none">
           {leading}
         </span>
       )}
@@ -65,15 +65,15 @@ export default function AdminField({
   return (
     <label htmlFor={inputId} className="flex flex-col gap-1.5">
       {label && (
-        <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-          {label}{rest.required && <span className="text-red-500"> *</span>}
+        <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">
+          {label}{rest.required && <span className="text-error"> *</span>}
         </span>
       )}
       {input}
       {error ? (
-        <span className="text-xs text-red-600">{error}</span>
+        <span className="text-xs text-error">{error}</span>
       ) : hint ? (
-        <span className="text-xs text-stone-500">{hint}</span>
+        <span className="text-xs text-fg-muted">{hint}</span>
       ) : null}
     </label>
   )

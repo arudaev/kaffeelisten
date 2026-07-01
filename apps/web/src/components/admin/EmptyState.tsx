@@ -16,12 +16,12 @@ export default function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-12 flex flex-col items-center gap-3 text-center">
+    <div className="bg-surface border border-border rounded-xl p-12 flex flex-col items-center gap-3 text-center">
       {illustration && (
         <img src={illustration} alt="" className="w-24" style={{ color: '#A8A29E' }} />
       )}
-      <p className="text-base font-semibold text-stone-900">{title}</p>
-      {body && <p className="text-sm text-stone-600 max-w-sm">{body}</p>}
+      <p className="text-base font-semibold text-fg">{title}</p>
+      {body && <p className="text-sm text-fg-muted max-w-sm">{body}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   )

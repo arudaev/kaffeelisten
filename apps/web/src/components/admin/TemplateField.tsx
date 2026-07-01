@@ -20,9 +20,9 @@ interface TemplateFieldProps {
 }
 
 const fieldBase =
-  'w-full px-3 border border-stone-200 rounded bg-stone-100 text-base text-stone-900 ' +
-  'placeholder:text-stone-400 outline-none transition-colors ' +
-  'focus:bg-white focus:border-amber-600 focus:ring-1 focus:ring-amber-600'
+  'w-full px-3 border border-border rounded bg-surface-2 text-base text-fg ' +
+  'placeholder:text-fg-subtle outline-none transition-colors ' +
+  'focus:bg-surface focus:border-accent focus:ring-1 focus:ring-accent'
 
 /**
  * A labelled subject/intro field with clickable placeholder chips (inserted at
@@ -62,7 +62,7 @@ export default function TemplateField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">{label}</span>
+      <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">{label}</span>
 
       {multiline ? (
         <textarea
@@ -85,7 +85,7 @@ export default function TemplateField({
       )}
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-stone-400 mr-0.5">Einfügen:</span>
+        <span className="text-[11px] text-fg-subtle mr-0.5">Einfügen:</span>
         {placeholders.map(key => {
           const p = PLACEHOLDERS[key]
           return (
@@ -94,9 +94,9 @@ export default function TemplateField({
               type="button"
               onClick={() => insert(p.token)}
               title={p.token}
-              className="inline-flex items-center gap-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+              className="inline-flex items-center gap-1 rounded bg-surface-2 hover:bg-border text-fg-muted text-xs font-medium px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <span className="text-amber-700">+</span>
+              <span className="text-accent">+</span>
               {p.label}
             </button>
           )
@@ -104,8 +104,8 @@ export default function TemplateField({
       </div>
 
       {example && (
-        <p className="text-[13px] text-stone-500 leading-relaxed">
-          Beispiel: <span className="text-stone-700">{example}</span>
+        <p className="text-[13px] text-fg-muted leading-relaxed">
+          Beispiel: <span className="text-fg">{example}</span>
         </p>
       )}
     </div>

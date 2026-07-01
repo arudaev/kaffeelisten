@@ -4,7 +4,40 @@ Design tokens and component specifications. Used as the source for the Tailwind 
 
 ---
 
-## Color tokens
+## Theming — use semantic tokens, not literal colors
+
+The app is themable (Light / Dark / System, and a future brand palette). Colors
+are **semantic CSS variables** defined in `apps/web/src/index.css` and mapped into
+Tailwind (`apps/web/tailwind.config.ts`). **Always use the semantic Tailwind
+classes below — never `stone-*` / `amber-*` literals** (they don't adapt to dark
+mode or a custom palette). Dark values live under `[data-mode="dark"]`; the light
+values equal the primitive palette so light mode is unchanged.
+
+| Semantic class | Variable | Light = | Role |
+|---|---|---|---|
+| `bg-bg` | `--bg` | stone-50 | Page background |
+| `bg-surface` | `--surface` | white | Card / modal surface |
+| `bg-surface-2` | `--surface-2` | stone-100 | Input / subtle background |
+| `border-border` | `--border` | stone-200 | Borders, dividers |
+| `border-border-strong` | `--border-strong` | stone-300 | Stronger border |
+| `text-fg` | `--fg` | stone-900 | Primary text |
+| `text-fg-muted` | `--fg-muted` | stone-600 | Secondary text |
+| `text-fg-subtle` | `--fg-subtle` | stone-400 | Muted text / placeholder |
+| `bg-accent` / `hover:bg-accent-hover` | `--accent` / `--accent-hover` | amber-600 / -700 | Brand accent |
+| `text-accent` | `--accent` | amber-600 | Accent text/icon |
+| `bg-accent-subtle` | `--accent-subtle` | amber-50 | Accent subtle bg |
+| `text-success` / `bg-success-subtle` | `--success` / `-subtle` | green-600 / -50 | Success |
+| `text-error` / `bg-error-subtle` | `--error` / `-subtle` | red-600 / -50 | Error |
+| `text-info` | `--info` | blue-600 | Info / links |
+
+Notes: `text-white` is fine on `bg-accent` (reads on amber in both modes). Inverse
+chips (e.g. the success Toast) use `bg-fg text-bg` so they flip correctly. The
+`ThemeProvider` (`apps/web/src/lib/theme.tsx`) owns light/dark mode; `useTheme`
+lives in `theme-context.ts`.
+
+---
+
+## Color tokens (primitive reference)
 
 ### Primitive palette
 

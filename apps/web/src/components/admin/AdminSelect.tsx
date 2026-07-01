@@ -21,12 +21,12 @@ interface AdminSelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>,
 }
 
 const selectBase =
-  'w-full border outline-none transition-colors text-stone-900 cursor-pointer ' +
-  'focus:border-amber-600 focus:ring-1 focus:ring-amber-600'
+  'w-full border outline-none transition-colors text-fg cursor-pointer ' +
+  'focus:border-accent focus:ring-1 focus:ring-accent'
 
 const variantClasses: Record<Variant, string> = {
-  form: 'h-11 px-3 bg-stone-100 rounded text-base focus:bg-white',
-  filter: 'h-9 px-3 bg-white rounded-md text-sm',
+  form: 'h-11 px-3 bg-surface-2 rounded text-base focus:bg-surface',
+  filter: 'h-9 px-3 bg-surface rounded-md text-sm',
 }
 
 export default function AdminSelect({
@@ -42,7 +42,7 @@ export default function AdminSelect({
 }: AdminSelectProps) {
   const reactId = useId()
   const selectId = id ?? reactId
-  const border = error ? 'border-red-600' : 'border-stone-200'
+  const border = error ? 'border-error' : 'border-border'
 
   const select = (
     <select
@@ -60,15 +60,15 @@ export default function AdminSelect({
   return (
     <label htmlFor={selectId} className="flex flex-col gap-1.5">
       {label && (
-        <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
-          {label}{rest.required && <span className="text-red-500"> *</span>}
+        <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">
+          {label}{rest.required && <span className="text-error"> *</span>}
         </span>
       )}
       {select}
       {error ? (
-        <span className="text-xs text-red-600">{error}</span>
+        <span className="text-xs text-error">{error}</span>
       ) : hint ? (
-        <span className="text-xs text-stone-500">{hint}</span>
+        <span className="text-xs text-fg-muted">{hint}</span>
       ) : null}
     </label>
   )

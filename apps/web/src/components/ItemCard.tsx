@@ -33,37 +33,37 @@ export default function ItemCard({ name, price, category, quantity, onAdd, onRem
         'flex flex-col gap-2 p-4 min-h-[124px] text-left',
         'rounded-xl border shadow-sm select-none',
         'transition-[background,border-color,box-shadow] duration-[120ms]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
         selected
-          ? 'bg-amber-50 border-amber-600 ring-2 ring-amber-600'
-          : 'bg-white border-stone-200 hover:bg-stone-50 hover:border-stone-400 cursor-pointer',
+          ? 'bg-accent-subtle border-accent ring-2 ring-accent'
+          : 'bg-surface border-border hover:bg-surface-2 hover:border-fg-subtle cursor-pointer',
       ].join(' ')}
     >
-      <span className={selected ? 'text-amber-700' : 'text-stone-600'}>
+      <span className={selected ? 'text-accent' : 'text-fg-muted'}>
         <Icon name={icon} size={28} />
       </span>
       <span className="flex-1" />
-      <span className="text-lg font-semibold text-stone-900">{name}</span>
+      <span className="text-lg font-semibold text-fg">{name}</span>
       {selected ? (
         <div
           className="flex items-center justify-between"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="text-sm text-stone-600">{price}</span>
+          <span className="text-sm text-fg-muted">{price}</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={onRemove}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-accent-subtle text-accent hover:bg-accent-subtle text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="Weniger"
             >
               −
             </button>
-            <span className="w-6 text-center text-base font-bold text-stone-900">{quantity}</span>
+            <span className="w-6 text-center text-base font-bold text-fg">{quantity}</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onAdd() }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-accent-subtle text-accent hover:bg-accent-subtle text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="Mehr"
             >
               +
@@ -71,7 +71,7 @@ export default function ItemCard({ name, price, category, quantity, onAdd, onRem
           </div>
         </div>
       ) : (
-        <span className="text-sm text-stone-600">{price}</span>
+        <span className="text-sm text-fg-muted">{price}</span>
       )}
     </div>
   )

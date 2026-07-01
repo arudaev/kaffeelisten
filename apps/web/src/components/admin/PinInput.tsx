@@ -51,16 +51,16 @@ export default function PinInput({
               className={[
                 'flex-1 h-[52px] rounded-lg flex items-center justify-center text-lg font-semibold transition-colors',
                 invalid
-                  ? 'border-[1.5px] border-red-600 bg-red-50 text-red-600'
+                  ? 'border-[1.5px] border-error bg-error-subtle text-error'
                   : active
-                  ? 'border-2 border-amber-600 bg-white text-stone-900'
-                  : 'border-[1.5px] border-stone-200 bg-stone-100 text-stone-900',
+                  ? 'border-2 border-accent bg-surface text-fg'
+                  : 'border-[1.5px] border-border bg-surface-2 text-fg',
               ].join(' ')}
             >
               {filled
                 ? reveal
                   ? value[i]
-                  : <span className={['w-2.5 h-2.5 rounded-full', invalid ? 'bg-red-600' : 'bg-stone-900'].join(' ')} />
+                  : <span className={['w-2.5 h-2.5 rounded-full', invalid ? 'bg-error' : 'bg-fg'].join(' ')} />
                 : null}
             </div>
           )

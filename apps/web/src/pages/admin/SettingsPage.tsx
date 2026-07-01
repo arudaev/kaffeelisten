@@ -301,16 +301,16 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           {loading ? (
             <>
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-40 rounded-lg bg-stone-100 animate-pulse" />
+                <div key={i} className="h-40 rounded-lg bg-surface-2 animate-pulse" />
               ))}
             </>
           ) : (
             <>
               {/* Card 1 — Berichts-Empfänger */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Berichts-Empfänger</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">Diese Adressen erhalten den monatlichen Bericht.</p>
+                  <h3 className="text-lg font-semibold text-fg">Berichts-Empfänger</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">Diese Adressen erhalten den monatlichen Bericht.</p>
                 </div>
 
                 {recipients.length > 0 || lockedBootstrap.length > 0 ? (
@@ -319,14 +319,14 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                       {recipients.map(email => (
                         <span
                           key={email}
-                          className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200 rounded-md pl-3 pr-2 py-1.5 text-sm font-medium text-stone-900"
+                          className="inline-flex items-center gap-2 bg-surface-2 border border-border rounded-md pl-3 pr-2 py-1.5 text-sm font-medium text-fg"
                         >
                           {email}
                           <button
                             type="button"
                             onClick={() => removeRecipient(email)}
                             aria-label={`${email} entfernen`}
-                            className="inline-flex items-center justify-center w-[22px] h-[22px] rounded text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors"
+                            className="inline-flex items-center justify-center w-[22px] h-[22px] rounded text-fg-subtle hover:bg-border hover:text-fg-muted transition-colors"
                           >
                             <AdminIcon name="close" size={14} strokeWidth={2} />
                           </button>
@@ -337,17 +337,17 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                         <span
                           key={email}
                           title="Aus der Serverkonfiguration (ADMIN_EMAIL)"
-                          className="inline-flex items-center gap-2 bg-stone-50 border border-dashed border-stone-300 rounded-md pl-3 pr-2.5 py-1.5 text-sm font-medium text-stone-400"
+                          className="inline-flex items-center gap-2 bg-bg border border-dashed border-border-strong rounded-md pl-3 pr-2.5 py-1.5 text-sm font-medium text-fg-subtle"
                         >
                           {email}
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400 bg-stone-200/70 rounded px-1.5 py-0.5">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle bg-border/70 rounded px-1.5 py-0.5">
                             Server
                           </span>
                         </span>
                       ))}
                     </div>
                     {lockedBootstrap.length > 0 && (
-                      <p className="text-[13px] text-stone-500 leading-relaxed">
+                      <p className="text-[13px] text-fg-muted leading-relaxed">
                         {recipients.length > 0
                           ? 'Grau hinterlegte Adressen stammen aus der Serverkonfiguration (ADMIN_EMAIL) und sind inaktiv, solange eigene Empfänger hinterlegt sind.'
                           : 'Grau hinterlegte Adressen stammen aus der Serverkonfiguration (ADMIN_EMAIL) und erhalten den Bericht, bis du eigene Empfänger hinzufügst.'}
@@ -355,9 +355,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                     )}
                   </div>
                 ) : (
-                  <div className="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-lg px-4 py-3.5">
-                    <span className="flex-none w-5 h-5 rounded-full bg-amber-600 text-white text-[13px] font-bold leading-5 text-center">!</span>
-                    <p className="text-sm font-medium text-amber-700 leading-relaxed">
+                  <div className="flex gap-3 items-start bg-accent-subtle border border-accent rounded-lg px-4 py-3.5">
+                    <span className="flex-none w-5 h-5 rounded-full bg-accent text-white text-[13px] font-bold leading-5 text-center">!</span>
+                    <p className="text-sm font-medium text-accent leading-relaxed">
                       Noch keine Empfänger — der Bericht wird sonst an niemanden gesendet.
                     </p>
                   </div>
@@ -379,10 +379,10 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
               </section>
 
               {/* Card 2 — Geschäftsführung (CEO) */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Geschäftsführung (CEO)</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-fg">Geschäftsführung (CEO)</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
                     Die Geschäftsführung wird bei jedem Versand automatisch in Kopie gesetzt.
                   </p>
                 </div>
@@ -395,84 +395,84 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 />
                 <div className="flex flex-col gap-2 pt-0.5">
                   <Toggle checked={ceoCc} onChange={setCeoCc} label="Geschäftsführung bei jedem Bericht in CC" />
-                  <p className="ml-[54px] text-[13px] text-stone-500 leading-relaxed">
+                  <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
                     Gilt sowohl für den manuellen als auch für den automatischen Monatsende-Versand.
                   </p>
                 </div>
               </section>
 
               {/* Card 3 — Mitglieder-Monatsbericht */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-4">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Mitglieder-Monatsbericht</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-fg">Mitglieder-Monatsbericht</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
                     Persönliche Aufstellung für jede Person zusätzlich zum Firmenbericht.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 pt-0.5">
                   <Toggle checked={memberReport} onChange={setMemberReport} label="Jede Person erhält am Monatsende ihre eigene Aufstellung" />
-                  <p className="ml-[54px] text-[13px] text-stone-500 leading-relaxed">
+                  <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
                     Zusätzlich zum Firmenbericht. Nur Personen mit hinterlegter Arbeits-E-Mail werden angeschrieben.
                   </p>
                 </div>
               </section>
 
               {/* Card 4 — Sicherheit / Admin-PIN */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Sicherheit — Admin-PIN</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">{pinSubtitle}</p>
+                  <h3 className="text-lg font-semibold text-fg">Sicherheit — Admin-PIN</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">{pinSubtitle}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <AdminButton variant="secondary" onClick={openChange}>PIN ändern</AdminButton>
                 </div>
-                <p className="text-[13px] text-stone-500 leading-relaxed">
+                <p className="text-[13px] text-fg-muted leading-relaxed">
                   PIN vergessen oder ausgesperrt? Die Zurücksetzung per E-Mail-Code erfolgt direkt auf der{' '}
-                  <span className="font-medium text-stone-700">Anmeldeseite</span> („PIN vergessen?“).
+                  <span className="font-medium text-fg">Anmeldeseite</span> („PIN vergessen?“).
                 </p>
               </section>
 
               {/* Card 5 — Bericht-Status */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-3.5">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-stone-900">Bericht-Status</h3>
+                  <h3 className="text-lg font-semibold text-fg">Bericht-Status</h3>
                   <Badge kind="active">Automatisch aktiv</Badge>
                 </div>
                 <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-4 pb-2.5 border-b border-stone-100">
-                    <span className="text-sm text-stone-600">Nächster automatischer Versand</span>
-                    <span className="text-sm font-semibold text-stone-900">{lastDayOfMonthLabel()}</span>
+                  <div className="flex items-center justify-between gap-4 pb-2.5 border-b border-border">
+                    <span className="text-sm text-fg-muted">Nächster automatischer Versand</span>
+                    <span className="text-sm font-semibold text-fg">{lastDayOfMonthLabel()}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-stone-600">Mitglieder-Aufstellungen</span>
-                    <span className="text-sm font-semibold text-stone-900">{memberReport ? 'Aktiv' : 'Inaktiv'}</span>
+                    <span className="text-sm text-fg-muted">Mitglieder-Aufstellungen</span>
+                    <span className="text-sm font-semibold text-fg">{memberReport ? 'Aktiv' : 'Inaktiv'}</span>
                   </div>
                 </div>
               </section>
 
               {/* Card 6 — Automatischer Versand */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Automatischer Versand</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-fg">Automatischer Versand</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
                     Steuere, ob und wann der Monatsbericht automatisch versendet wird.
                   </p>
                 </div>
                 <Toggle checked={autoEnabled} onChange={setAutoEnabled} label="Bericht automatisch am Monatsende senden" />
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Versandtag</span>
+                  <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Versandtag</span>
                   <DayGridPicker value={autoDay} onChange={setAutoDay} disabled={!autoEnabled} />
-                  <p className="text-[13px] text-stone-500 leading-relaxed">
+                  <p className="text-[13px] text-fg-muted leading-relaxed">
                     Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an.
                   </p>
                 </div>
               </section>
 
               {/* Card 7 — Berichts-Format */}
-              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-5">
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-5">
                 <div className="flex flex-col gap-1.5">
-                  <h3 className="text-lg font-semibold text-stone-900">Berichts-Format</h3>
-                  <p className="text-sm text-stone-600 leading-relaxed">
+                  <h3 className="text-lg font-semibold text-fg">Berichts-Format</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
                     Betreff und Einleitung der E-Mails, plus Anhänge des Firmenberichts. Klicke auf die
                     Platzhalter, um sie einzufügen — die Beispielzeile zeigt das fertige Ergebnis.
                   </p>
@@ -481,36 +481,36 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 {/* Attachments + accent */}
                 <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
                   <div className="flex flex-col gap-2 pt-0.5">
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Anhänge (Firmenbericht)</span>
+                    <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Anhänge (Firmenbericht)</span>
                     <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
                     <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
                   </div>
                   <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Akzentfarbe</span>
+                    <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Akzentfarbe</span>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         value={accent}
                         onChange={e => setAccent(e.target.value)}
                         aria-label="Akzentfarbe wählen"
-                        className="h-11 w-14 rounded border border-stone-200 bg-white cursor-pointer p-1"
+                        className="h-11 w-14 rounded border border-border bg-surface cursor-pointer p-1"
                       />
                       <input
                         type="text"
                         value={accent}
                         onChange={e => setAccent(e.target.value)}
                         aria-label="Akzentfarbe (Hex)"
-                        className="h-11 w-28 px-3 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 font-mono"
+                        className="h-11 w-28 px-3 rounded border border-border bg-surface-2 focus:bg-surface text-base text-fg outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent font-mono"
                       />
                     </div>
-                    <span className="text-[11px] text-stone-400">Zieht später in die Theme-Einstellungen um.</span>
+                    <span className="text-[11px] text-fg-subtle">Zieht später in die Theme-Einstellungen um.</span>
                   </label>
                 </div>
 
                 {/* Company report copy */}
-                <div className="flex flex-col gap-3 border-t border-stone-100 pt-4">
+                <div className="flex flex-col gap-3 border-t border-border pt-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-stone-900">Firmenbericht (Admin + CEO)</span>
+                    <span className="text-sm font-semibold text-fg">Firmenbericht (Admin + CEO)</span>
                     <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company')}>Vorschau</AdminButton>
                   </div>
                   <TemplateField
@@ -533,9 +533,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 </div>
 
                 {/* Member statement copy */}
-                <div className="flex flex-col gap-3 border-t border-stone-100 pt-4">
+                <div className="flex flex-col gap-3 border-t border-border pt-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-stone-900">Mitglieder-Aufstellung</span>
+                    <span className="text-sm font-semibold text-fg">Mitglieder-Aufstellung</span>
                     <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member')}>Vorschau</AdminButton>
                   </div>
                   <TemplateField
@@ -559,8 +559,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
               </section>
 
               {/* Sticky save bar */}
-              <div className="sticky bottom-0 mt-1 flex items-center justify-between gap-4 px-[18px] py-3.5 bg-white border border-stone-200 rounded-lg shadow-[0_-6px_16px_-8px_rgba(28,25,23,0.12)]">
-                <span className="text-[13px] text-stone-500">Änderungen wirken ab dem nächsten Versand.</span>
+              <div className="sticky bottom-0 mt-1 flex items-center justify-between gap-4 px-[18px] py-3.5 bg-surface border border-border rounded-lg shadow-[0_-6px_16px_-8px_rgba(28,25,23,0.12)]">
+                <span className="text-[13px] text-fg-muted">Änderungen wirken ab dem nächsten Versand.</span>
                 <AdminButton variant="primary" onClick={save} disabled={saving}>
                   {saving ? 'Speichern…' : 'Speichern'}
                 </AdminButton>
@@ -585,22 +585,22 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
         }
       >
         <div className="flex flex-col gap-5">
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-fg-muted">
             Gib deine aktuelle PIN ein und wähle eine neue {pinLength}-stellige PIN.
           </p>
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Aktuelle PIN</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Aktuelle PIN</span>
             <PinInput value={curPin} onChange={setCurPin} length={pinLength} autoFocus ariaLabel="Aktuelle PIN" invalid={!!changeError && !curPin} />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Neue PIN</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Neue PIN</span>
             <PinInput value={nextPin} onChange={setNextPin} length={pinLength} ariaLabel="Neue PIN" />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Neue PIN bestätigen</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Neue PIN bestätigen</span>
             <PinInput value={confirmPin} onChange={setConfirmPin} length={pinLength} ariaLabel="Neue PIN bestätigen" />
           </div>
-          {changeError && <p className="text-[13px] text-red-600">{changeError}</p>}
+          {changeError && <p className="text-[13px] text-error">{changeError}</p>}
         </div>
       </Modal>
 
@@ -611,28 +611,28 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           onClick={() => setPreviewType(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-lg w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-surface rounded-2xl shadow-lg w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-stone-200">
+            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">
                   {previewType === 'company' ? 'Firmenbericht (Admin + CEO)' : 'Mitglieder-Aufstellung'} · Vorschau
                 </p>
-                <p className="text-sm font-semibold text-stone-900 truncate">{previewSubject || '—'}</p>
+                <p className="text-sm font-semibold text-fg truncate">{previewSubject || '—'}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewType(null)}
                 aria-label="Schließen"
-                className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                className="text-fg-muted hover:text-fg p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <AdminIcon name="close" size={20} />
               </button>
             </div>
-            <div className="flex-1 min-h-0 bg-stone-100">
+            <div className="flex-1 min-h-0 bg-surface-2">
               {previewLoading ? (
-                <div className="h-[60vh] flex items-center justify-center text-sm text-stone-500">
+                <div className="h-[60vh] flex items-center justify-center text-sm text-fg-muted">
                   Vorschau wird geladen…
                 </div>
               ) : (
@@ -640,12 +640,12 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   title="Berichts-Vorschau"
                   srcDoc={previewHtml}
                   sandbox=""
-                  className="w-full h-[70vh] bg-white border-0"
+                  className="w-full h-[70vh] bg-surface border-0"
                 />
               )}
             </div>
-            <div className="flex items-center justify-between gap-3 px-6 py-3 border-t border-stone-200">
-              <span className="text-[13px] text-stone-500">Zeigt die aktuellen — auch ungespeicherten — Einstellungen.</span>
+            <div className="flex items-center justify-between gap-3 px-6 py-3 border-t border-border">
+              <span className="text-[13px] text-fg-muted">Zeigt die aktuellen — auch ungespeicherten — Einstellungen.</span>
               <AdminButton variant="secondary" onClick={() => setPreviewType(null)}>Schließen</AdminButton>
             </div>
           </div>

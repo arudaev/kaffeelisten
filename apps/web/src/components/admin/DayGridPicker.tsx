@@ -16,10 +16,10 @@ export default function DayGridPicker({ value, onChange, disabled = false }: Day
   const cell = (selected: boolean) =>
     [
       'h-9 rounded-md text-sm font-medium transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
       selected
-        ? 'bg-amber-600 text-white border border-transparent'
-        : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50',
+        ? 'bg-accent text-white border border-transparent'
+        : 'bg-surface text-fg border border-border hover:bg-surface-2',
     ].join(' ')
 
   return (
