@@ -140,7 +140,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [activePalette, setActivePalette] = useState(currentPalette.id)
   const [customMap, setCustomMap] = useState<CustomMap>({})
   const [themeReady, setThemeReady] = useState(false)
-  const [themeSaving, setThemeSaving] = useState(false)
 
   // Modals
   const [modal, setModal] = useState<'change' | null>(null)
@@ -223,26 +222,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       return { ...m, [slot]: { ...base, ...patch } }
     })
 
-  const saveTheme = async () => {
-    setThemeSaving(true)
-    try {
-      const res = await fetch('/api/admin/theme', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
-        body: JSON.stringify({
-          default_mode: themeDefaultMode,
-          active_palette: activePalette,
-          custom: customMap,
-        }),
-      })
-      onToast(res.ok ? 'Erscheinungsbild gespeichert.' : 'Speichern fehlgeschlagen.')
-    } catch {
-      onToast('Speichern fehlgeschlagen.')
-    } finally {
-      setThemeSaving(false)
-    }
-  }
-
   const addRecipient = () => {
     const v = newEmail.trim()
     if (!EMAIL_RE.test(v)) {
@@ -277,21 +256,33 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     }
     setSaving(true)
     try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
-        body: JSON.stringify({
-          report_recipients: recipients,
-          ceo_email: ceoEmail.trim() || null,
-          cc_ceo_on_reports: ceoCc,
-          member_statements_enabled: memberReport,
-          auto_report_enabled: autoEnabled,
-          auto_report_day: autoDay,
-          ...formatPayload(),
+      // Save the report settings and the appearance (theme) together.
+      const [res, tRes] = await Promise.all([
+        fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+          body: JSON.stringify({
+            report_recipients: recipients,
+            ceo_email: ceoEmail.trim() || null,
+            cc_ceo_on_reports: ceoCc,
+            member_statements_enabled: memberReport,
+            auto_report_enabled: autoEnabled,
+            auto_report_day: autoDay,
+            ...formatPayload(),
+          }),
         }),
-      })
-      if (res.ok) {
-        applySettings((await res.json()) as SettingsData)
+        fetch('/api/admin/theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+          body: JSON.stringify({
+            default_mode: themeDefaultMode,
+            active_palette: activePalette,
+            custom: customMap,
+          }),
+        }),
+      ])
+      if (res.ok) applySettings((await res.json()) as SettingsData)
+      if (res.ok && tRes.ok) {
         onToast('Einstellungen gespeichert.')
       } else {
         const err = await res.json().catch(() => ({}))
@@ -459,14 +450,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-                  <span className="text-[13px] text-fg-muted leading-relaxed">
-                    Änderungen erscheinen sofort in der Vorschau; „Speichern“ macht sie für alle wirksam.
-                  </span>
-                  <AdminButton variant="primary" onClick={saveTheme} disabled={themeSaving}>
-                    {themeSaving ? 'Speichern…' : 'Erscheinungsbild speichern'}
-                  </AdminButton>
-                </div>
+                <p className="text-[13px] text-fg-muted leading-relaxed border-t border-border pt-4">
+                  Änderungen erscheinen sofort in der Vorschau. Mit „Speichern“ unten werden sie für alle wirksam.
+                </p>
               </section>
 
               {/* Card 1 — Berichts-Empfänger */}
