@@ -4,7 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, verifyAdminPin, pinFromHeader } from '../_lib/adminAuth'
-import { PRESET_PALETTES, CUSTOM_SLOTS, isHex } from '../../src/lib/palettes'
+import { PRESET_PALETTES, CUSTOM_SLOTS, isHex } from '../_lib/palettes'
 import type { Database } from '../../src/lib/database.types'
 
 type ThemeUpdate = Database['public']['Tables']['app_theme']['Update']
