@@ -133,10 +133,13 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [pinIsSet, setPinIsSet] = useState(false)
 
   // Appearance / theme
-  const { setPalette } = useTheme()
+  const { setPalette, palette: currentPalette } = useTheme()
   const [themeDefaultMode, setThemeDefaultMode] = useState<ThemeMode>('system')
-  const [activePalette, setActivePalette] = useState('bayerwald')
+  // Start from the currently-active palette so the picker highlights it and the
+  // live-preview effect never resets to the default while the theme loads.
+  const [activePalette, setActivePalette] = useState(currentPalette.id)
   const [customMap, setCustomMap] = useState<CustomMap>({})
+  const [themeReady, setThemeReady] = useState(false)
   const [themeSaving, setThemeSaving] = useState(false)
 
   // Modals
@@ -194,6 +197,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           const cm: CustomMap = {}
           for (const p of customPalettes(t.custom)) cm[p.id] = { name: p.name, light: p.lightAccent, dark: p.darkAccent }
           setCustomMap(cm)
+          setThemeReady(true)
         }
       } catch {
         if (!cancelled) onToast('Einstellungen konnten nicht geladen werden.')
@@ -206,9 +210,12 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   }, [onToast])
 
   // Live preview: reflect the selected palette / custom edits app-wide immediately.
+  // Gated until the theme has loaded, so we never momentarily apply the default
+  // palette while the fetch is in flight.
   useEffect(() => {
+    if (!themeReady) return
     setPalette(findPalette(activePalette, customMap))
-  }, [activePalette, customMap, setPalette])
+  }, [themeReady, activePalette, customMap, setPalette])
 
   const updateCustom = (slot: string, patch: Partial<{ name: string; light: string; dark: string }>) =>
     setCustomMap(m => {

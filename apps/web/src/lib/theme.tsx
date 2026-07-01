@@ -42,12 +42,29 @@ function applyBrandFavicon(accent: string) {
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', accent)
 }
 
+const PALETTE_CACHE_KEY = 'kaffeelisten-theme-palette'
+
+function readCachedPalette(): Palette | null {
+  try {
+    const raw = localStorage.getItem(PALETTE_CACHE_KEY)
+    if (raw) {
+      const p = JSON.parse(raw) as Palette
+      if (p && p.lightAccent && p.darkAccent) return p
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const stored = readStoredMode()
   const hasStoredPref = useRef(stored !== null)
   const [mode, setModeState] = useState<ThemeMode>(stored ?? 'system')
   const [systemDark, setSystemDark] = useState<boolean>(systemPrefersDark)
-  const [palette, setPaletteState] = useState<Palette>(PRESET_PALETTES[0])
+  // Start from the cached palette so we never flash the default before the
+  // app_theme fetch resolves.
+  const [palette, setPaletteState] = useState<Palette>(() => readCachedPalette() ?? PRESET_PALETTES[0])
 
   const resolved: 'light' | 'dark' = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
 
@@ -68,6 +85,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         'kaffeelisten-theme-vars',
         JSON.stringify({ light: paletteVars(palette, 'light'), dark: paletteVars(palette, 'dark') }),
       )
+      localStorage.setItem(PALETTE_CACHE_KEY, JSON.stringify(palette))
     } catch {
       /* ignore */
     }
