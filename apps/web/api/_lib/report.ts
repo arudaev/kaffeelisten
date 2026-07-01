@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs'
 import { Resend } from 'resend'
 import {
   buildReportHtml,
+  buildMemberStatementHtml,
   formatEuro,
   formatDate,
   type EnrichedTransaction,
@@ -24,6 +25,46 @@ function makeSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
   return createClient(url, key)
+}
+
+// ─── Report settings (from app_settings, with env bootstrap fallbacks) ─────────
+
+export interface ReportSettings {
+  recipients: string[]
+  ccEmails: string[]
+  memberStatementsEnabled: boolean
+}
+
+// Reads the singleton app_settings row and resolves the effective recipients:
+//   • to  = report_recipients, falling back to ADMIN_EMAIL env when empty
+//   • cc  = [ceo_email] when cc_ceo_on_reports is on and ceo_email is set
+export async function fetchReportSettings(): Promise<ReportSettings> {
+  const supabase = makeSupabase()
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled')
+    .eq('id', 1)
+    .maybeSingle()
+
+  if (error) throw new Error(`Failed to read app_settings: ${error.message}`)
+
+  const configured = (data?.report_recipients ?? []).filter(Boolean)
+  const envFallback = (process.env.ADMIN_EMAIL ?? '')
+    .split(',')
+    .map(e => e.trim())
+    .filter(Boolean)
+  const recipients = configured.length > 0 ? configured : envFallback
+
+  const ccEmails =
+    data?.cc_ceo_on_reports && data.ceo_email
+      ? [data.ceo_email].filter(e => !recipients.includes(e))
+      : []
+
+  return {
+    recipients,
+    ccEmails,
+    memberStatementsEnabled: data?.member_statements_enabled ?? true,
+  }
 }
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
@@ -354,11 +395,14 @@ export async function sendEmail(
   transactions: EnrichedTransaction[],
   monthLabel: string,
   reportMonth: string,
+  recipients: string[],
+  ccEmails: string[],
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
-  const adminEmail = process.env.ADMIN_EMAIL
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
-  if (!adminEmail) throw new Error('Missing ADMIN_EMAIL')
+  if (recipients.length === 0) {
+    throw new Error('No report recipients configured (app_settings.report_recipients / ADMIN_EMAIL)')
+  }
 
   const resend = new Resend(resendKey)
   const totalCents = transactions.reduce((s, t) => s + t.total_cents, 0)
@@ -468,7 +512,8 @@ export async function sendEmail(
 
   await resend.emails.send({
     from: 'Kaffeelisten <bericht@kaffeelisten.de>',
-    to: adminEmail.split(',').map(e => e.trim()),
+    to: recipients,
+    ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
     subject: `Kaffeelisten – Monatsbericht ${monthName} ${yearStr}`,
     html,
     attachments: [
@@ -477,6 +522,48 @@ export async function sendEmail(
       { filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') },
     ],
   })
+}
+
+// ─── Per-member monthly statements (feature E) ────────────────────────────────
+
+// Sends each member who logged ≥1 transaction their own itemized statement.
+// Sequential with light throttling to respect Resend rate limits; individual
+// failures are logged and skipped so one bad address never aborts the run.
+// Returns how many statements were sent.
+export async function sendMemberStatements(
+  transactions: EnrichedTransaction[],
+  monthLabel: string,
+): Promise<number> {
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
+  const resend = new Resend(resendKey)
+
+  // Group by member; keep the member's name + work email alongside their entries.
+  const byMember = new Map<string, { name: string; email: string | null; entries: EnrichedTransaction[] }>()
+  for (const t of transactions) {
+    const g = byMember.get(t.member_id) ?? { name: t.member_name, email: t.work_email, entries: [] }
+    g.entries.push(t)
+    byMember.set(t.member_id, g)
+  }
+
+  let sent = 0
+  for (const { name, email, entries } of byMember.values()) {
+    if (!email) continue // no reachable address — skip silently
+    try {
+      await resend.emails.send({
+        from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+        to: [email],
+        subject: `Kaffeelisten – Deine Aufstellung ${monthLabel}`,
+        html: buildMemberStatementHtml(name, entries, monthLabel),
+      })
+      sent++
+      // Light throttle — Resend free tier limits requests/second.
+      await new Promise(r => setTimeout(r, 120))
+    } catch (err) {
+      console.error(`[member-statement] failed for ${email}:`, err instanceof Error ? err.message : err)
+    }
+  }
+  return sent
 }
 
 // ─── Archive and reset ────────────────────────────────────────────────────────
@@ -577,11 +664,28 @@ export async function deactivateInactiveMembers(): Promise<void> {
 export async function runMonthlyReport(forMonth?: string): Promise<void> {
   const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
   const summaries = computeSummary(transactions)
+  const settings = await fetchReportSettings()
+
   const [pdfBuffer, xlsxBuffer] = await Promise.all([
     generatePdf(summaries, transactions, monthLabel, reportMonth),
     generateExcel(summaries, transactions),
   ])
-  await sendEmail(pdfBuffer, xlsxBuffer, summaries, transactions, monthLabel, reportMonth)
+  await sendEmail(
+    pdfBuffer,
+    xlsxBuffer,
+    summaries,
+    transactions,
+    monthLabel,
+    reportMonth,
+    settings.recipients,
+    settings.ccEmails,
+  )
+
+  // Per-member statements augment (never replace) the company report.
+  if (settings.memberStatementsEnabled && transactions.length > 0) {
+    await sendMemberStatements(transactions, monthLabel)
+  }
+
   await archiveTransactions(transactions, reportMonth)
   await pruneOldTransactions()
   await deactivateInactiveMembers()
