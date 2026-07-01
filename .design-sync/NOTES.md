@@ -44,11 +44,21 @@ Read this before re-syncing.
 
 ## Component set
 
-22 components: 7 member-flow (`BigButton`, `Tile`, `ItemCard`, `Stepper`, `Icon`, `FlowShell`,
-`SuccessScreen`) + 15 admin (`AdminButton`, `AdminIcon`, `Badge`, `DataTable`, `Modal`, `PinKeypad`,
-`SummaryCard`, `Sidebar`, `Topbar`, `MonthSelector`, and the form primitives `AdminField`,
-`AdminSelect`, `Toggle`, `Toast`, `EmptyState`). Keep building admin form UI from the primitives
-rather than raw `<input>`/`<select>`.
+29 components (was 22; +7 added 2026-07-02):
+- **2 brand marks:** `Logo`, `CappuccinoMark` — inline themable SVGs (member/`general` group).
+- **7 member-flow:** `BigButton`, `Tile`, `ItemCard`, `Stepper`, `Icon`, `FlowShell`, `SuccessScreen`.
+- **20 admin:** `AdminButton`, `AdminIcon`, `Badge`, `DataTable`, `Modal`, `PinKeypad`, `SummaryCard`,
+  `Sidebar`, `Topbar`, `MonthSelector`, and the form primitives `AdminField`, `AdminSelect`, `Toggle`,
+  `Toast`, `EmptyState`, `SegmentedControl`, `PinInput`, `DayGridPicker`, `TemplateField`,
+  `PalettePreviewCard`. Keep building admin form UI from the primitives rather than raw
+  `<input>`/`<select>`.
+
+The 7 new components came from the palette/appearance/PIN work (see git around cc33b57). Two carry
+non-trivial preview data: `PalettePreviewCard` needs a `Palette` object (id/name/lightAccent/darkAccent
+— literals mirror `apps/web/src/lib/palettes.ts` `PRESET_PALETTES`), and `TemplateField` needs
+`placeholders` keys from `apps/web/src/lib/reportPlaceholders.ts` (`'monat'|'jahr'|'name'|'gesamt'`).
+`SegmentedControl` is generic (`<T extends string>`), so its `.d.ts` is hand-written via
+`cfg.dtsPropsFor.SegmentedControl` — auto-extraction can't flatten the generic.
 
 **Adding/removing a component re-grades everything.** When the component set changes, every
 component's contract key shifts, so `package-capture` reports `grade cleared … contract changed`
@@ -57,7 +67,38 @@ components are visually identical; confirm them from the contact sheets and re-w
 (a small node script writing `.design-sync/.cache/review/<Name>.grade.json` for every component is
 the fast path). A re-sync that does NOT change the set carries grades forward normally.
 
+## Token-layer sync — `.design-sync/tailwind.config.cjs` + `tailwind.css` MUST mirror the app
+
+The 2026-07 palette refactor migrated the app to a **semantic token layer**: `apps/web/tailwind.config.ts`
+maps `bg`/`surface`/`border`/`fg`/`accent`/`success`/`error`/`info` to `rgb(var(--<name>) / <alpha>)`,
+and `apps/web/src/index.css` defines those `--*` channel-triplet vars on `:root` (light) +
+`[data-mode="dark"]`. The DS sync had its OWN older `tailwind.config.cjs` (only `brand`) and never got
+the new layer, so components using `bg-accent`/`text-fg`/`border-border`/`bg-surface-2`/`bg-error-subtle`
+compiled to **nothing** and rendered unstyled (silently — no error, just wrong colors).
+
+**Fix (already applied — keep it in sync going forward):**
+1. `.design-sync/tailwind.config.cjs` `theme.extend.colors` now mirrors `apps/web/tailwind.config.ts`
+   (the `token()` → `rgb(var(--*))` map). Also `darkMode: ['selector','[data-mode="dark"]']`.
+2. `.design-sync/tailwind.css` now defines the `:root` + `[data-mode='dark']` channel-triplet vars
+   (copied from `apps/web/src/index.css`) so `rgb(var(--accent))` etc. resolve; cards render light
+   (`:root`). Body is `@apply bg-bg text-fg`.
+**Whenever the app's token system changes** (new semantic color, renamed var), update BOTH files and
+re-run `cfg.buildCmd`. Quick check after building: `grep -oE '\.(text|bg|border)-(accent|fg|surface)[a-z0-9-]*' .design-sync/.cache/ds-tailwind.css` should list the classes.
+
+## Provider — Sidebar needs a Router (`cfg.provider`)
+
+`Sidebar` imports `Link` from `react-router-dom`, so its preview renders blank ("Cannot destructure
+'basename' of useContext(...) as it is null") without a Router. react-router-dom is **inlined into the
+bundle**, so a preview-side `<MemoryRouter>` wouldn't share context. Fix: `ds-entry.tsx` re-exports
+`MemoryRouter` from `react-router-dom` (→ `window.Kaffeelisten.MemoryRouter`, same instance),
+`cfg.provider = {"component":"MemoryRouter"}` wraps every card, and `componentSrcMap.MemoryRouter = null`
+keeps it out of the component set. If a future component adds another router hook, this already covers it.
+
 ## Known render warns (triaged — not regressions)
+
+- **`[RENDER_THIN]` on `Logo` and `CappuccinoMark`** — both are pure line-art SVGs with no text, so the
+  "no text + thin paint" heuristic misfires. They DO paint (12–15 KB PNGs, correct amber/token colors —
+  confirmed from the contact sheets). Benign; grade `good`.
 
 - **`[FONT_REMOTE]` Inter / JetBrains Mono** — load via remote `@import` (Google Fonts + the
   `--font-mono` stack referenced by the design tokens); expected, by design.
@@ -84,3 +125,17 @@ the fast path). A re-sync that does NOT change the set carries grades forward no
 - Brand-asset copy step skipped → Sidebar/DataTable images break in the uploaded project.
 - Several previews use `style={{...}}` inline layout deliberately (to avoid depending on un-compiled
   Tailwind classes) — keep that pattern when editing previews.
+- **`.design-sync/tailwind.config.cjs` + `tailwind.css` drift from the app's token system** — the single
+  biggest silent-failure risk after the palette refactor (see the Token-layer sync section). If the app
+  adds/renames a semantic color or `--*` var and these two files aren't updated, the affected components
+  render unstyled with no error. After any app token change: mirror both files, re-run `cfg.buildCmd`.
+- **Sidebar / any new router-dependent component** — needs `cfg.provider` (MemoryRouter). A new component
+  that reads router/theme/i18n context renders blank until its provider is wired.
+- **Remote anchor cache** — `.design-sync/.cache/remote-sync.json` must be the CURRENT project
+  `_ds_sync.json` fetched via `DesignSync(get_file)`; a stale/old-format file logs
+  `remote sidecar malformed — treating as no anchor` (→ full re-verify; harmless but slower). The
+  2026-07-02 run hit this because the cache file couldn't be overwritten (Write needs a prior Read on an
+  existing file) — just re-fetch and overwrite it before running the driver.
+- **Conventions header** — `.design-sync/conventions.md`'s class vocabulary must track the token system.
+  It was rewritten 2026-07-02 (amber-*/stone-* → semantic `bg-accent`/`text-fg`/… classes). Re-validate
+  named classes against the compiled CSS on every sync (`grep` them in `ds-bundle/_ds_bundle.css`).
