@@ -46,6 +46,93 @@ function consolidatedItems(entries: EnrichedTransaction[]): string {
   return Object.entries(map).map(([name, qty]) => `${qty}× ${name}`).join(' · ')
 }
 
+// ── Per-member monthly statement (Phase 2 feature E) ──────────────────────────
+// A warm, table-based HTML email sent to each member who consumed that month.
+// Contains only that member's own consumption — never another member's or the
+// company total. Uses Arial (Outlook-safe) rather than the Inter used in-app.
+export function buildMemberStatementHtml(
+  memberName: string,
+  entries: EnrichedTransaction[],
+  monthLabel: string,
+): string {
+  const firstName = memberName.trim().split(/\s+/)[0] || memberName
+  const totalCents = entries.reduce((s, e) => s + e.total_cents, 0)
+
+  const rows = entries
+    .map(
+      e => `
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatDate(e.logged_at)}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${e.item_name}</td>
+          <td align="center" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${e.quantity}</td>
+          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatEuro(e.price_cents)}</td>
+          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${formatEuro(e.total_cents)}</td>
+        </tr>`,
+    )
+    .join('')
+
+  return `<!DOCTYPE html>
+<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background:#D97706;padding:26px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Deine Kaffeeliste &ndash; ${monthLabel}</p>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="padding:28px 32px 24px;background:#ffffff;">
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${firstName},</p>
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">hier ist deine pers&ouml;nliche Aufstellung f&uuml;r ${monthLabel}.</p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <th align="left"  style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Datum</th>
+                <th align="left"  style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Artikel</th>
+                <th align="center" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Menge</th>
+                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Einzelpreis</th>
+                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Betrag</th>
+              </tr>
+              ${rows}
+              <tr>
+                <td colspan="4" align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;">Gesamt</td>
+                <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">ITC1 Deggendorf &middot; Diese Aufstellung dient deiner &Uuml;bersicht.</p>
+          </td>
+        </tr>
+
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+}
+
 export function buildReportHtml(
   summaries: CompanySummary[],
   transactions: EnrichedTransaction[],
