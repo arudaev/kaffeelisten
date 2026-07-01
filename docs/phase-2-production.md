@@ -129,8 +129,13 @@ PIN-checked unless noted):
 |---|---|---|---|
 | `verify-pin` (update existing) | POST | none (it *is* the auth) | compare against `admin_pin_hash` via `crypt()`; fall back to `ADMIN_PIN` env when hash is NULL |
 | `change-pin` | POST | current PIN | validate new PIN is 6 digits, write `crypt()` hash, set `pin_updated_at` |
-| `request-pin-reset` | POST | none | generate one-time code, store its hash + 15-min expiry, email it to `report_recipients` + `ceo_email` via Resend |
+| `request-pin-reset` | POST | none | takes an **email**; if it is on the admin list (recipients/CEO), generate a one-time code, store its hash + 15-min expiry, and email it **only to that address** (generic response — no enumeration) |
 | `reset-pin` | POST | reset code **or** `ADMIN_RECOVERY_PIN` env | verify code/expiry (or env recovery PIN), set new PIN hash, clear the token |
+
+> **Recovery is reachable from the `/admin` login page** (not Settings): after 5
+> failed attempts the keypad locks and opens the email → code → new-PIN flow, so a
+> locked-out admin who never received a shared PIN can still get back in. A "PIN
+> vergessen?" link exposes the same flow without waiting for the lockout.
 
 **Reset = both paths** (per decision): email one-time code for normal use, plus
 the `ADMIN_RECOVERY_PIN` env var as a last-resort backstop if email is down.

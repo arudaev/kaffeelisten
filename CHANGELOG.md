@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — feat/admin-settings
 
+### Changed (PIN recovery moved to the login page)
+- **Self-service PIN reset is now on the `/admin` login screen**, not inside Settings. After 5 failed PIN attempts the keypad locks and the recovery flow opens (also reachable anytime via a "PIN vergessen?" link).
+- Recovery now asks for **your** admin email and sends the one-time code **only to that address** (if it's on the admin list), instead of broadcasting to all recipients — so a locked-out admin can regain access even when they didn't receive a shared PIN. The email instructs setting a fresh PIN immediately; entering the code + a new PIN logs you straight in.
+- The `ADMIN_RECOVERY_PIN` server backstop still works in the same code field when email is unavailable.
+- Removed the now-redundant "PIN zurücksetzen" flow from the Settings page (it keeps "PIN ändern" for logged-in changes).
+
 ### Added (report scheduling, format & preview)
 - **Automatic report schedule control** — a Settings card to turn the month-end automatic send on/off and choose the send day (a specific 1.–28. or the last day of the month). The cron now runs daily and the function enforces the chosen day.
 - **Light report-format customization** — accent colour, email subject and intro text (with `{monat}` / `{name}` placeholders), and per-report attachment toggles (attach PDF and/or Excel to the company report), applied to both the company report and the member statement
