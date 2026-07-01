@@ -7,7 +7,7 @@
 // Palette: fetched from the public app_theme row and applied by overriding the
 // --accent CSS variables for the resolved mode. `useTheme` lives in ./theme-context.
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
 import { PRESET_PALETTES, findPalette, paletteVars, type Palette } from './palettes'
 import {
@@ -59,7 +59,9 @@ function readCachedPalette(): Palette | null {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const stored = readStoredMode()
-  const hasStoredPref = useRef(stored !== null)
+  // Mode is a GLOBAL admin setting (app_theme.default_mode): 'light'/'dark' force
+  // that appearance for everyone; 'system' follows each device's OS. We start from
+  // the last-known cached value to avoid a flash before the fetch resolves.
   const [mode, setModeState] = useState<ThemeMode>(stored ?? 'system')
   const [systemDark, setSystemDark] = useState<boolean>(systemPrefersDark)
   // Start from the cached palette so we never flash the default before the
@@ -111,23 +113,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         if (cancelled || !data) return
         setPaletteState(findPalette(data.active_palette, data.custom))
-        // Adopt the admin default only when the visitor hasn't set a preference.
-        if (!hasStoredPref.current) setModeState(data.default_mode)
+        setModeState(data.default_mode)
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  const setMode = useCallback((next: ThemeMode) => {
-    hasStoredPref.current = true
-    setModeState(next)
+  // Cache the global mode so the anti-FOUC script paints the right appearance.
+  useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, next)
+      localStorage.setItem(STORAGE_KEY, mode)
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [mode])
+
+  // Live-apply a mode (used by the Settings "Standard-Modus" control).
+  const setMode = useCallback((next: ThemeMode) => setModeState(next), [])
 
   return (
     <ThemeContext.Provider value={{ mode, resolved, setMode, palette, setPalette: setPaletteState }}>

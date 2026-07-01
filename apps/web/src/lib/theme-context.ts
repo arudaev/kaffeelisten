@@ -26,7 +26,7 @@ export function useTheme(): ThemeContextValue {
   return ctx
 }
 
-/** Stored per-device mode, or null when the visitor hasn't chosen one. */
+/** Last-known cached global mode (from app_theme.default_mode), or null. */
 export function readStoredMode(): ThemeMode | null {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
