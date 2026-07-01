@@ -49,11 +49,16 @@ export function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
-/** Substitute {monat} / {name} placeholders in admin-provided subjects/intros. */
-export function renderTemplate(tpl: string, vars: { monat?: string; name?: string }): string {
+/** Substitute {monat} / {jahr} / {name} / {gesamt} placeholders in admin copy. */
+export function renderTemplate(
+  tpl: string,
+  vars: { monat?: string; jahr?: string; name?: string; gesamt?: string },
+): string {
   return tpl
     .replace(/\{monat\}/gi, vars.monat ?? '')
+    .replace(/\{jahr\}/gi, vars.jahr ?? '')
     .replace(/\{name\}/gi, vars.name ?? '')
+    .replace(/\{gesamt\}/gi, vars.gesamt ?? '')
 }
 
 function consolidatedItems(entries: EnrichedTransaction[]): string {
