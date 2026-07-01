@@ -15,6 +15,8 @@ import {
   type CompanySummary,
 } from './reportHtml'
 
+import { findPalette } from '../../src/lib/palettes'
+
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
 export const EMAIL_LOGO_CONTENT_ID = 'kaffeelisten-logo'
@@ -79,12 +81,25 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
       ? [data.ceo_email].filter(e => !recipients.includes(e))
       : []
 
+  // Emails use the brand palette's LIGHT accent (email dark-mode is unreliable,
+  // so statements always render the light variant). Falls back to the legacy
+  // report_accent, then the default.
+  let accent = data?.report_accent || '#D97706'
+  const { data: themeRow } = await supabase
+    .from('app_theme')
+    .select('active_palette, custom')
+    .eq('id', 1)
+    .maybeSingle()
+  if (themeRow) {
+    accent = findPalette(themeRow.active_palette, themeRow.custom).lightAccent
+  }
+
   return {
     recipients,
     ccEmails,
     memberStatementsEnabled: data?.member_statements_enabled ?? true,
     format: {
-      accent: data?.report_accent || '#D97706',
+      accent,
       reportSubject: data?.report_subject ?? null,
       reportIntro: data?.report_intro ?? null,
       includePdf: data?.report_include_pdf ?? true,
