@@ -21,6 +21,9 @@ type Step = 'start' | 'company' | 'member' | 'item' | 'confirm' | 'success'
 
 type CartEntry = { item: Item; quantity: number }
 
+// Basic email shape check — the DB (work_email NOT NULL) is the source of truth.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const CATEGORY_LABELS: Record<string, string> = {
   coffee: 'Kaffee',
   drink: 'Getränke',
@@ -253,12 +256,15 @@ export default function MemberFlow() {
   const handleAddSelf = async () => {
     const first = selfFirstName.trim()
     const last = selfLastName.trim()
+    const email = selfEmail.trim()
     if (!first) { setAddSelfError('Vorname fehlt.'); return }
+    if (!last) { setAddSelfError('Nachname fehlt.'); return }
+    if (!email) { setAddSelfError('Arbeits-E-Mail fehlt.'); return }
+    if (!EMAIL_RE.test(email)) { setAddSelfError('Bitte eine gültige E-Mail-Adresse eingeben.'); return }
     if (!selectedCompany) return
     setAddingMember(true)
     setAddSelfError(null)
-    const storedName = last ? `${capitalizeName(first)} ${capitalizeName(last)}` : capitalizeName(first)
-    const email = selfEmail.trim() || null
+    const storedName = `${capitalizeName(first)} ${capitalizeName(last)}`
     const { data, error: err } = await supabase
       .from('members')
       .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
@@ -468,7 +474,7 @@ export default function MemberFlow() {
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-fg" htmlFor="self-first">
-                    Vorname
+                    Vorname <span className="text-error">*</span>
                   </label>
                   <input
                     ref={firstNameRef}
@@ -484,7 +490,7 @@ export default function MemberFlow() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-fg" htmlFor="self-last">
-                    Nachname
+                    Nachname <span className="text-error">*</span>
                   </label>
                   <input
                     id="self-last"
@@ -499,7 +505,7 @@ export default function MemberFlow() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-fg" htmlFor="self-email">
-                    Arbeits-E-Mail
+                    Arbeits-E-Mail <span className="text-error">*</span>
                   </label>
                   <input
                     id="self-email"
@@ -535,7 +541,12 @@ export default function MemberFlow() {
                 <button
                   type="button"
                   onClick={handleAddSelf}
-                  disabled={addingMember || !selfFirstName.trim()}
+                  disabled={
+                    addingMember ||
+                    !selfFirstName.trim() ||
+                    !selfLastName.trim() ||
+                    !EMAIL_RE.test(selfEmail.trim())
+                  }
                   className="h-11 px-5 rounded-xl text-base font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   {addingMember ? 'Speichern…' : 'Hinzufügen'}
