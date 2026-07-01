@@ -6,9 +6,11 @@ interface PinKeypadProps {
   onErrorAnimEnd?: () => void
   /** Expected PIN length. Phase 2 uses 6; defaults to 6. */
   length?: number
+  /** When provided, renders a "PIN vergessen?" link that starts the reset flow. */
+  onForgot?: () => void
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, length = 6 }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, length = 6, onForgot }: PinKeypadProps) {
   const [pin, setPin] = useState('')
   const MAX = length
 
@@ -108,6 +110,16 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, len
           OK
         </button>
       </div>
+
+      {onForgot && (
+        <button
+          type="button"
+          onClick={onForgot}
+          className="text-sm font-medium text-stone-500 hover:text-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 rounded px-2 py-1"
+        >
+          PIN vergessen?
+        </button>
+      )}
     </div>
   )
 }

@@ -94,7 +94,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [pinIsSet, setPinIsSet] = useState(false)
 
   // Modals
-  const [modal, setModal] = useState<'change' | 'reset' | null>(null)
+  const [modal, setModal] = useState<'change' | null>(null)
 
   // PIN change form
   const [curPin, setCurPin] = useState('')
@@ -102,14 +102,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [confirmPin, setConfirmPin] = useState('')
   const [changeError, setChangeError] = useState('')
   const [changeSaving, setChangeSaving] = useState(false)
-
-  // PIN reset flow
-  const [resetStep, setResetStep] = useState<1 | 2>(1)
-  const [resetSending, setResetSending] = useState(false)
-  const [resetCode, setResetCode] = useState('')
-  const [resetNewPin, setResetNewPin] = useState('')
-  const [resetError, setResetError] = useState('')
-  const [resetSaving, setResetSaving] = useState(false)
 
   const applySettings = (d: SettingsData) => {
     setRecipients(d.report_recipients ?? [])
@@ -283,60 +275,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     }
   }
 
-  // ── PIN reset ───────────────────────────────────────────────────────────────
-  const openReset = () => {
-    setResetStep(1); setResetCode(''); setResetNewPin(''); setResetError('')
-    setModal('reset')
-  }
-
-  const sendResetCode = async () => {
-    setResetSending(true)
-    setResetError('')
-    try {
-      await fetch('/api/admin/request-pin-reset', { method: 'POST' })
-      // Always advance — the recovery-PIN backstop works even if no email went out.
-      setResetStep(2)
-    } catch {
-      setResetError('Code konnte nicht gesendet werden. Notfall-Code ist weiterhin möglich.')
-      setResetStep(2)
-    } finally {
-      setResetSending(false)
-    }
-  }
-
-  const submitReset = async () => {
-    if (resetNewPin.length !== pinLength) {
-      setResetError(`Die neue PIN muss ${pinLength}-stellig sein.`)
-      return
-    }
-    if (!resetCode.trim()) {
-      setResetError('Bitte den Code oder Notfall-Code eingeben.')
-      return
-    }
-    setResetSaving(true)
-    setResetError('')
-    try {
-      const res = await fetch('/api/admin/reset-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: resetCode.trim(), newPin: resetNewPin }),
-      })
-      if (res.ok) {
-        sessionStorage.setItem('adminPin', resetNewPin)
-        setModal(null)
-        onToast('PIN erfolgreich zurückgesetzt.')
-        void refreshPinMeta()
-      } else {
-        const err = await res.json().catch(() => ({}))
-        setResetError(err.error ?? 'Zurücksetzen fehlgeschlagen.')
-      }
-    } catch {
-      setResetError('Zurücksetzen fehlgeschlagen.')
-    } finally {
-      setResetSaving(false)
-    }
-  }
-
   const refreshPinMeta = async () => {
     try {
       const res = await fetch('/api/admin/settings', { headers: { 'x-admin-pin': adminPin() } })
@@ -485,8 +423,11 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <AdminButton variant="secondary" onClick={openChange}>PIN ändern</AdminButton>
-                  <AdminButton variant="ghost" onClick={openReset}>PIN zurücksetzen</AdminButton>
                 </div>
+                <p className="text-[13px] text-stone-500 leading-relaxed">
+                  PIN vergessen oder ausgesperrt? Die Zurücksetzung per E-Mail-Code erfolgt direkt auf der{' '}
+                  <span className="font-medium text-stone-700">Anmeldeseite</span> („PIN vergessen?“).
+                </p>
               </section>
 
               {/* Card 5 — Bericht-Status */}
@@ -663,71 +604,6 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           </div>
           {changeError && <p className="text-[13px] text-red-600">{changeError}</p>}
         </div>
-      </Modal>
-
-      {/* PIN zurücksetzen modal (2 steps) */}
-      <Modal
-        open={modal === 'reset'}
-        onClose={() => setModal(null)}
-        title="PIN zurücksetzen"
-        actions={
-          resetStep === 1 ? undefined : (
-            <>
-              <AdminButton variant="secondary" onClick={() => setModal(null)}>Abbrechen</AdminButton>
-              <AdminButton variant="primary" onClick={submitReset} disabled={resetSaving}>
-                {resetSaving ? 'Speichern…' : 'PIN speichern'}
-              </AdminButton>
-            </>
-          )
-        }
-      >
-        {resetStep === 1 ? (
-          <div className="flex flex-col gap-4">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-[0.06em] text-amber-700">Schritt 1 von 2</span>
-            <p className="text-sm text-stone-600 leading-relaxed">
-              Wir senden einen einmaligen Code an die hinterlegten Berichts-Empfänger. Mit diesem Code kannst du eine neue PIN vergeben.
-            </p>
-            <div className="bg-stone-100 border border-stone-200 rounded-lg px-3.5 py-3 text-[13px] font-medium text-stone-600 leading-relaxed break-words">
-              {(() => {
-                const codeTo = [...(recipients.length > 0 ? recipients : bootstrapRecipients), ...(ceoEmail ? [ceoEmail] : [])]
-                return codeTo.length > 0
-                  ? `Code geht an: ${codeTo.join(', ')}`
-                  : 'Keine Empfänger hinterlegt — nutze den Notfall-Code.'
-              })()}
-            </div>
-            <AdminButton variant="primary" onClick={sendResetCode} disabled={resetSending}>
-              {resetSending ? 'Wird gesendet…' : 'Code senden'}
-            </AdminButton>
-            <div className="border-t border-stone-100 pt-3.5 flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={() => setResetStep(2)}
-                className="self-start text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Ich habe einen Notfall-Code
-              </button>
-              <p className="text-xs text-stone-400 leading-relaxed">
-                Der Notfall-Code (Wiederherstellungs-PIN) ist in der Serverkonfiguration hinterlegt.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-[0.06em] text-amber-700">Schritt 2 von 2</span>
-            <p className="text-sm text-stone-600 leading-relaxed">
-              Gib den Code aus der E-Mail ein oder verwende den Notfall-Code, und wähle eine neue {pinLength}-stellige PIN.
-            </p>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Einmaliger Code</span>
-              <PinInput value={resetCode} onChange={setResetCode} length={pinLength} reveal autoFocus ariaLabel="Einmaliger Code" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Neue PIN</span>
-              <PinInput value={resetNewPin} onChange={setResetNewPin} length={pinLength} ariaLabel="Neue PIN" />
-            </div>
-            {resetError && <p className="text-[13px] text-red-600">{resetError}</p>}
-          </div>
-        )}
       </Modal>
 
       {/* Report preview overlay (wider than the standard modal to fit a 600px email) */}
