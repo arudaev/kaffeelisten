@@ -15,7 +15,7 @@ import {
   type CompanySummary,
 } from './reportHtml'
 
-import { findPalette } from '../../src/lib/palettes'
+import { findPalette } from './palettes'
 
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
