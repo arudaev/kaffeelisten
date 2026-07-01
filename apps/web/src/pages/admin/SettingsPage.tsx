@@ -8,6 +8,7 @@ import { Topbar } from '../../components/admin/Topbar'
 import Modal from '../../components/admin/Modal'
 import AdminButton from '../../components/admin/AdminButton'
 import AdminField from '../../components/admin/AdminField'
+import AdminSelect from '../../components/admin/AdminSelect'
 import AdminIcon from '../../components/admin/AdminIcon'
 import Badge from '../../components/admin/Badge'
 import Toggle from '../../components/admin/Toggle'
@@ -24,6 +25,15 @@ interface SettingsData {
   ceo_email: string | null
   cc_ceo_on_reports: boolean
   member_statements_enabled: boolean
+  auto_report_enabled: boolean
+  auto_report_day: number | null
+  report_accent: string
+  report_subject: string | null
+  report_intro: string | null
+  report_include_pdf: boolean
+  report_include_excel: boolean
+  member_subject: string | null
+  member_intro: string | null
   pin_length: number
   pin_updated_at: string | null
   pin_is_set: boolean
@@ -59,6 +69,25 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [ceoCc, setCeoCc] = useState(true)
   const [memberReport, setMemberReport] = useState(true)
 
+  // Scheduling
+  const [autoEnabled, setAutoEnabled] = useState(true)
+  const [autoDay, setAutoDay] = useState<number | null>(null)
+
+  // Format
+  const [accent, setAccent] = useState('#D97706')
+  const [includePdf, setIncludePdf] = useState(true)
+  const [includeExcel, setIncludeExcel] = useState(true)
+  const [reportSubject, setReportSubject] = useState('')
+  const [reportIntro, setReportIntro] = useState('')
+  const [memberSubject, setMemberSubject] = useState('')
+  const [memberIntro, setMemberIntro] = useState('')
+
+  // Preview
+  const [previewType, setPreviewType] = useState<'company' | 'member' | null>(null)
+  const [previewHtml, setPreviewHtml] = useState('')
+  const [previewSubject, setPreviewSubject] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
   // Read-only PIN metadata
   const [pinLength, setPinLength] = useState(6)
   const [pinUpdatedAt, setPinUpdatedAt] = useState<string | null>(null)
@@ -88,6 +117,15 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setCeoEmail(d.ceo_email ?? '')
     setCeoCc(d.cc_ceo_on_reports)
     setMemberReport(d.member_statements_enabled)
+    setAutoEnabled(d.auto_report_enabled)
+    setAutoDay(d.auto_report_day)
+    setAccent(d.report_accent || '#D97706')
+    setIncludePdf(d.report_include_pdf)
+    setIncludeExcel(d.report_include_excel)
+    setReportSubject(d.report_subject ?? '')
+    setReportIntro(d.report_intro ?? '')
+    setMemberSubject(d.member_subject ?? '')
+    setMemberIntro(d.member_intro ?? '')
     setPinLength(d.pin_length)
     setPinUpdatedAt(d.pin_updated_at)
     setPinIsSet(d.pin_is_set)
@@ -132,6 +170,17 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
 
   const removeRecipient = (email: string) => setRecipients(r => r.filter(e => e !== email))
 
+  // The format fields as the API expects them (used for both save and preview).
+  const formatPayload = () => ({
+    report_accent: accent,
+    report_subject: reportSubject.trim() || null,
+    report_intro: reportIntro.trim() || null,
+    report_include_pdf: includePdf,
+    report_include_excel: includeExcel,
+    member_subject: memberSubject.trim() || null,
+    member_intro: memberIntro.trim() || null,
+  })
+
   const save = async () => {
     if (ceoEmail.trim() && !EMAIL_RE.test(ceoEmail.trim())) {
       onToast('Ungültige CEO-E-Mail-Adresse.')
@@ -147,6 +196,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           ceo_email: ceoEmail.trim() || null,
           cc_ceo_on_reports: ceoCc,
           member_statements_enabled: memberReport,
+          auto_report_enabled: autoEnabled,
+          auto_report_day: autoDay,
+          ...formatPayload(),
         }),
       })
       if (res.ok) {
@@ -160,6 +212,34 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       onToast('Speichern fehlgeschlagen.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  // ── Preview ─────────────────────────────────────────────────────────────────
+  const openPreview = async (type: 'company' | 'member') => {
+    setPreviewType(type)
+    setPreviewLoading(true)
+    setPreviewHtml('')
+    setPreviewSubject('')
+    try {
+      const res = await fetch('/api/admin/preview-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+        body: JSON.stringify({ type, format: formatPayload() }),
+      })
+      if (res.ok) {
+        const data = (await res.json()) as { html: string; subject: string }
+        setPreviewHtml(data.html)
+        setPreviewSubject(data.subject)
+      } else {
+        onToast('Vorschau konnte nicht geladen werden.')
+        setPreviewType(null)
+      }
+    } catch {
+      onToast('Vorschau konnte nicht geladen werden.')
+      setPreviewType(null)
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
@@ -427,6 +507,118 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 </div>
               </section>
 
+              {/* Card 6 — Automatischer Versand */}
+              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-stone-900">Automatischer Versand</h3>
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    Steuere, ob und wann der Monatsbericht automatisch versendet wird.
+                  </p>
+                </div>
+                <Toggle checked={autoEnabled} onChange={setAutoEnabled} label="Bericht automatisch am Monatsende senden" />
+                <div className="max-w-xs">
+                  <AdminSelect
+                    label="Versandtag"
+                    value={autoDay === null ? '' : String(autoDay)}
+                    onChange={e => setAutoDay(e.target.value === '' ? null : Number(e.target.value))}
+                    disabled={!autoEnabled}
+                    hint="Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an."
+                    options={[
+                      { value: '', label: 'Letzter Tag des Monats' },
+                      ...Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}. des Monats` })),
+                    ]}
+                  />
+                </div>
+              </section>
+
+              {/* Card 7 — Berichts-Format */}
+              <section className="bg-white border border-stone-200 rounded-lg shadow-sm p-6 flex flex-col gap-5">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-stone-900">Berichts-Format</h3>
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    Betreff, Einleitung, Akzentfarbe und Anhänge. Platzhalter:{' '}
+                    <code className="text-[13px] bg-stone-100 rounded px-1 py-0.5">{'{monat}'}</code> und (bei Mitgliedern){' '}
+                    <code className="text-[13px] bg-stone-100 rounded px-1 py-0.5">{'{name}'}</code>.
+                  </p>
+                </div>
+
+                {/* Accent + attachments */}
+                <div className="flex flex-wrap items-end gap-6">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Akzentfarbe</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={accent}
+                        onChange={e => setAccent(e.target.value)}
+                        aria-label="Akzentfarbe wählen"
+                        className="h-11 w-14 rounded border border-stone-200 bg-white cursor-pointer p-1"
+                      />
+                      <input
+                        type="text"
+                        value={accent}
+                        onChange={e => setAccent(e.target.value)}
+                        aria-label="Akzentfarbe (Hex)"
+                        className="h-11 w-28 px-3 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 font-mono"
+                      />
+                    </div>
+                  </label>
+                  <div className="flex flex-col gap-2 pt-0.5">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Anhänge (Firmenbericht)</span>
+                    <Toggle checked={includePdf} onChange={setIncludePdf} label="PDF anhängen" />
+                    <Toggle checked={includeExcel} onChange={setIncludeExcel} label="Excel anhängen" />
+                  </div>
+                </div>
+
+                {/* Company report copy */}
+                <div className="flex flex-col gap-3 border-t border-stone-100 pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-stone-900">Firmenbericht (Admin + CEO)</span>
+                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company')}>Vorschau</AdminButton>
+                  </div>
+                  <AdminField
+                    label="Betreff"
+                    placeholder="Kaffeelisten – Monatsbericht {monat}"
+                    value={reportSubject}
+                    onChange={e => setReportSubject(e.target.value)}
+                  />
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Einleitung</span>
+                    <textarea
+                      value={reportIntro}
+                      onChange={e => setReportIntro(e.target.value)}
+                      rows={2}
+                      placeholder="Anbei der Monatsbericht für {monat} mit allen Einträgen des ITC1-Campus."
+                      className="w-full px-3 py-2.5 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 resize-y"
+                    />
+                  </label>
+                </div>
+
+                {/* Member statement copy */}
+                <div className="flex flex-col gap-3 border-t border-stone-100 pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-stone-900">Mitglieder-Aufstellung</span>
+                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member')}>Vorschau</AdminButton>
+                  </div>
+                  <AdminField
+                    label="Betreff"
+                    placeholder="Kaffeelisten – Deine Aufstellung {monat}"
+                    value={memberSubject}
+                    onChange={e => setMemberSubject(e.target.value)}
+                  />
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Einleitung</span>
+                    <textarea
+                      value={memberIntro}
+                      onChange={e => setMemberIntro(e.target.value)}
+                      rows={2}
+                      placeholder="Hallo {name}, hier ist deine persönliche Aufstellung für {monat}."
+                      className="w-full px-3 py-2.5 rounded border border-stone-200 bg-stone-100 focus:bg-white text-base text-stone-900 placeholder:text-stone-400 outline-none transition-colors focus:border-amber-600 focus:ring-1 focus:ring-amber-600 resize-y"
+                    />
+                  </label>
+                </div>
+              </section>
+
               {/* Sticky save bar */}
               <div className="sticky bottom-0 mt-1 flex items-center justify-between gap-4 px-[18px] py-3.5 bg-white border border-stone-200 rounded-lg shadow-[0_-6px_16px_-8px_rgba(28,25,23,0.12)]">
                 <span className="text-[13px] text-stone-500">Änderungen wirken ab dem nächsten Versand.</span>
@@ -537,6 +729,54 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
           </div>
         )}
       </Modal>
+
+      {/* Report preview overlay (wider than the standard modal to fit a 600px email) */}
+      {previewType && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setPreviewType(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-lg w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-stone-200">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                  {previewType === 'company' ? 'Firmenbericht (Admin + CEO)' : 'Mitglieder-Aufstellung'} · Vorschau
+                </p>
+                <p className="text-sm font-semibold text-stone-900 truncate">{previewSubject || '—'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewType(null)}
+                aria-label="Schließen"
+                className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+              >
+                <AdminIcon name="close" size={20} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 bg-stone-100">
+              {previewLoading ? (
+                <div className="h-[60vh] flex items-center justify-center text-sm text-stone-500">
+                  Vorschau wird geladen…
+                </div>
+              ) : (
+                <iframe
+                  title="Berichts-Vorschau"
+                  srcDoc={previewHtml}
+                  sandbox=""
+                  className="w-full h-[70vh] bg-white border-0"
+                />
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 px-6 py-3 border-t border-stone-200">
+              <span className="text-[13px] text-stone-500">Zeigt die aktuellen — auch ungespeicherten — Einstellungen.</span>
+              <AdminButton variant="secondary" onClick={() => setPreviewType(null)}>Schließen</AdminButton>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
