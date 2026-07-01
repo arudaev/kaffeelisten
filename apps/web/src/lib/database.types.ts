@@ -177,6 +177,15 @@ export type Database = {
           ceo_email: string | null
           cc_ceo_on_reports: boolean
           member_statements_enabled: boolean
+          auto_report_enabled: boolean
+          auto_report_day: number | null
+          report_accent: string
+          report_subject: string | null
+          report_intro: string | null
+          report_include_pdf: boolean
+          report_include_excel: boolean
+          member_subject: string | null
+          member_intro: string | null
           updated_at: string
         }
         Insert: {
@@ -190,6 +199,15 @@ export type Database = {
           ceo_email?: string | null
           cc_ceo_on_reports?: boolean
           member_statements_enabled?: boolean
+          auto_report_enabled?: boolean
+          auto_report_day?: number | null
+          report_accent?: string
+          report_subject?: string | null
+          report_intro?: string | null
+          report_include_pdf?: boolean
+          report_include_excel?: boolean
+          member_subject?: string | null
+          member_intro?: string | null
           updated_at?: string
         }
         Update: {
@@ -203,6 +221,15 @@ export type Database = {
           ceo_email?: string | null
           cc_ceo_on_reports?: boolean
           member_statements_enabled?: boolean
+          auto_report_enabled?: boolean
+          auto_report_day?: number | null
+          report_accent?: string
+          report_subject?: string | null
+          report_intro?: string | null
+          report_include_pdf?: boolean
+          report_include_excel?: boolean
+          member_subject?: string | null
+          member_intro?: string | null
           updated_at?: string
         }
         Relationships: []
