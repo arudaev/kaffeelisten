@@ -11,6 +11,7 @@ import ItemCard from '../components/ItemCard'
 import FlowShell from '../components/FlowShell'
 import SuccessScreen from '../components/SuccessScreen'
 import Icon from '../components/Icon'
+import CappuccinoMark from '../components/CappuccinoMark'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type Member = Database['public']['Tables']['members']['Row']
@@ -292,12 +293,7 @@ export default function MemberFlow() {
   if (step === 'start') {
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
-        <img
-          src="/assets/illustrations/cappuccino-with-steam.svg"
-          alt=""
-          className="w-28 sm:w-40"
-          style={{ color: '#44403C' }}
-        />
+        <CappuccinoMark className="w-28 sm:w-40 h-auto text-fg-muted" />
         <div className="text-center max-w-xl">
           <h1 className="text-3xl sm:text-5xl font-bold text-fg tracking-tight">Kaffeelisten</h1>
           <p className="text-xl text-fg-muted mt-2.5 leading-relaxed">
