@@ -1,7 +1,7 @@
 // Admin dashboard: month-to-date summary, transaction log, report trigger
 // Protected — requires valid session token from AdminLogin PIN flow
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Sidebar from '../components/admin/Sidebar'
@@ -18,6 +18,7 @@ import Toast from '../components/admin/Toast'
 import ItemsPage from './admin/ItemsPage'
 import CompaniesPage from './admin/CompaniesPage'
 import MembersPage from './admin/MembersPage'
+import SettingsPage from './admin/SettingsPage'
 
 type PageId = 'dashboard' | 'log' | 'companies' | 'members' | 'items' | 'settings'
 
@@ -155,10 +156,12 @@ export default function AdminDashboard() {
     fetchData()
   }, [])
 
-  const showToast = (msg: string) => {
+  // Stable identity so child effects that depend on it (e.g. SettingsPage's
+  // initial load) don't re-run every time a toast is shown/cleared.
+  const showToast = useCallback((msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
-  }
+  }, [])
 
   const handleSendReport = async () => {
     setReportSending(true)
@@ -304,7 +307,7 @@ export default function AdminDashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="flex-1 min-w-0 bg-stone-50 overflow-y-auto">
+      <main className="flex-1 min-w-0 bg-bg overflow-y-auto">
 
         {/* ── Dashboard ── */}
         {activePage === 'dashboard' && (
@@ -337,7 +340,7 @@ export default function AdminDashboard() {
               {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-28 rounded-xl bg-stone-100 animate-pulse" />
+                    <div key={i} className="h-28 rounded-xl bg-surface-2 animate-pulse" />
                   ))}
                 </div>
               ) : (
@@ -355,7 +358,7 @@ export default function AdminDashboard() {
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base font-semibold text-stone-900">Letzte Einträge</h2>
+                  <h2 className="text-base font-semibold text-fg">Letzte Einträge</h2>
                   <AdminButton variant="ghost" size="sm" onClick={() => setActivePage('log')}>
                     Alle anzeigen →
                   </AdminButton>
@@ -369,7 +372,7 @@ export default function AdminDashboard() {
 
               {companiesForMonth.some(c => c.month_total_cents > 0) && (
                 <div>
-                  <h2 className="text-base font-semibold text-stone-900 mb-3">
+                  <h2 className="text-base font-semibold text-fg mb-3">
                     Übersicht nach Unternehmen
                   </h2>
                   <DataTable columns={companyColumns} rows={companiesForMonth} />
@@ -435,7 +438,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setLogSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-                  className="inline-flex items-center gap-1.5 h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 bg-surface border border-border rounded-md text-sm text-fg hover:bg-surface-2 transition-colors"
                 >
                   Datum {logSortDir === 'desc' ? '↓' : '↑'}
                 </button>
@@ -443,12 +446,12 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => { setFilterCompanyId(''); setFilterName(''); setFilterItemName('') }}
-                    className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+                    className="text-xs text-fg-muted hover:text-fg transition-colors"
                   >
                     Filter zurücksetzen
                   </button>
                 )}
-                <span className="ml-auto text-sm text-stone-500">
+                <span className="ml-auto text-sm text-fg-muted">
                   {filteredTransactions.length} Einträge
                 </span>
               </div>
@@ -469,16 +472,7 @@ export default function AdminDashboard() {
 
         {/* ── Settings ── */}
         {activePage === 'settings' && (
-          <>
-            <Topbar title="Einstellungen" onMenuClick={() => setSidebarOpen(true)} />
-            <div className="p-4 md:p-8">
-              <DataTable
-                columns={[{ key: 'k', label: '' }]}
-                rows={[]}
-                empty={{ title: 'Einstellungen', body: 'Konfiguration folgt in einer späteren Version.' }}
-              />
-            </div>
-          </>
+          <SettingsPage onToast={showToast} onMenuClick={() => setSidebarOpen(true)} />
         )}
       </main>
 

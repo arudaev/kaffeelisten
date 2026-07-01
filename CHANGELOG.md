@@ -7,6 +7,58 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/admin-settings
+
+### Changed
+- Member self-registration ("Namen hinzufügen") now requires **Vorname, Nachname and Arbeits-E-Mail** (with email-format validation) — matching the admin-side member form, so every self-added member is reachable for the monthly statement.
+
+### Added (theming foundation — dark mode)
+- **The whole app now supports Light / Dark / System.** Colors are driven by semantic CSS-variable tokens (`--bg`, `--surface`, `--fg`, `--accent`, …) mapped into Tailwind; a `ThemeProvider` resolves the mode, persists a per-device choice, and follows the OS in "System".
+- **Appearance mode is a single global admin setting** (Settings → Erscheinungsbild → Standard-Modus): „Hell"/„Dunkel" force that appearance for everyone (members and admins); „System" follows each device's OS. There is no per-device switcher.
+- The app logo and the landing/empty illustrations now recolor with the theme (inlined as `currentColor` SVGs instead of static `<img>`s).
+- **Admin "Erscheinungsbild" settings:** set the app's default mode (Hell/Dunkel/System) and pick a **brand palette** — three presets (Standard-Amber, ITC1, Wald) plus **three custom palettes**, each with its own light and dark accent colour. Selecting/editing previews instantly; "Speichern" applies it app-wide (member flow + admin) for everyone. Stored in a new public `app_theme` table.
+- **Report and statement emails now use the brand-palette accent** (light variant — email dark-mode is unreliable). The separate accent picker in "Berichts-Format" is removed; the email accent follows the palette under "Erscheinungsbild".
+- The **browser tab favicon and theme-colour now follow the active brand palette** (generated at runtime from the accent). The installed PWA home-screen icon stays static.
+- Light mode is visually unchanged — the light token values equal the previous stone/amber palette.
+
+### Changed (Report-Format & Automatic-dispatch redesign)
+- **Send day is now a calendar-style grid** (1–28 + „Letzter Tag des Monats") instead of a dropdown.
+- **Subject/intro fields gained placeholder chips and a live example:** click `{monat}` / `{jahr}` / `{name}` / `{gesamt}` to insert them at the cursor, with a "Beispiel:" line showing the resolved text as you type. New `{jahr}` and `{gesamt}` placeholders (member total) are supported.
+- **Fixed:** report previews (and a real send with a blank field) no longer show the literal word "null" — an empty subject/intro now correctly falls back to the built-in default.
+
+### Changed (PIN recovery moved to the login page)
+- **Self-service PIN reset is now on the `/admin` login screen**, not inside Settings. After 5 failed PIN attempts the keypad locks and the recovery flow opens (also reachable anytime via a "PIN vergessen?" link).
+- Recovery now asks for **your** admin email and sends the one-time code **only to that address** (if it's on the admin list), instead of broadcasting to all recipients — so a locked-out admin can regain access even when they didn't receive a shared PIN. The email instructs setting a fresh PIN immediately; entering the code + a new PIN logs you straight in.
+- The `ADMIN_RECOVERY_PIN` server backstop still works in the same code field when email is unavailable.
+- Removed the now-redundant "PIN zurücksetzen" flow from the Settings page (it keeps "PIN ändern" for logged-in changes).
+
+### Added (report scheduling, format & preview)
+- **Automatic report schedule control** — a Settings card to turn the month-end automatic send on/off and choose the send day (a specific 1.–28. or the last day of the month). The cron now runs daily and the function enforces the chosen day.
+- **Light report-format customization** — accent colour, email subject and intro text (with `{monat}` / `{name}` placeholders), and per-report attachment toggles (attach PDF and/or Excel to the company report), applied to both the company report and the member statement
+- **Report preview** — "Vorschau" opens the company report (admin + CEO) and the member statement rendered exactly as they'll be sent, reflecting your current unsaved edits; uses this month's real data or a small sample when the month is empty
+- Report recipients now also show the `ADMIN_EMAIL` env fallback as read-only "Server" chips so you can see who currently receives reports before configuring your own list
+
+### Database
+- Migration 013 — `app_settings` gains `auto_report_enabled`, `auto_report_day`, `report_accent`, `report_subject`, `report_intro`, `report_include_pdf`, `report_include_excel`, `member_subject`, `member_intro` (all with safe defaults)
+
+### Added
+- **Admin Settings page** (replaces the placeholder): manage report recipients (add/remove with inline validation and an empty-state warning), the CEO/Geschäftsführung CC address and its toggle, and the per-member monthly-statement toggle — all saved together via a "Speichern" bar
+- **6-digit admin PIN with self-service change & reset**:
+  - "PIN ändern" — verify the current PIN and set a new 6-digit PIN (segmented PIN entry, confirm field)
+  - "PIN zurücksetzen" — two-step flow: email a one-time code to the report recipients + CEO, or use the server-side emergency recovery PIN, then set a new PIN
+  - The login keypad now renders the PIN length reported by the server (6 by default) instead of a fixed 4 digits
+- **CEO copied on every monthly report** — the configured CEO address is CC'd on both the manual send and the month-end cron when the toggle is on
+- **Per-member monthly statement email** — each person who consumed that month and has a work e-mail receives their own warm, itemized statement (date, item, quantity, unit price, amount, total) in addition to the company report; can be turned off in Settings
+
+### Changed
+- Report recipients now come from the Settings page (`app_settings.report_recipients`); `ADMIN_EMAIL` is used only as a bootstrap fallback when the list is empty
+- `/api/send-report` and `/api/admin/verify-pin` now authenticate against the hashed PIN in the database, falling back to `ADMIN_PIN` only until a PIN is set from the dashboard
+
+### Database
+- Migration 012 — `pgcrypto`-backed, service-role-only functions for verifying/setting the PIN and for issuing/consuming one-time PIN-reset codes (hashes only; clear PIN/codes are never stored)
+
+---
+
 ## [Unreleased] — feat/itc1-production-prep
 
 ### Added

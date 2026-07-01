@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom'
 import AdminIcon from './AdminIcon'
+import Logo from '../Logo'
 
 type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
 
@@ -40,7 +42,7 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
       )}
 
       <aside className={[
-        'w-60 bg-white border-r border-stone-200 flex flex-col shrink-0',
+        'w-60 bg-surface border-r border-border flex flex-col shrink-0',
         // Mobile: fixed overlay, slide in/out
         'fixed inset-y-0 left-0 z-40 transition-transform duration-200 ease-in-out',
         open ? 'translate-x-0' : '-translate-x-full',
@@ -48,18 +50,18 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
         'md:static md:h-full md:translate-x-0 md:z-auto md:transition-none',
       ].join(' ')}>
         {/* Header */}
-        <div className="px-5 py-6 border-b border-stone-200">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/logo.svg"
-              alt="Kaffeelisten"
-              className="h-8 w-8 rounded-lg"
-            />
+        <div className="px-5 py-6 border-b border-border">
+          <Link
+            to="/"
+            title="Zur Mitglieder-Ansicht"
+            className="flex items-center gap-2.5 -m-1 p-1 rounded-md hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <Logo className="h-8 w-8 text-accent" />
             <div>
-              <p className="text-[15px] font-bold text-stone-900 tracking-tight">Kaffeelisten</p>
-              <p className="text-[11px] text-stone-500 uppercase tracking-[0.06em]">Admin</p>
+              <p className="text-[15px] font-bold text-fg tracking-tight">Kaffeelisten</p>
+              <p className="text-[11px] text-fg-muted uppercase tracking-[0.06em]">Admin</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Nav */}
@@ -73,10 +75,10 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
                 onClick={() => { onNavigate(item.id); onClose() }}
                 className={[
                   'flex items-center gap-2.5 px-3 h-9 rounded-md text-sm text-left w-full transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
                   isActive
-                    ? 'bg-amber-50 text-amber-700 font-semibold'
-                    : 'text-stone-700 font-medium hover:bg-stone-100',
+                    ? 'bg-accent-subtle text-accent font-semibold'
+                    : 'text-fg font-medium hover:bg-surface-2',
                 ].join(' ')}
               >
                 <AdminIcon name={item.icon} size={18} strokeWidth={isActive ? 2 : 1.5} />
@@ -87,18 +89,18 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-stone-200 flex flex-col gap-3">
+        <div className="p-4 border-t border-border flex flex-col gap-3">
           <button
             type="button"
             onClick={onSendReport}
-            className="flex items-center justify-center gap-2 h-10 rounded-md bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2"
+            className="flex items-center justify-center gap-2 h-10 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             <AdminIcon name="send" size={16} strokeWidth={2} />
             Bericht senden
           </button>
           <div className="flex items-center gap-2">
-            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80" />
-            <span className="text-[11px] text-stone-500">ITC1 · Part of GZDN</span>
+            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
+            <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
           </div>
         </div>
       </aside>

@@ -4,11 +4,15 @@ interface PinKeypadProps {
   onSubmit: (pin: string) => void
   error?: boolean
   onErrorAnimEnd?: () => void
+  /** Expected PIN length. Phase 2 uses 6; defaults to 6. */
+  length?: number
+  /** When provided, renders a "PIN vergessen?" link that starts the reset flow. */
+  onForgot?: () => void
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, length = 6, onForgot }: PinKeypadProps) {
   const [pin, setPin] = useState('')
-  const MAX = 4
+  const MAX = length
 
   const handleKey = (k: string) => {
     if (k === 'del') {
@@ -27,7 +31,7 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
       const t = setTimeout(() => onSubmit(pin), 250)
       return () => clearTimeout(t)
     }
-  }, [pin, onSubmit])
+  }, [pin, onSubmit, MAX])
 
   // Reset pin after error
   useEffect(() => {
@@ -41,14 +45,14 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
   }, [error, onErrorAnimEnd])
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center gap-8 p-10 font-sans">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-8 p-10 font-sans">
       {/* Title */}
       <div className="text-center">
-        <p className="text-[12px] font-medium text-stone-500 uppercase tracking-[0.06em] mb-2">
+        <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">
           Kaffeelisten
         </p>
-        <h1 className="text-[28px] font-bold text-stone-900 tracking-tight">Administration</h1>
-        <p className="text-base text-stone-600 mt-1.5">PIN eingeben</p>
+        <h1 className="text-[28px] font-bold text-fg tracking-tight">Administration</h1>
+        <p className="text-base text-fg-muted mt-1.5">PIN eingeben</p>
       </div>
 
       {/* Dots */}
@@ -61,10 +65,10 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
               className={[
                 'w-4 h-4 rounded-full border-2 transition-all duration-[120ms]',
                 error
-                  ? 'border-red-600 bg-red-600'
+                  ? 'border-error bg-error'
                   : filled
-                  ? 'border-stone-900 bg-stone-900'
-                  : 'border-stone-400 bg-transparent',
+                  ? 'border-fg bg-fg'
+                  : 'border-fg-subtle bg-transparent',
               ].join(' ')}
             />
           )
@@ -78,7 +82,7 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
             key={n}
             type="button"
             onClick={() => handleKey(String(n))}
-            className="w-[76px] h-[68px] rounded-lg bg-white border border-stone-200 text-2xl font-semibold text-stone-900 hover:bg-stone-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+            className="w-[76px] h-[68px] rounded-lg bg-surface border border-border text-2xl font-semibold text-fg hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {n}
           </button>
@@ -87,25 +91,35 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd }: P
         <button
           type="button"
           onClick={() => handleKey('del')}
-          className="w-[76px] h-[68px] rounded-lg bg-transparent border border-transparent text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+          className="w-[76px] h-[68px] rounded-lg bg-transparent border border-transparent text-sm font-medium text-fg-muted hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           Löschen
         </button>
         <button
           type="button"
           onClick={() => handleKey('0')}
-          className="w-[76px] h-[68px] rounded-lg bg-white border border-stone-200 text-2xl font-semibold text-stone-900 hover:bg-stone-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+          className="w-[76px] h-[68px] rounded-lg bg-surface border border-border text-2xl font-semibold text-fg hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           0
         </button>
         <button
           type="button"
           onClick={() => handleKey('ok')}
-          className="w-[76px] h-[68px] rounded-lg bg-amber-600 border border-transparent text-sm font-semibold text-white hover:bg-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2"
+          className="w-[76px] h-[68px] rounded-lg bg-accent border border-transparent text-sm font-semibold text-white hover:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           OK
         </button>
       </div>
+
+      {onForgot && (
+        <button
+          type="button"
+          onClick={onForgot}
+          className="text-sm font-medium text-fg-muted hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-2 py-1"
+        >
+          PIN vergessen?
+        </button>
+      )}
     </div>
   )
 }

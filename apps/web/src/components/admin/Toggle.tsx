@@ -17,8 +17,8 @@ export default function Toggle({ checked, onChange, label, disabled = false }: T
       onClick={() => onChange(!checked)}
       className={[
         'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2',
-        checked ? 'bg-amber-600' : 'bg-stone-300',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+        checked ? 'bg-accent' : 'bg-border-strong',
         disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
       ].join(' ')}
     >
@@ -36,7 +36,7 @@ export default function Toggle({ checked, onChange, label, disabled = false }: T
   return (
     <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
       {sw}
-      <span className="text-sm text-stone-700">{label}</span>
+      <span className="text-sm text-fg">{label}</span>
     </label>
   )
 }

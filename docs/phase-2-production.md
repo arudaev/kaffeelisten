@@ -14,6 +14,11 @@ internal product for the ITC1 Deggendorf campus, ready for an internal demo.
 > for the real ITC1 seed. **Report recipients now live in `app_settings`, not env**
 > — the `ADMIN_EMAIL` env value is only a bootstrap fallback until the recipient
 > list is filled in from the Settings page (workstream D + F).
+>
+> **Update:** workstreams C–F have since shipped on `feat/admin-settings`, and
+> migration `012_pin_functions.sql` (the PIN/reset RPC helpers) has been applied
+> to the same production project. The admin PIN, recipients and CEO CC can now be
+> managed from the Settings page.
 
 This document is the single source of truth for what is missing, what needs to
 be done, and how. It complements [`prd.md`](prd.md) (the product rationale) and
@@ -45,10 +50,10 @@ ITC1 asked for more control inside their own product:
 |---|---|---|---|
 | A | DB is full of demo data + fake prices | Reset script + production seed template | `supabase/maintenance/`, `supabase/seed_production.template.sql` — **Done on this branch** |
 | B | "Add member" only requires first name | All identity fields mandatory (form + DB constraint) | `MembersPage.tsx` **Done**, migration `011` **Done** (apply after reset) |
-| C | PIN is a fixed 4-digit env var, dev-only | 6-digit PIN, hashed in DB, change + reset (email + env backstop) | `app_settings` (migration `010` **Done**), new API endpoints + Settings UI **Planned** |
-| D | Report goes to admin only; recipients hard-coded | CEO CC + editable recipient list, managed in dashboard | `app_settings` **Done**, report logic + Settings UI **Planned** |
-| E | Members get nothing at month-end | Per-member itemized monthly statement (augments company report) | report logic + email template **Planned** |
-| F | Settings page is an empty placeholder | Real Settings page (PIN, recipients, CEO, toggles) | `AdminDashboard.tsx` settings tab **Planned** |
+| C | PIN is a fixed 4-digit env var, dev-only | 6-digit PIN, hashed in DB, change + reset (email + env backstop) | `app_settings` + PIN functions (migrations `010`/`012` **Done**), API endpoints + keypad **Done on `feat/admin-settings`** |
+| D | Report goes to admin only; recipients hard-coded | CEO CC + editable recipient list, managed in dashboard | `app_settings` **Done**, report logic + Settings UI **Done on `feat/admin-settings`** |
+| E | Members get nothing at month-end | Per-member itemized monthly statement (augments company report) | report logic + email template **Done on `feat/admin-settings`** |
+| F | Settings page is an empty placeholder | Real Settings page (PIN, recipients, CEO, toggles) | `pages/admin/SettingsPage.tsx` **Done on `feat/admin-settings`** |
 
 ---
 
@@ -124,8 +129,13 @@ PIN-checked unless noted):
 |---|---|---|---|
 | `verify-pin` (update existing) | POST | none (it *is* the auth) | compare against `admin_pin_hash` via `crypt()`; fall back to `ADMIN_PIN` env when hash is NULL |
 | `change-pin` | POST | current PIN | validate new PIN is 6 digits, write `crypt()` hash, set `pin_updated_at` |
-| `request-pin-reset` | POST | none | generate one-time code, store its hash + 15-min expiry, email it to `report_recipients` + `ceo_email` via Resend |
+| `request-pin-reset` | POST | none | takes an **email**; if it is on the admin list (recipients/CEO), generate a one-time code, store its hash + 15-min expiry, and email it **only to that address** (generic response — no enumeration) |
 | `reset-pin` | POST | reset code **or** `ADMIN_RECOVERY_PIN` env | verify code/expiry (or env recovery PIN), set new PIN hash, clear the token |
+
+> **Recovery is reachable from the `/admin` login page** (not Settings): after 5
+> failed attempts the keypad locks and opens the email → code → new-PIN flow, so a
+> locked-out admin who never received a shared PIN can still get back in. A "PIN
+> vergessen?" link exposes the same flow without waiting for the lockout.
 
 **Reset = both paths** (per decision): email one-time code for normal use, plus
 the `ADMIN_RECOVERY_PIN` env var as a last-resort backstop if email is down.
@@ -191,15 +201,26 @@ apps/web/src/pages/admin/MembersPage.tsx            (changed — Done; mandatory
 apps/web/src/lib/database.types.ts                  (changed — Done; app_settings type)
 apps/web/.env.example                               (changed — Done; ADMIN_RECOVERY_PIN, 6-digit notes)
 
-apps/web/api/admin/verify-pin.ts                    (change — Planned; DB hash + fallback)
-apps/web/api/admin/change-pin.ts                    (new — Planned)
-apps/web/api/admin/request-pin-reset.ts             (new — Planned)
-apps/web/api/admin/reset-pin.ts                     (new — Planned)
-apps/web/api/admin/settings.ts                      (new — Planned)
-apps/web/api/_lib/report.ts                         (change — Planned; CC + member statements)
-apps/web/api/_lib/reportHtml.ts                     (change — Planned; member statement template)
-apps/web/src/components/admin/PinKeypad.tsx         (change — Planned; length prop, default 6)
-apps/web/src/pages/AdminDashboard.tsx               (change — Planned; Settings page)
+supabase/migrations/012_pin_functions.sql           (new — Done; applied to prod; PIN/reset RPC)
+supabase/migrations/013_report_config.sql           (new — Done; apply to prod; scheduling + format)
+apps/web/api/admin/preview-report.ts                 (new — Done; company + member preview)
+apps/web/api/cron/monthly-report.ts                 (change — Done; reads enabled + day from settings)
+apps/web/vercel.json                                (change — Done; cron now daily; function guards day)
+apps/web/api/_lib/adminAuth.ts                       (new — Done; verifyAdminPin + service client)
+apps/web/api/admin/verify-pin.ts                    (change — Done; DB hash + fallback)
+apps/web/api/admin/pin-meta.ts                      (new — Done; public PIN length)
+apps/web/api/admin/change-pin.ts                    (new — Done)
+apps/web/api/admin/request-pin-reset.ts             (new — Done)
+apps/web/api/admin/reset-pin.ts                     (new — Done)
+apps/web/api/admin/settings.ts                      (new — Done)
+apps/web/api/send-report.ts                         (change — Done; DB-hash auth)
+apps/web/api/_lib/report.ts                         (change — Done; CC + member statements)
+apps/web/api/_lib/reportHtml.ts                     (change — Done; member statement template)
+apps/web/src/components/admin/PinKeypad.tsx         (change — Done; length prop, default 6)
+apps/web/src/components/admin/PinInput.tsx          (new — Done; segmented PIN entry)
+apps/web/src/pages/AdminLogin.tsx                   (change — Done; fetch pin-meta length)
+apps/web/src/pages/admin/SettingsPage.tsx           (new — Done; the Settings page)
+apps/web/src/pages/AdminDashboard.tsx               (change — Done; mounts SettingsPage)
 ```
 
 ---
@@ -262,9 +283,21 @@ Needed from the ITC1 side before steps 3–4 above:
 - [x] DB types + `.env.example` updated
 - [x] This plan
 
-**Planned (follow-up branches)**
-- [ ] C — 6-digit PIN: keypad length, `verify-pin` DB hash, `change-pin`, reset (email + env)
-- [ ] D — CEO CC + recipient list wired into the report
-- [ ] E — per-member monthly statements
-- [ ] F — real admin Settings page
+**Done on `feat/admin-settings`**
+- [x] C — 6-digit PIN: keypad length prop + `pin-meta`, `verify-pin` DB hash, `change-pin`, reset (email code + `ADMIN_RECOVERY_PIN` backstop), migration `012` PIN functions
+- [x] D — CEO CC + recipient list wired into the report (`fetchReportSettings` → `sendEmail` to/cc)
+- [x] E — per-member monthly statements (`sendMemberStatements` + `buildMemberStatementHtml`, gated on the toggle)
+- [x] F — real admin Settings page (`pages/admin/SettingsPage.tsx`), backed by `GET/PUT /api/admin/settings`
+
+**Also shipped on `feat/admin-settings`**
+- [x] Automatic-send scheduling (enable/disable + day of month) — cron reads it from `app_settings`
+- [x] Light report-format customization (accent, subject, intro, PDF/Excel attachment toggles)
+- [x] In-dashboard report preview (company + member), reflecting unsaved edits
+
+**Planned / manual**
+- [x] Apply migration `012_pin_functions.sql` to the live Supabase project
+- [x] Apply migration `013_report_config.sql` to the live Supabase project
+- [ ] Apply migration `014_app_theme.sql` to the live Supabase project (public appearance table)
 - [ ] Run the reset + seed + `011` against production once real data arrives
+- [ ] Set the admin PIN from the dashboard once deployed (until then `ADMIN_PIN` env is in effect)
+- [ ] Fill in report recipients + CEO email from the Settings page (until then `ADMIN_EMAIL` env is the sole recipient)

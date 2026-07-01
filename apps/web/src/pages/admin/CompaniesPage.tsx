@@ -125,7 +125,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             type="button"
             onClick={() => openEdit(r)}
             title="Bearbeiten"
-            className="text-stone-500 hover:text-stone-700 p-1 rounded transition-colors"
+            className="text-fg-muted hover:text-fg p-1 rounded transition-colors"
           >
             <AdminIcon name="edit" size={16} />
           </button>
@@ -136,8 +136,8 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             className={[
               'p-1 rounded transition-colors',
               r.active
-                ? 'text-stone-500 hover:text-red-600'
-                : 'text-stone-500 hover:text-green-600',
+                ? 'text-fg-muted hover:text-error'
+                : 'text-fg-muted hover:text-success',
             ].join(' ')}
           >
             <AdminIcon name={r.active ? 'delete' : 'check'} size={16} />
@@ -178,7 +178,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
           <button
             type="button"
             onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-            className="inline-flex items-center gap-1.5 h-9 px-3 bg-white border border-stone-200 rounded-md text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-3 bg-surface border border-border rounded-md text-sm text-fg hover:bg-surface-2 transition-colors"
           >
             Name {sortDir === 'asc' ? 'A→Z' : 'Z→A'}
             <AdminIcon name="chevron" size={14} strokeWidth={2} />
@@ -187,17 +187,17 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             <button
               type="button"
               onClick={() => setFilterStatus('all')}
-              className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+              className="text-xs text-fg-muted hover:text-fg transition-colors"
             >
               Filter zurücksetzen
             </button>
           )}
-          <span className="ml-auto text-sm text-stone-500">
+          <span className="ml-auto text-sm text-fg-muted">
             {displayed.length} {displayed.length === 1 ? 'Unternehmen' : 'Unternehmen'}
           </span>
         </div>
         {loading ? (
-          <div className="h-48 bg-stone-100 rounded-xl animate-pulse" />
+          <div className="h-48 bg-surface-2 rounded-xl animate-pulse" />
         ) : (
           <DataTable
             columns={columns}

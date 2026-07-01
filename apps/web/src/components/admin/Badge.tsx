@@ -6,10 +6,10 @@ interface BadgeProps {
 }
 
 const kindClasses: Record<BadgeKind, string> = {
-  active: 'bg-green-50 text-green-600',
-  inactive: 'bg-stone-100 text-stone-400',
-  warn: 'bg-amber-50 text-amber-700',
-  error: 'bg-red-50 text-red-600',
+  active: 'bg-success-subtle text-success',
+  inactive: 'bg-surface-2 text-fg-subtle',
+  warn: 'bg-accent-subtle text-accent',
+  error: 'bg-error-subtle text-error',
 }
 
 export default function Badge({ kind = 'active', children }: BadgeProps) {
