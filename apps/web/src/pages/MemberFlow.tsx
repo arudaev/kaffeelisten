@@ -16,7 +16,11 @@ import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 
 type Company = Database['public']['Tables']['companies']['Row']
-type Member = Database['public']['Tables']['members']['Row']
+// The anonymous member flow may only read the non-PII columns of members
+// (work_email is admin-only — migration 015). Keep this shape in sync with the
+// column-level SELECT grant.
+type Member = Pick<Database['public']['Tables']['members']['Row'], 'id' | 'name' | 'company_id' | 'active'>
+const MEMBER_PUBLIC_COLS = 'id, name, company_id, active' as const
 type Item = Database['public']['Tables']['items']['Row']
 type Step = 'start' | 'company' | 'member' | 'item' | 'confirm' | 'success'
 
@@ -181,7 +185,7 @@ export default function MemberFlow() {
       setLoadingMembers(true)
       const { data, error: err } = await supabase
         .from('members')
-        .select('*')
+        .select(MEMBER_PUBLIC_COLS)
         .eq('company_id', selectedCompany.id)
         .eq('active', true)
         .order('name')
@@ -270,7 +274,7 @@ export default function MemberFlow() {
     const { data, error: err } = await supabase
       .from('members')
       .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
-      .select()
+      .select(MEMBER_PUBLIC_COLS)
       .single()
     setAddingMember(false)
     if (err || !data) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
