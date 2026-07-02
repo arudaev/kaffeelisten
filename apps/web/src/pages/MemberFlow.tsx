@@ -135,6 +135,9 @@ export default function MemberFlow() {
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Admin-configured cap on total quantity per order (null = unlimited).
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState<number | null>(null)
+  const [limitReached, setLimitReached] = useState(false)
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
@@ -178,6 +181,16 @@ export default function MemberFlow() {
       if (cats.length > 0) setActiveCategory(cats[0])
     }
     fetchInitial()
+
+    // Non-sensitive runtime config (per-order cap). Fails open to unlimited so a
+    // config hiccup never blocks logging.
+    fetch('/api/config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(cfg => {
+        const max = cfg?.maxItemsPerOrder
+        if (typeof max === 'number' && Number.isFinite(max)) setMaxItemsPerOrder(max)
+      })
+      .catch(() => { /* keep unlimited */ })
   }, [])
 
   // Load members when company is selected
@@ -211,11 +224,17 @@ export default function MemberFlow() {
     setSelectedMember(null)
     setCart(new Map())
     setError(null)
+    setLimitReached(false)
     const cats = [...new Set(items.map(i => i.category))]
     if (cats.length > 0) setActiveCategory(cats[0])
   }, [items])
 
   const addToCart = (item: Item) => {
+    // Enforce the admin-configured per-order cap on total quantity.
+    if (maxItemsPerOrder != null && cartCount >= maxItemsPerOrder) {
+      setLimitReached(true)
+      return
+    }
     setCart(prev => {
       const next = new Map(prev)
       const entry = next.get(item.id)
@@ -225,6 +244,7 @@ export default function MemberFlow() {
   }
 
   const removeFromCart = (itemId: string) => {
+    setLimitReached(false)
     setCart(prev => {
       const next = new Map(prev)
       const entry = next.get(itemId)
@@ -600,6 +620,7 @@ export default function MemberFlow() {
         totalSteps={4}
         onBack={() => {
           setCart(new Map())
+          setLimitReached(false)
           setStep('member')
         }}
         header={
@@ -617,7 +638,7 @@ export default function MemberFlow() {
                 {cartCount} {cartCount === 1 ? 'Artikel' : 'Artikel'} · {formatPrice(cartTotal)}
               </span>
               <div className="flex-1" />
-              <BigButton variant="secondary" onClick={() => setCart(new Map())}>
+              <BigButton variant="secondary" onClick={() => { setCart(new Map()); setLimitReached(false) }}>
                 Auswahl löschen
               </BigButton>
               <BigButton variant="primary" onClick={() => setStep('confirm')}>
@@ -628,6 +649,11 @@ export default function MemberFlow() {
         }
       >
         <div className="flex flex-col gap-4">
+          {maxItemsPerOrder != null && (limitReached || cartCount >= maxItemsPerOrder) && (
+            <div className="rounded-xl border border-accent bg-accent-subtle px-4 py-3 text-sm text-accent">
+              Maximal {maxItemsPerOrder} {maxItemsPerOrder === 1 ? 'Artikel' : 'Artikel'} pro Bestellung.
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap">
             {availableCategories.map(cat => {
               const isActive = cat === activeCategory
