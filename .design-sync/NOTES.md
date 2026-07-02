@@ -85,6 +85,39 @@ compiled to **nothing** and rendered unstyled (silently — no error, just wrong
 **Whenever the app's token system changes** (new semantic color, renamed var), update BOTH files and
 re-run `cfg.buildCmd`. Quick check after building: `grep -oE '\.(text|bg|border)-(accent|fg|surface)[a-z0-9-]*' .design-sync/.cache/ds-tailwind.css` should list the classes.
 
+## Token `@kind` annotations + `--minify` (2026-07-02)
+
+The claude.ai/design `check_design_system` classifies design tokens by a `/* @kind … */`
+annotation it reads from the **shipped** `_ds_bundle.css`. To make those survive:
+
+- **`cfg.buildCmd` must NOT pass `--minify`.** The Tailwind CLI minifier strips comments, and
+  the converter does NOT re-minify (`.ds-sync/lib/bundle.mjs` uses esbuild `minify:false`, no
+  cssnano) — so `--minify` would delete every `@kind` before upload. Removed it from `buildCmd`.
+- **Annotate on the line BEFORE each declaration**, not trailing. Tailwind's formatter relocates
+  a same-line trailing `/* … */` onto the *next* line (mis-associating it with the following
+  token); a comment on its own line *before* the declaration is preserved verbatim. All tokens in
+  `tokens/colors_and_type.css` and the `:root`/`[data-mode]` triplets in `tailwind.css` are
+  annotated (`color` / `font` / `spacing` / `radius` / `shadow` / `motion`). `apps/web/src/index.css`
+  mirrors the annotations for parity but does NOT ship (the app bundle, not the DS bundle).
+- Header/section comments must not contain a nested `/* … */` — CSS comments don't nest and the
+  inner `*/` ends the block (postcss-import throws "Unknown word"). Keep `@kind` out of prose.
+- Verify after building: `grep -c "@kind" ds-bundle/_ds_bundle.css` (expect ~130) and
+  `grep -nA1 "@kind" …` to confirm each sits immediately before its `--var`.
+
+## JetBrains Mono + new animations (2026-07-02)
+
+- **JetBrains Mono** is loaded via the combined Google-Fonts `@import` (`Inter … & JetBrains+Mono`)
+  in `apps/web/src/index.css`, `tokens/colors_and_type.css`, and `tailwind.css`. `--font-mono`
+  already referenced it; the `@import` satisfies the check's "no @font-face for JetBrains Mono".
+  Remote-font `[FONT_REMOTE]` for it is expected/benign (same as Inter).
+- **`mono` fontFamily** (`JetBrains Mono, …`) added to BOTH tailwind configs so `font-mono` resolves
+  to it (used by revealed PINs, DataTable numeric columns). **`blink` animation** (caret) added to
+  both configs for `PinInput`'s active-slot caret. Mirror any new animation/family in BOTH
+  `apps/web/tailwind.config.ts` and `.design-sync/tailwind.config.cjs`.
+- The three admin primitives `DayGridPicker`, `PinInput`, `TemplateField` were reimplemented from a
+  claude.ai/design redesign proposal (kept in the DS project as `redesign/` + `Redesign.html`);
+  same props/API, new visuals. See `docs/redesign/README.md`.
+
 ## Provider — Sidebar needs a Router (`cfg.provider`)
 
 `Sidebar` imports `Link` from `react-router-dom`, so its preview renders blank ("Cannot destructure
