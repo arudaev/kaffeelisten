@@ -1,7 +1,7 @@
 // Member-facing logging flow: start → company → member → item → confirm → success
 // Design spec: docs/design-foundation.md, ui_kits/member-flow/
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
@@ -140,7 +140,9 @@ export default function MemberFlow() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [cart, setCart] = useState<Map<string, CartEntry>>(new Map())
   const [activeCategory, setActiveCategory] = useState<string>('coffee')
-  const [submitting, setSubmitting] = useState(false)
+  // Guards the deferred insert so an order is written at most once, even if the
+  // success-screen countdown effect fires onReset more than once (see below).
+  const orderWrittenRef = useRef(false)
 
   // Self-registration modal
   const [addSelfOpen, setAddSelfOpen] = useState(false)
@@ -203,7 +205,7 @@ export default function MemberFlow() {
     }
   }, [addSelfOpen])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setStep('start')
     setSelectedCompany(null)
     setSelectedMember(null)
@@ -211,7 +213,7 @@ export default function MemberFlow() {
     setError(null)
     const cats = [...new Set(items.map(i => i.category))]
     if (cats.length > 0) setActiveCategory(cats[0])
-  }
+  }, [items])
 
   const addToCart = (item: Item) => {
     setCart(prev => {
@@ -236,20 +238,41 @@ export default function MemberFlow() {
     })
   }
 
-  const handleConfirm = async () => {
+  // "Bestätigen" does NOT write yet — it opens the success screen with an undo
+  // window (Gmail "Undo Send" model). The insert is deferred to finalizeOrder,
+  // which runs when the window elapses. This makes "Rückgängig" a true cancel and
+  // removes the confirm → back → confirm double-order path: nothing is written
+  // while undo is available, so an order can never be inserted twice.
+  const handleConfirm = () => {
     if (!selectedMember || !selectedCompany || cartEntries.length === 0) return
-    setSubmitting(true)
-    const rows = cartEntries.map(e => ({
+    setError(null)
+    orderWrittenRef.current = false // arm the write for this order
+    setStep('success')
+  }
+
+  // Commits the order to the database, then returns to the start screen. Invoked
+  // by SuccessScreen when its countdown reaches zero (the undo window closed).
+  const finalizeOrder = useCallback(async () => {
+    if (orderWrittenRef.current) return // already written — never write twice
+    if (!selectedMember || !selectedCompany) { reset(); return }
+    const rows = [...cart.values()].map(e => ({
       member_id: selectedMember.id,
       company_id: selectedCompany.id,
       item_id: e.item.id,
       quantity: e.quantity,
     }))
+    if (rows.length === 0) { reset(); return }
+    orderWrittenRef.current = true
     const { error: err } = await supabase.from('transactions').insert(rows)
-    setSubmitting(false)
-    if (err) { setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
-    setStep('success')
-  }
+    if (err) {
+      // Let the person retry from the confirm screen — nothing was committed.
+      orderWrittenRef.current = false
+      setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
+      setStep('confirm')
+      return
+    }
+    reset()
+  }, [selectedMember, selectedCompany, cart, reset])
 
   const openAddSelf = () => {
     setSelfFirstName('')
@@ -298,7 +321,7 @@ export default function MemberFlow() {
       <SuccessScreen
         summary={successSummary}
         onUndo={() => setStep('confirm')}
-        onReset={reset}
+        onReset={finalizeOrder}
       />
     )
   }
@@ -661,10 +684,9 @@ export default function MemberFlow() {
             <BigButton
               variant="primary"
               onClick={handleConfirm}
-              disabled={submitting}
               icon={<Icon name="check" size={22} strokeWidth={2.5} />}
             >
-              {submitting ? 'Speichern…' : 'Bestätigen'}
+              Bestätigen
             </BigButton>
           </>
         }
