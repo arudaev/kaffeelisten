@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — fix/rls-lockdown
+
+### Security
+- **The public (anon) Supabase key can no longer read personal data or write catalogue data.** Previously the key shipped in the browser bundle had table-wide `SELECT` on members (including `work_email`) and transactions, plus `INSERT`/`UPDATE` on companies, members and items — so anyone with the key could read every member's work email and every transaction and corrupt the catalogue. Migration 015 revokes all of that. The anonymous member flow keeps only what it needs: reading active companies/items, reading the non-PII columns (`id, name, company_id, active`) of active members, and inserting its own member row and transactions.
+- **All admin data access now runs server-side through a PIN-protected, service-role API** (`/api/admin/data`). The admin dashboard and the Companies/Items/Members pages no longer query Supabase with the anon key; reads (including work emails) and all catalogue writes are authenticated server-side. Admin writes are now validated on the server (name/price/category/email bounds, company existence). This makes the privacy notice's "only campus admins have access" statement actually enforced by the database.
+
+### Known follow-ups (not in this branch)
+- The anonymous `INSERT` paths (transactions, self-registration) are locked to their tables but not yet validated for quantity bounds, member↔company consistency, or rate limiting — tracked as a separate write-abuse hardening change.
+
 ## [Unreleased] — feat/deathstar-theme
 
 ### Added
