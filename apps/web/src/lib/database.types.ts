@@ -186,6 +186,7 @@ export type Database = {
           report_include_excel: boolean
           member_subject: string | null
           member_intro: string | null
+          max_items_per_order: number | null
           updated_at: string
         }
         Insert: {
@@ -208,6 +209,7 @@ export type Database = {
           report_include_excel?: boolean
           member_subject?: string | null
           member_intro?: string | null
+          max_items_per_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -230,6 +232,7 @@ export type Database = {
           report_include_excel?: boolean
           member_subject?: string | null
           member_intro?: string | null
+          max_items_per_order?: number | null
           updated_at?: string
         }
         Relationships: []

@@ -29,6 +29,7 @@ interface SettingsBody {
   report_include_excel?: unknown
   member_subject?: unknown
   member_intro?: unknown
+  max_items_per_order?: unknown
 }
 
 /** Normalize an optional text field to a trimmed string, null, or an error. */
@@ -100,6 +101,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // ── Order limit ──
+      if (body.max_items_per_order !== undefined) {
+        if (body.max_items_per_order === null || body.max_items_per_order === '') {
+          update.max_items_per_order = null
+        } else {
+          const max = Number(body.max_items_per_order)
+          if (!Number.isInteger(max) || max < 1 || max > 999) {
+            return res.status(400).json({ error: 'Limit muss zwischen 1 und 999 liegen (oder leer für unbegrenzt).' })
+          }
+          update.max_items_per_order = max
+        }
+      }
+
       // ── Format ──
       if (body.report_accent !== undefined) {
         const accent = String(body.report_accent).trim()
@@ -134,7 +148,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the current non-secret settings (for both GET and after a PUT).
     const { data, error } = await supabase
       .from('app_settings')
-      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, pin_length, pin_updated_at')
+      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, pin_length, pin_updated_at')
       .eq('id', 1)
       .single()
     if (error) throw new Error(error.message)
@@ -163,6 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       report_include_excel: data.report_include_excel,
       member_subject: data.member_subject,
       member_intro: data.member_intro,
+      max_items_per_order: data.max_items_per_order,
       pin_length: data.pin_length,
       pin_updated_at: data.pin_updated_at,
       pin_is_set: await isDbPinSet(supabase),
