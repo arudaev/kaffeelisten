@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { adminApi } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
@@ -70,11 +70,16 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
 
   const fetchItems = async () => {
     setLoading(true)
-    const { data } = await supabase.from('items').select('*').order('name')
-    setItems(data ?? [])
-    setLoading(false)
+    try {
+      setItems(await adminApi.getItems())
+    } catch {
+      onToast('Items konnten nicht geladen werden.')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchItems() }, [])
 
   const openAdd = () => {
@@ -113,17 +118,16 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
       active: form.active,
     }
     setSaving(true)
-    const { error } =
-      modalMode === 'add'
-        ? await supabase.from('items').insert(payload)
-        : await supabase.from('items').update(payload).eq('id', editId!)
-    setSaving(false)
-    if (error) {
-      onToast('Fehler beim Speichern.')
-    } else {
+    try {
+      if (modalMode === 'add') await adminApi.createItem(payload)
+      else await adminApi.updateItem(editId!, payload)
       setModalOpen(false)
       onToast(modalMode === 'add' ? 'Item hinzugefügt.' : 'Item aktualisiert.')
       fetchItems()
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Fehler beim Speichern.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -146,15 +150,12 @@ export default function ItemsPage({ onToast, onMenuClick }: Props) {
   }, [items, filterStatus, filterCategory, filterName, sortKey, sortDir])
 
   const toggleActive = async (item: ItemRow) => {
-    const { error } = await supabase
-      .from('items')
-      .update({ active: !item.active })
-      .eq('id', item.id)
-    if (error) {
-      onToast('Fehler beim Aktualisieren.')
-    } else {
+    try {
+      await adminApi.updateItem(item.id, { active: !item.active })
       onToast(item.active ? 'Item deaktiviert.' : 'Item aktiviert.')
       fetchItems()
+    } catch {
+      onToast('Fehler beim Aktualisieren.')
     }
   }
 

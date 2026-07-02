@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { adminApi } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
@@ -37,14 +37,16 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
 
   const fetchCompanies = async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('companies')
-      .select('id, name, active')
-      .order('name')
-    setCompanies(data ?? [])
-    setLoading(false)
+    try {
+      setCompanies(await adminApi.getCompanies())
+    } catch {
+      onToast('Unternehmen konnten nicht geladen werden.')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchCompanies() }, [])
 
   const openAdd = () => {
@@ -65,17 +67,16 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
     const name = form.name.trim()
     if (!name) return
     setSaving(true)
-    const { error } =
-      modalMode === 'add'
-        ? await supabase.from('companies').insert({ name, active: true })
-        : await supabase.from('companies').update({ name }).eq('id', editId!)
-    setSaving(false)
-    if (error) {
-      onToast('Fehler beim Speichern.')
-    } else {
+    try {
+      if (modalMode === 'add') await adminApi.createCompany({ name })
+      else await adminApi.updateCompany(editId!, { name })
       setModalOpen(false)
       onToast(modalMode === 'add' ? 'Unternehmen hinzugefügt.' : 'Unternehmen aktualisiert.')
       fetchCompanies()
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Fehler beim Speichern.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -88,15 +89,12 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
   }, [companies, filterStatus, sortDir])
 
   const toggleActive = async (company: CompanyRow) => {
-    const { error } = await supabase
-      .from('companies')
-      .update({ active: !company.active })
-      .eq('id', company.id)
-    if (error) {
-      onToast('Fehler beim Aktualisieren.')
-    } else {
+    try {
+      await adminApi.updateCompany(company.id, { active: !company.active })
       onToast(company.active ? 'Unternehmen deaktiviert.' : 'Unternehmen aktiviert.')
       fetchCompanies()
+    } catch {
+      onToast('Fehler beim Aktualisieren.')
     }
   }
 

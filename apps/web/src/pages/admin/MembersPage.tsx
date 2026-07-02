@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { adminApi } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
@@ -70,26 +70,33 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
 
   const fetchData = async () => {
     setLoading(true)
-    const [membersRes, companiesRes] = await Promise.all([
-      supabase.from('members').select('id, name, company_id, work_email, active').order('name'),
-      supabase.from('companies').select('id, name').eq('active', true).order('name'),
-    ])
-    const companyMap = new Map(
-      (companiesRes.data ?? []).map(c => [c.id, c.name])
-    )
-    const rows: MemberRow[] = (membersRes.data ?? []).map(m => ({
-      id: m.id,
-      name: m.name,
-      company_id: m.company_id,
-      company_name: companyMap.get(m.company_id) ?? '—',
-      work_email: m.work_email ?? null,
-      active: m.active,
-    }))
-    setMembers(rows)
-    setCompanies(companiesRes.data ?? [])
-    setLoading(false)
+    try {
+      const [memberList, companyList] = await Promise.all([
+        adminApi.getMembers(),
+        adminApi.getCompanies(),
+      ])
+      const activeCompanies: CompanyOption[] = companyList
+        .filter(c => c.active)
+        .map(c => ({ id: c.id, name: c.name }))
+      const companyMap = new Map(companyList.map(c => [c.id, c.name]))
+      const rows: MemberRow[] = memberList.map(m => ({
+        id: m.id,
+        name: m.name,
+        company_id: m.company_id,
+        company_name: companyMap.get(m.company_id) ?? '—',
+        work_email: m.work_email ?? null,
+        active: m.active,
+      }))
+      setMembers(rows)
+      setCompanies(activeCompanies)
+    } catch {
+      onToast('Mitarbeitende konnten nicht geladen werden.')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData() }, [])
 
   const openAdd = () => {
@@ -138,30 +145,26 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       work_email: workEmail,
       active: form.active,
     }
-    const { error } =
-      modalMode === 'add'
-        ? await supabase.from('members').insert(payload)
-        : await supabase.from('members').update(payload).eq('id', editId!)
-    setSaving(false)
-    if (error) {
-      onToast('Fehler beim Speichern.')
-    } else {
+    try {
+      if (modalMode === 'add') await adminApi.createMember(payload)
+      else await adminApi.updateMember(editId!, payload)
       setModalOpen(false)
       onToast(modalMode === 'add' ? 'Mitarbeitende(r) hinzugefügt.' : 'Mitarbeitende(r) aktualisiert.')
       fetchData()
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Fehler beim Speichern.')
+    } finally {
+      setSaving(false)
     }
   }
 
   const toggleActive = async (member: MemberRow) => {
-    const { error } = await supabase
-      .from('members')
-      .update({ active: !member.active })
-      .eq('id', member.id)
-    if (error) {
-      onToast('Fehler beim Aktualisieren.')
-    } else {
+    try {
+      await adminApi.updateMember(member.id, { active: !member.active })
       onToast(member.active ? 'Mitarbeitende(r) deaktiviert.' : 'Mitarbeitende(r) aktiviert.')
       fetchData()
+    } catch {
+      onToast('Fehler beim Aktualisieren.')
     }
   }
 
