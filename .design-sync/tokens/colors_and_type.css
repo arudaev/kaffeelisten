@@ -4,9 +4,17 @@
    and any pitch / landing surfaces.
 
    Source of truth: docs/design-system.md, docs/design-foundation.md
+
+   Each custom property is preceded by an "@kind ..." annotation comment so the
+   design-system tokenizer can classify it (color / font / spacing / radius /
+   shadow / motion). The comment sits on its own line BEFORE the declaration —
+   Tailwind's formatter preserves that position (it relocates same-line trailing
+   comments). NOTE: this file ships to designs via _ds_bundle.css, so
+   cfg.buildCmd must NOT minify (comments would be stripped) — see
+   .design-sync/config.json and .design-sync/NOTES.md.
    ========================================================================== */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap");
 
 :root {
   /* ----------------------------------------------------------------------
@@ -16,36 +24,62 @@
      ---------------------------------------------------------------------- */
 
   /* Stone — neutral, warm grey (background, text, borders) */
+  /* @kind color */
   --stone-50:  #FAFAF9;
+  /* @kind color */
   --stone-100: #F5F5F4;
+  /* @kind color */
   --stone-200: #E7E5E4;
+  /* @kind color */
   --stone-300: #D6D3D1;
+  /* @kind color */
   --stone-400: #A8A29E;
+  /* @kind color */
   --stone-500: #78716C;
+  /* @kind color */
   --stone-600: #57534E;
+  /* @kind color */
   --stone-700: #44403C;
+  /* @kind color */
   --stone-800: #292524;
+  /* @kind color */
   --stone-900: #1C1917;
 
   /* Amber — brand accent, "coffee warm" */
+  /* @kind color */
   --amber-50:  #FFFBEB;
+  /* @kind color */
   --amber-100: #FEF3C7;
+  /* @kind color */
   --amber-200: #FDE68A;
+  /* @kind color */
   --amber-400: #FBBF24;
+  /* @kind color */
   --amber-500: #F59E0B;
-  --amber-600: #D97706;  /* brand */
-  --amber-700: #B45309;  /* brand hover */
+  /* @kind color — brand */
+  --amber-600: #D97706;
+  /* @kind color — brand hover */
+  --amber-700: #B45309;
+  /* @kind color */
   --amber-800: #92400E;
+  /* @kind color */
   --amber-900: #78350F;
 
   /* Semantic accent — only used for status, links, alerts */
+  /* @kind color */
   --green-50:  #F0FDF4;
+  /* @kind color */
   --green-600: #16A34A;
+  /* @kind color */
   --red-50:    #FEF2F2;
+  /* @kind color */
   --red-600:   #DC2626;
+  /* @kind color */
   --blue-600:  #2563EB;
 
+  /* @kind color */
   --white: #FFFFFF;
+  /* @kind color */
   --black: #000000;
 
   /* ----------------------------------------------------------------------
@@ -53,43 +87,71 @@
      Always reach for these in components rather than the primitives.
      ---------------------------------------------------------------------- */
 
-  --bg-default:        var(--stone-50);   /* Page background */
-  --bg-subtle:         var(--stone-100);  /* Section / input bg */
+  /* @kind color — page background */
+  --bg-default:        var(--stone-50);
+  /* @kind color — section / input bg */
+  --bg-subtle:         var(--stone-100);
+  /* @kind color */
   --bg-inverse:        var(--stone-900);
-  --surface-default:   var(--white);      /* Card surface */
-  --surface-elevated:  var(--white);      /* Card + shadow */
+  /* @kind color — card surface */
+  --surface-default:   var(--white);
+  /* @kind color — card + shadow */
+  --surface-elevated:  var(--white);
 
+  /* @kind color */
   --border-default:    var(--stone-200);
+  /* @kind color */
   --border-strong:     var(--stone-400);
+  /* @kind color */
   --border-focus:      var(--amber-600);
 
-  --fg-primary:        var(--stone-900);  /* Body, headings */
-  --fg-secondary:      var(--stone-600);  /* Sub-text, captions */
-  --fg-muted:          var(--stone-400);  /* Placeholder, hint */
+  /* @kind color — body, headings */
+  --fg-primary:        var(--stone-900);
+  /* @kind color — sub-text, captions */
+  --fg-secondary:      var(--stone-600);
+  /* @kind color — placeholder, hint */
+  --fg-muted:          var(--stone-400);
+  /* @kind color */
   --fg-inverse:        var(--white);
 
+  /* @kind color */
   --brand:             var(--amber-600);
+  /* @kind color */
   --brand-hover:       var(--amber-700);
+  /* @kind color */
   --brand-subtle:      var(--amber-50);
+  /* @kind color */
   --brand-on:          var(--white);
 
+  /* @kind color */
   --success:           var(--green-600);
+  /* @kind color */
   --success-subtle:    var(--green-50);
+  /* @kind color */
   --error:             var(--red-600);
+  /* @kind color */
   --error-subtle:      var(--red-50);
+  /* @kind color */
   --info:              var(--blue-600);
 
+  /* @kind color */
   --focus-ring:        var(--amber-600);
 
   /* ----------------------------------------------------------------------
      TYPOGRAPHY — FAMILIES & WEIGHTS
      ---------------------------------------------------------------------- */
+  /* @kind font */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* @kind font */
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
+  /* @kind font */
   --fw-regular:  400;
+  /* @kind font */
   --fw-medium:   500;
+  /* @kind font */
   --fw-semibold: 600;
+  /* @kind font */
   --fw-bold:     700;
 
   /* ----------------------------------------------------------------------
@@ -97,62 +159,115 @@
      Standard product scale + a "wall" pair for the wall-mounted iPad.
      The member flow MUST use --fs-lg or larger for body and tap targets.
      ---------------------------------------------------------------------- */
-  --fs-xs:   12px;  --lh-xs:  1.5;
-  --fs-sm:   14px;  --lh-sm:  1.5;
-  --fs-base: 16px;  --lh-base:1.5;
-  --fs-lg:   18px;  --lh-lg:  1.4;   /* member flow body floor */
-  --fs-xl:   20px;  --lh-xl:  1.4;
-  --fs-2xl:  24px;  --lh-2xl: 1.3;
-  --fs-3xl:  30px;  --lh-3xl: 1.2;   /* member flow heading */
-  --fs-4xl:  36px;  --lh-4xl: 1.1;   /* landing hero */
+  /* @kind font */
+  --fs-xs:   12px;
+  /* @kind font */
+  --lh-xs:  1.5;
+  /* @kind font */
+  --fs-sm:   14px;
+  /* @kind font */
+  --lh-sm:  1.5;
+  /* @kind font */
+  --fs-base: 16px;
+  /* @kind font */
+  --lh-base: 1.5;
+  /* @kind font — member flow body floor */
+  --fs-lg:   18px;
+  /* @kind font */
+  --lh-lg:  1.4;
+  /* @kind font */
+  --fs-xl:   20px;
+  /* @kind font */
+  --lh-xl:  1.4;
+  /* @kind font */
+  --fs-2xl:  24px;
+  /* @kind font */
+  --lh-2xl: 1.3;
+  /* @kind font — member flow heading */
+  --fs-3xl:  30px;
+  /* @kind font */
+  --lh-3xl: 1.2;
+  /* @kind font — landing hero */
+  --fs-4xl:  36px;
+  /* @kind font */
+  --lh-4xl: 1.1;
 
   /* Letter spacing — used sparingly, only on uppercase eyebrows */
+  /* @kind font */
   --tracking-tight:  -0.01em;
+  /* @kind font */
   --tracking-normal:  0;
+  /* @kind font */
   --tracking-wide:    0.06em;
 
   /* ----------------------------------------------------------------------
      SPACING — 4px base grid
      ---------------------------------------------------------------------- */
+  /* @kind spacing */
   --space-1:  4px;
+  /* @kind spacing */
   --space-2:  8px;
+  /* @kind spacing */
   --space-3:  12px;
+  /* @kind spacing */
   --space-4:  16px;
+  /* @kind spacing */
   --space-5:  20px;
+  /* @kind spacing */
   --space-6:  24px;
+  /* @kind spacing */
   --space-8:  32px;
+  /* @kind spacing */
   --space-10: 40px;
+  /* @kind spacing */
   --space-12: 48px;
+  /* @kind spacing */
   --space-16: 64px;
 
   /* ----------------------------------------------------------------------
      RADII — soft, never pill except for status dots
      ---------------------------------------------------------------------- */
-  --radius-sm:   4px;   /* inputs, badges */
-  --radius-md:   6px;   /* buttons, small cards */
-  --radius-lg:   8px;   /* standard cards */
-  --radius-xl:   12px;  /* member-flow tiles */
-  --radius-2xl:  16px;  /* modals, elevated surfaces */
+  /* @kind radius — inputs, badges */
+  --radius-sm:   4px;
+  /* @kind radius — buttons, small cards */
+  --radius-md:   6px;
+  /* @kind radius — standard cards */
+  --radius-lg:   8px;
+  /* @kind radius — member-flow tiles */
+  --radius-xl:   12px;
+  /* @kind radius — modals, elevated surfaces */
+  --radius-2xl:  16px;
+  /* @kind radius */
   --radius-full: 9999px;
 
   /* ----------------------------------------------------------------------
      SHADOWS — light, single-layer; never colored
      ---------------------------------------------------------------------- */
+  /* @kind shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* @kind shadow */
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  /* @kind shadow */
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
 
   /* ----------------------------------------------------------------------
      MOTION — minimal, fast, no bounce
      ---------------------------------------------------------------------- */
+  /* @kind motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* @kind motion */
   --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  /* @kind motion */
   --duration-fast:  120ms;
+  /* @kind motion */
   --duration-base:  180ms;
+  /* @kind motion */
   --duration-slow:  280ms;
 
   /* Tap targets (member flow / wall iPad) */
+  /* @kind spacing */
   --tap-min: 44px;
+  /* @kind spacing */
   --tap-comfortable: 56px;
 }
 

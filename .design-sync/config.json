@@ -3,7 +3,7 @@
   "shape": "package",
   "pkg": "@kaffeelisten/web",
   "globalName": "Kaffeelisten",
-  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css --minify",
+  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css",
   "entry": ".design-sync/ds-entry.tsx",
   "srcDir": "apps/web/src",
   "cssEntry": ".design-sync/.cache/ds-tailwind.css",
@@ -31,7 +31,19 @@
     "AdminSelect": "apps/web/src/components/admin/AdminSelect.tsx",
     "Toggle": "apps/web/src/components/admin/Toggle.tsx",
     "Toast": "apps/web/src/components/admin/Toast.tsx",
-    "EmptyState": "apps/web/src/components/admin/EmptyState.tsx"
+    "EmptyState": "apps/web/src/components/admin/EmptyState.tsx",
+    "Logo": "apps/web/src/components/Logo.tsx",
+    "CappuccinoMark": "apps/web/src/components/CappuccinoMark.tsx",
+    "SegmentedControl": "apps/web/src/components/admin/SegmentedControl.tsx",
+    "PinInput": "apps/web/src/components/admin/PinInput.tsx",
+    "DayGridPicker": "apps/web/src/components/admin/DayGridPicker.tsx",
+    "TemplateField": "apps/web/src/components/admin/TemplateField.tsx",
+    "PalettePreviewCard": "apps/web/src/components/admin/PalettePreviewCard.tsx",
+    "MemoryRouter": null
+  },
+  "provider": { "component": "MemoryRouter" },
+  "dtsPropsFor": {
+    "SegmentedControl": "options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; ariaLabel?: string; size?: 'sm' | 'md'"
   },
   "overrides": {
     "FlowShell": { "cardMode": "single", "viewport": "960x720" },
@@ -45,6 +57,10 @@
     "AdminField": { "cardMode": "column" },
     "AdminSelect": { "cardMode": "column" },
     "Toast": { "cardMode": "single", "viewport": "520x200", "primaryStory": "Success" },
-    "EmptyState": { "cardMode": "column" }
+    "EmptyState": { "cardMode": "column" },
+    "DayGridPicker": { "cardMode": "column" },
+    "TemplateField": { "cardMode": "column" },
+    "PinInput": { "cardMode": "column" },
+    "PalettePreviewCard": { "cardMode": "column" }
   }
 }

@@ -1,8 +1,93 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
 /* Design-foundation tokens (from the teammate's original DS): CSS custom
    properties + semantic .k-* type classes. Inlined into the compiled stylesheet
    so the values ship to designs via the styles.css import closure. */
 @import './tokens/colors_and_type.css';
+
+/*
+  Semantic, theme-driven tokens (channel triplets so Tailwind can apply
+  /<alpha>). Mirrors apps/web/src/index.css. The Tailwind config maps
+  bg/surface/border/fg/accent/success/error/info to rgb(var(--*)), so these
+  definitions must ship for the compiled utility classes to resolve. Cards
+  render in light mode (:root); the dark block is kept for parity.
+*/
+:root {
+  /* Semantic channel triplets (light). Each is a color token. */
+  /* @kind color */
+  --bg: 250 250 249;
+  /* @kind color */
+  --surface: 255 255 255;
+  /* @kind color */
+  --surface-2: 245 245 244;
+  /* @kind color */
+  --border: 231 229 228;
+  /* @kind color */
+  --border-strong: 214 211 209;
+
+  /* @kind color */
+  --fg: 28 25 23;
+  /* @kind color */
+  --fg-muted: 87 83 78;
+  /* @kind color */
+  --fg-subtle: 168 162 158;
+
+  /* @kind color */
+  --accent: 217 119 6;
+  /* @kind color */
+  --accent-hover: 180 83 9;
+  /* @kind color */
+  --accent-subtle: 255 251 235;
+
+  /* @kind color */
+  --success: 22 163 74;
+  /* @kind color */
+  --success-subtle: 240 253 244;
+  /* @kind color */
+  --error: 220 38 38;
+  /* @kind color */
+  --error-subtle: 254 242 242;
+  /* @kind color */
+  --info: 37 99 235;
+}
+
+[data-mode='dark'] {
+  /* Semantic channel triplets (dark overrides). Each is a color token. */
+  /* @kind color */
+  --bg: 28 25 23;
+  /* @kind color */
+  --surface: 41 37 36;
+  /* @kind color */
+  --surface-2: 51 48 46;
+  /* @kind color */
+  --border: 68 64 60;
+  /* @kind color */
+  --border-strong: 87 83 78;
+
+  /* @kind color */
+  --fg: 245 245 244;
+  /* @kind color */
+  --fg-muted: 168 162 158;
+  /* @kind color */
+  --fg-subtle: 120 113 108;
+
+  /* @kind color */
+  --accent: 245 158 11;
+  /* @kind color */
+  --accent-hover: 217 119 6;
+  /* @kind color */
+  --accent-subtle: 61 45 20;
+
+  /* @kind color */
+  --success: 74 222 128;
+  /* @kind color */
+  --success-subtle: 20 45 30;
+  /* @kind color */
+  --error: 248 113 113;
+  /* @kind color */
+  --error-subtle: 60 25 25;
+  /* @kind color */
+  --info: 96 165 250;
+}
 
 @tailwind base;
 @tailwind components;
@@ -16,6 +101,6 @@
   }
 
   body {
-    @apply bg-stone-50 text-stone-900;
+    @apply bg-bg text-fg;
   }
 }
