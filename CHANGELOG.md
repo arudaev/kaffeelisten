@@ -15,6 +15,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Template fields (`TemplateField`)** now highlight `{platzhalter}` tokens live *inside* the field as amber chips, show the raw token on each insert-chip, and render the "Beispiel" preview in an elevated card with the substituted sample values highlighted.
 - JetBrains Mono is now loaded for monospaced/numeric text (revealed PINs, code columns) — matching the design system's `--font-mono` stack.
 
+### Changed (Datenschutzerklärung — production-ready revision)
+- The `/datenschutz` page is now more comprehensive and precise for the production deployment: the Arbeits-E-Mail is correctly described as **required** (was "freiwillig"), matching the mandatory self-registration field.
+- Added sections for the **verantwortliche Stelle** (ITC1 GmbH), **Empfänger & Auftragsverarbeiter** (Supabase, Vercel, Resend, incl. non-EU transfer / SCC note), and full **Betroffenenrechte** (Art. 15–21 + Beschwerde beim BayLDA).
+- Corrected the localStorage disclosure (last-used company **and** light/dark preference) and clarified stammdaten vs. 90-day archive retention. Stand updated to Juli 2026.
+
 ### Fixed
 - **"Namen hinzufügen" (member self-registration) inputs were white in dark mode** — the Vorname/Nachname/Arbeits-E-Mail fields had no background and fell back to the browser default. They now use the themed inset (`bg-surface-2`, focus lifts to `bg-surface`) like the other form fields.
 
