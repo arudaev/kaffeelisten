@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — feat/admin-settings
 
+### Changed (Admin form primitives — visual & interaction redesign)
+- **Send-day picker (`DayGridPicker`)** now shows a plain-language summary line ("Versand am 1. jedes Monats" / "…letzten Tag des Monats"), tactile rounded day cells with a solid-amber selected state, and a distinct "Letzter Tag des Monats" row with a calendar glyph and a confirmation check.
+- **PIN entry (`PinInput`)** now has a blinking caret in the active slot, dots/digits that pop in as you type, a shake on a wrong PIN, and revealed reset-codes rendered in **JetBrains Mono**.
+- **Template fields (`TemplateField`)** now highlight `{platzhalter}` tokens live *inside* the field as amber chips, show the raw token on each insert-chip, and render the "Beispiel" preview in an elevated card with the substituted sample values highlighted.
+- JetBrains Mono is now loaded for monospaced/numeric text (revealed PINs, code columns) — matching the design system's `--font-mono` stack.
+
 ### Changed
 - Member self-registration ("Namen hinzufügen") now requires **Vorname, Nachname and Arbeits-E-Mail** (with email-format validation) — matching the admin-side member form, so every self-added member is reachable for the monthly statement.
 
