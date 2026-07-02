@@ -26,6 +26,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Corrected the localStorage disclosure (last-used company **and** light/dark preference) and clarified stammdaten vs. 90-day archive retention. Stand updated to Juli 2026.
 
 ### Fixed
+- **PIN reset now recognizes server admins from `ADMIN_EMAIL` even after custom report recipients are configured**, so those admins still receive their one-time recovery code.
 - **"Namen hinzufügen" (member self-registration) inputs were white in dark mode** — the Vorname/Nachname/Arbeits-E-Mail fields had no background and fell back to the browser default. They now use the themed inset (`bg-surface-2`, focus lifts to `bg-surface`) like the other form fields.
 
 ### Changed

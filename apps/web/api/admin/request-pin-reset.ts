@@ -38,15 +38,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single()
     if (error) throw new Error(error.message)
 
-    // The admin list authorised to recover access: the report recipients (or the
-    // ADMIN_EMAIL env fallback when none are set) plus the CEO.
+    // The admin list authorised to recover access: every configured report
+    // recipient, every server admin from ADMIN_EMAIL, and the CEO. ADMIN_EMAIL
+    // is always included here even when custom report recipients exist because
+    // server admins must not lose their recovery path when Settings is changed.
     const dbRecipients = (data.report_recipients ?? []).filter(Boolean)
-    const envFallback = (process.env.ADMIN_EMAIL ?? '')
+    const serverAdmins = (process.env.ADMIN_EMAIL ?? '')
       .split(',')
       .map(e => e.trim())
       .filter(Boolean)
-    const base = dbRecipients.length > 0 ? dbRecipients : envFallback
-    const admins = Array.from(new Set([...base, data.ceo_email].filter(Boolean) as string[]))
+    const admins = Array.from(
+      new Set([...dbRecipients, ...serverAdmins, data.ceo_email].filter(Boolean) as string[]),
+    )
 
     // Match case-insensitively but send to the stored casing.
     const match = requested ? admins.find(a => a.toLowerCase() === requested) : undefined
