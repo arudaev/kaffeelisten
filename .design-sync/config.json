@@ -3,7 +3,7 @@
   "shape": "package",
   "pkg": "@kaffeelisten/web",
   "globalName": "Kaffeelisten",
-  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css --minify",
+  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css",
   "entry": ".design-sync/ds-entry.tsx",
   "srcDir": "apps/web/src",
   "cssEntry": ".design-sync/.cache/ds-tailwind.css",

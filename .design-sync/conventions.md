@@ -61,9 +61,11 @@ automatically. Prefer them over raw color scales — this is the current idiom t
 - **Status:** `text-success` / `bg-success-subtle` (active/ok), `text-error` / `bg-error` /
   `bg-error-subtle` (error/destructive). Amber accent doubles for warnings.
 - **Radius:** `rounded-md`, `rounded-lg`, `rounded-xl` (12px), `rounded-2xl` (16px), `rounded-full`.
-- **Type:** `font-medium`/`font-semibold`/`font-bold`, Inter via `font-sans`. Tabular numbers
-  via `tabular-nums`.
-- **Motion:** `animate-pop` (success pop-in), `animate-shake` (error shake).
+- **Type:** `font-medium`/`font-semibold`/`font-bold`, Inter via `font-sans`, JetBrains Mono via
+  `font-mono` (numeric/code, e.g. revealed PINs — loaded via the remote font `@import`). Tabular
+  numbers via `tabular-nums`.
+- **Motion:** `animate-pop` (success/value pop-in), `animate-shake` (error shake), `animate-blink`
+  (input caret). Accent caret color via `caret-accent`.
 
 ## Where the truth lives
 

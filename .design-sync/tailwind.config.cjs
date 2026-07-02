@@ -17,6 +17,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       colors: {
         // Semantic, theme-driven tokens — mirrors apps/web/tailwind.config.ts.
@@ -70,10 +71,14 @@ module.exports = {
           '25%': { transform: 'translateX(-6px)' },
           '75%': { transform: 'translateX(6px)' },
         },
+        blink: {
+          '50%': { opacity: '0' },
+        },
       },
       animation: {
         pop: 'pop 280ms cubic-bezier(0.2, 0, 0, 1)',
         shake: 'shake 300ms ease-in-out',
+        blink: 'blink 1.1s steps(1, end) infinite',
       },
     },
   },
