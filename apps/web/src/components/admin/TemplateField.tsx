@@ -1,9 +1,5 @@
-import { useRef, type RefObject } from 'react'
-import {
-  PLACEHOLDERS,
-  renderExample,
-  type PlaceholderKey,
-} from '../../lib/reportPlaceholders'
+import { useCallback, useLayoutEffect, useRef, type RefObject } from 'react'
+import { PLACEHOLDERS, type PlaceholderKey } from '../../lib/reportPlaceholders'
 
 interface TemplateFieldProps {
   label: string
@@ -13,21 +9,51 @@ interface TemplateFieldProps {
   placeholders: PlaceholderKey[]
   /** Render a multi-line textarea instead of a single-line input. */
   multiline?: boolean
-  /** Native placeholder shown when empty (also drives the example fallback). */
+  /** Ghost text shown when empty (also drives the example fallback). */
   placeholder?: string
   /** Example text to show when the field is empty — i.e. the built-in default. */
   emptyExample?: string
 }
 
-const fieldBase =
-  'w-full px-3 border border-border rounded bg-surface-2 text-base text-fg ' +
-  'placeholder:text-fg-subtle outline-none transition-colors ' +
-  'focus:bg-surface focus:border-accent focus:ring-1 focus:ring-accent'
+// Matches any known placeholder token, e.g. "{monat}". Built from the shared
+// PLACEHOLDERS map so it stays in sync with reportPlaceholders.ts.
+const TOKEN_RE = new RegExp(`\\{(${Object.keys(PLACEHOLDERS).join('|')})\\}`, 'gi')
+
+type Part = { t: 'text' | 'tok'; v: string }
+
+function tokenize(str: string): Part[] {
+  const parts: Part[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  TOKEN_RE.lastIndex = 0
+  while ((m = TOKEN_RE.exec(str))) {
+    if (m.index > last) parts.push({ t: 'text', v: str.slice(last, m.index) })
+    parts.push({ t: 'tok', v: m[0] })
+    last = m.index + m[0].length
+  }
+  if (last < str.length) parts.push({ t: 'text', v: str.slice(last) })
+  return parts
+}
+
+const keyOf = (token: string) => token.slice(1, -1).toLowerCase() as PlaceholderKey
+
+// Shared text metrics — the mirror and the real input MUST use identical
+// typography and padding so the highlighted tokens sit exactly under the
+// (transparent) input text.
+const TEXT = 'text-[15px] font-medium leading-normal'
+const PAD = 'px-[13px] py-[11px]'
+
+/** Non-layout token highlight: box-shadow extends the tint without shifting glyphs. */
+const TOKEN_HL =
+  'rounded-sm bg-accent-subtle text-accent-hover ' +
+  'shadow-[2px_0_0_rgb(var(--accent-subtle)),-2px_0_0_rgb(var(--accent-subtle))]'
 
 /**
- * A labelled subject/intro field with clickable placeholder chips (inserted at
- * the caret) and a live "Beispiel:" line that resolves the tokens to sample
- * values — so the admin sees exactly what the finished text looks like.
+ * A labelled subject/intro field that highlights placeholder tokens live
+ * *inside* the field (a synced mirror layer renders `{tokens}` as amber chips
+ * behind a transparent input), offers pill insert-chips (inserted at the
+ * caret), and shows an elevated "Beispiel" card where the tokens are resolved
+ * to sample values — so the admin sees exactly what recipients will get.
  */
 export default function TemplateField({
   label,
@@ -39,6 +65,16 @@ export default function TemplateField({
   emptyExample,
 }: TemplateFieldProps) {
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
+
+  const syncScroll = useCallback(() => {
+    const el = ref.current
+    const mi = mirrorRef.current
+    if (!el || !mi) return
+    mi.scrollLeft = el.scrollLeft
+    mi.scrollTop = el.scrollTop
+  }, [])
+  useLayoutEffect(syncScroll, [value, syncScroll])
 
   const insert = (token: string) => {
     const el = ref.current
@@ -57,35 +93,69 @@ export default function TemplateField({
     })
   }
 
+  const parts = tokenize(value)
   const source = value.trim() ? value : emptyExample ?? ''
-  const example = renderExample(source)
+  const previewParts = tokenize(source)
+
+  const mirrorClass = [
+    'pointer-events-none absolute inset-0 overflow-hidden border-0 text-fg',
+    TEXT,
+    PAD,
+    multiline ? 'whitespace-pre-wrap break-words' : 'whitespace-pre',
+  ].join(' ')
+
+  const inputClass = [
+    'relative m-0 block w-full resize-none border-0 bg-transparent font-sans text-transparent caret-accent outline-none',
+    TEXT,
+    PAD,
+  ].join(' ')
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">{label}</span>
+    <div className="flex flex-col gap-2.5">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">{label}</span>
 
-      {multiline ? (
-        <textarea
-          ref={ref as RefObject<HTMLTextAreaElement>}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          rows={2}
-          placeholder={placeholder}
-          className={[fieldBase, 'py-2.5 min-h-[76px] resize-y'].join(' ')}
-        />
-      ) : (
-        <input
-          ref={ref as RefObject<HTMLInputElement>}
-          type="text"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={[fieldBase, 'h-11'].join(' ')}
-        />
-      )}
+      <div className="relative rounded-[10px] border-[1.5px] border-border bg-surface-2 transition-all focus-within:border-accent focus-within:bg-surface focus-within:ring-2 focus-within:ring-accent/25">
+        <div ref={mirrorRef} className={mirrorClass} aria-hidden="true">
+          {value === '' && placeholder ? (
+            <span className="text-fg-subtle">{placeholder}</span>
+          ) : (
+            parts.map((p, i) =>
+              p.t === 'tok' ? (
+                <span key={i} className={TOKEN_HL}>
+                  {p.v}
+                </span>
+              ) : (
+                <span key={i}>{p.v}</span>
+              ),
+            )
+          )}
+          {'​'}
+        </div>
+        {multiline ? (
+          <textarea
+            ref={ref as RefObject<HTMLTextAreaElement>}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            onScroll={syncScroll}
+            rows={2}
+            spellCheck={false}
+            className={[inputClass, 'min-h-[76px]'].join(' ')}
+          />
+        ) : (
+          <input
+            ref={ref as RefObject<HTMLInputElement>}
+            type="text"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            onScroll={syncScroll}
+            spellCheck={false}
+            className={inputClass}
+          />
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-fg-subtle mr-0.5">Einfügen:</span>
+        <span className="mr-0.5 text-xs text-fg-subtle">Platzhalter</span>
         {placeholders.map(key => {
           const p = PLACEHOLDERS[key]
           return (
@@ -94,20 +164,34 @@ export default function TemplateField({
               type="button"
               onClick={() => insert(p.token)}
               title={p.token}
-              className="inline-flex items-center gap-1 rounded bg-surface-2 hover:bg-border text-fg-muted text-xs font-medium px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-xs font-medium text-fg-muted transition-colors hover:border-accent hover:bg-accent-subtle hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <span className="text-accent">+</span>
-              {p.label}
+              <span className="text-sm font-bold leading-none text-accent">+</span>
+              <span>{p.label}</span>
+              <span className="font-mono text-[10.5px] opacity-65">{p.token}</span>
             </button>
           )
         })}
       </div>
 
-      {example && (
-        <p className="text-[13px] text-fg-muted leading-relaxed">
-          Beispiel: <span className="text-fg">{example}</span>
-        </p>
-      )}
+      <div className="flex flex-col gap-1.5 rounded-[10px] border border-border bg-surface-2 px-3.5 py-[11px]">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">Beispiel</span>
+        <span className="text-sm leading-relaxed text-fg">
+          {source ? (
+            previewParts.map((p, i) =>
+              p.t === 'tok' ? (
+                <span key={i} className="font-semibold text-accent-hover">
+                  {PLACEHOLDERS[keyOf(p.v)].sample}
+                </span>
+              ) : (
+                <span key={i}>{p.v}</span>
+              ),
+            )
+          ) : (
+            <span className="italic text-fg-subtle">Noch kein Text</span>
+          )}
+        </span>
+      </div>
     </div>
   )
 }

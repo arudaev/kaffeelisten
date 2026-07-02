@@ -485,7 +485,7 @@ export default function MemberFlow() {
                     onChange={e => setSelfFirstName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. Max"
-                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    className="h-12 px-4 rounded-xl border border-border bg-surface-2 text-fg text-base placeholder:text-fg-subtle transition-colors focus:outline-none focus:bg-surface focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -500,7 +500,7 @@ export default function MemberFlow() {
                     onChange={e => setSelfLastName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. Mustermann"
-                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    className="h-12 px-4 rounded-xl border border-border bg-surface-2 text-fg text-base placeholder:text-fg-subtle transition-colors focus:outline-none focus:bg-surface focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -515,7 +515,7 @@ export default function MemberFlow() {
                     onChange={e => setSelfEmail(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleAddSelf() }}
                     placeholder="z. B. max.mustermann@firma.de"
-                    className="h-12 px-4 rounded-xl border border-border text-fg text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    className="h-12 px-4 rounded-xl border border-border bg-surface-2 text-fg text-base placeholder:text-fg-subtle transition-colors focus:outline-none focus:bg-surface focus:ring-2 focus:ring-accent focus:border-accent"
                   />
                 </div>
               </div>
