@@ -24,6 +24,7 @@ export default function AdminLogin() {
 
   const [view, setView] = useState<View>('pin')
   const [error, setError] = useState(false)
+  const [notice, setNotice] = useState('')
   const attemptsRef = useRef(0)
   const [lockedOut, setLockedOut] = useState(false)
 
@@ -57,6 +58,7 @@ export default function AdminLogin() {
 
   const handleSubmit = async (pin: string) => {
     setError(false)
+    let status = 0
     try {
       const res = await fetch('/api/admin/auth?action=verify', {
         method: 'POST',
@@ -67,10 +69,22 @@ export default function AdminLogin() {
         enter()
         return
       }
+      status = res.status
     } catch {
-      /* fall through to error handling */
+      /* network error — treat as a generic failure below */
     }
+
     setError(true)
+
+    // 429 = throttled, not a wrong PIN. Don't count it toward the lockout and
+    // don't bounce to recovery — just tell the user to wait. Otherwise the real
+    // admin gets kicked into the email flow the moment the limiter kicks in.
+    if (status === 429) {
+      setNotice('Zu viele Versuche. Bitte einige Minuten warten und erneut versuchen.')
+      return
+    }
+
+    setNotice('')
     attemptsRef.current += 1
     if (attemptsRef.current >= MAX_ATTEMPTS) {
       setLockedOut(true)
@@ -139,6 +153,7 @@ export default function AdminLogin() {
       <PinKeypad
         onSubmit={handleSubmit}
         error={error}
+        notice={notice}
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
         onForgot={openRecovery}
