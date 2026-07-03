@@ -11,6 +11,7 @@
 // Never exposes secrets. Reads work_email only for the admin (members/dashboard).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { resolveMx, resolve } from 'node:dns/promises'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -81,6 +82,34 @@ function validateItem(body: Record<string, unknown>, partial: boolean): Ok<Parti
   return { value: out }
 }
 
+// Confirm the email domain can actually receive mail, so obvious typos
+// (anna@gmial.com, chef@firma.col) are caught before a per-member statement is
+// ever addressed to a dead domain. Checks MX records, falling back to A/AAAA
+// per RFC 5321. Fails OPEN on transient DNS trouble (timeout, SERVFAIL): a flaky
+// resolver must never block a legitimate save — only a domain that definitively
+// does not exist / accepts no mail is rejected.
+async function domainAcceptsMail(domain: string): Promise<Ok<true> | Err> {
+  const NOT_DELIVERABLE = new Set(['ENOTFOUND', 'ENODATA', 'NOTFOUND'])
+  const reject: Err = { error: 'Die E-Mail-Domain existiert nicht oder empfängt keine E-Mails.' }
+  const withTimeout = <T>(p: Promise<T>) =>
+    Promise.race([p, new Promise<T>((_, r) => setTimeout(() => r(new Error('ETIMEOUT')), 3000))])
+  try {
+    const mx = await withTimeout(resolveMx(domain))
+    return mx.length > 0 ? { value: true } : reject
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code ?? ''
+    if (!NOT_DELIVERABLE.has(code)) return { value: true } // transient → fail open
+    // No MX record: RFC 5321 allows delivery to the A/AAAA host as a fallback.
+    try {
+      const addrs = await withTimeout(resolve(domain))
+      return addrs.length > 0 ? { value: true } : reject
+    } catch (err2) {
+      const code2 = (err2 as NodeJS.ErrnoException).code ?? ''
+      return NOT_DELIVERABLE.has(code2) ? reject : { value: true }
+    }
+  }
+}
+
 interface MemberValues { name: string; company_id: string; work_email: string; active: boolean }
 async function validateMember(
   supabase: ReturnType<typeof makeAdminClient>,
@@ -97,6 +126,9 @@ async function validateMember(
     const email = String(body.work_email ?? '').trim()
     if (!email || !EMAIL_RE.test(email)) return { error: 'Ungültige Arbeits-E-Mail-Adresse.' }
     if (email.length > NAME_MAX) return { error: 'E-Mail-Adresse ist zu lang.' }
+    const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase()
+    const deliverable = await domainAcceptsMail(domain)
+    if (isErr(deliverable)) return deliverable
     out.work_email = email
   }
   if (!partial || body.company_id !== undefined) {
