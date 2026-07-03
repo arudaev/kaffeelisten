@@ -17,6 +17,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Known follow-ups (not in this branch)
 - The admin session still uses the PIN sent per request (held in `sessionStorage`) rather than an HttpOnly, Secure, SameSite session cookie. Moving to a real server-side session is the remaining admin-auth item and is deferred to a focused change that can be verified end-to-end against the deployed cookie flow.
 
+## [Unreleased] — fix/report-security-reliability
+
+### Security
+- **Fixed a stored-HTML/script injection in the PDF report (Critical).** User-controlled member, company and item names were inlined **unescaped** into the report HTML, which Puppeteer then rendered — a crafted name could inject markup/script and, because Chromium ran with web security relaxed, exfiltrate data or make server-side requests. All names are now HTML-escaped, the PDF is rendered with **JavaScript disabled** and **all network requests blocked**, `--disable-web-security` is dropped from the Chromium launch, and the report document carries a strict `Content-Security-Policy` (`default-src 'none'`). Defense in depth: even markup that slipped through could neither execute nor phone home.
+
+### Fixed
+- **Report emails no longer report failure as success.** The company report and each member statement now check Resend's `{ error }` result (the SDK does not throw on API errors). A failed company send aborts the run **before** archiving/pruning, so a report that wasn't delivered can't quietly wipe the month's data. Member-statement failures are counted and surfaced instead of silently swallowed.
+- **The monthly prune can no longer delete unreported data.** Old live transactions are removed only if they were actually archived (new `prune_reported_transactions` RPC filters on existence in `transactions_archive`), so a month that was never reported is retained rather than permanently lost.
+- **Duplicate reports on retry are prevented.** A new `report_runs` ledger (migration 019) records each month's run; a completed month is skipped on re-invocation and a concurrent second invocation is locked out. Resend **idempotency keys** dedupe individual emails within a run. A manual admin send explicitly forces a re-send (with a fresh key) while still respecting the concurrency lock.
+- **A PDF-generation failure no longer sinks the whole report.** If the PDF can't be built, the report still goes out with the Excel attachment / email only, instead of aborting.
+
+### Deploy note
+- Apply **migration 019** (report_runs table + prune RPC) before/with this deploy — it's additive and safe to apply anytime, but the report run needs it.
+
 ## [Unreleased] — fix/rls-lockdown
 
 ### Security

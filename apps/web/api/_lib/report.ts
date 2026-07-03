@@ -226,16 +226,35 @@ export async function generatePdf(
         'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
       )
 
+  // Drop --disable-web-security: the report HTML is fully self-contained (inline
+  // styles + inline SVG), so relaxing the same-origin policy only widens the
+  // attack surface if any markup slips through. (--no-sandbox stays; it's
+  // required in the serverless runtime and is not what defends against injection.)
+  const safeArgs = chromium.args.filter(a => !a.startsWith('--disable-web-security'))
+
   const browser = await puppeteer.launch({
-    args: chromium.args,
+    args: safeArgs,
     executablePath,
     headless: true,
   })
 
   try {
     const page = await browser.newPage()
+
+    // The report contains no scripts and loads no external resources. Disabling
+    // JS and aborting every non-inline request means that even if a crafted
+    // member/company/item name embedded a <script> or an external URL, it can
+    // neither execute nor exfiltrate/SSRF. Defense-in-depth alongside escaping.
+    await page.setJavaScriptEnabled(false)
+    await page.setRequestInterception(true)
+    page.on('request', req => {
+      const url = req.url()
+      if (url.startsWith('data:') || url.startsWith('about:')) req.continue()
+      else req.abort()
+    })
+
     const html = buildReportHtml(summaries, transactions, monthLabel, reportMonth)
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { waitUntil: 'load' })
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -455,6 +474,7 @@ export async function sendEmail(
   recipients: string[],
   ccEmails: string[],
   format: ReportFormat,
+  idempotencyKey: string,
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -482,28 +502,48 @@ export async function sendEmail(
     attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
   }
 
-  await resend.emails.send({
-    from: 'Kaffeelisten <bericht@kaffeelisten.de>',
-    to: recipients,
-    ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
-    subject: resolveReportSubject(format, monthLabel, reportMonth),
-    html,
-    attachments,
-  })
+  const { error } = await resend.emails.send(
+    {
+      from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+      to: recipients,
+      ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
+      subject: resolveReportSubject(format, monthLabel, reportMonth),
+      html,
+      attachments,
+    },
+    // Idempotency key: a retry for the same run won't send a second copy
+    // (Resend dedupes within its window). The caller varies the key when an
+    // admin explicitly forces a re-send.
+    { idempotencyKey: `report-${idempotencyKey}` },
+  )
+  // Resend returns { data, error } and generally does NOT throw on API errors —
+  // so an unchecked call reports failures as success. Surface it so the caller
+  // does not archive/prune a report that was never delivered.
+  if (error) {
+    throw new Error(`Resend company report failed: ${error.message ?? JSON.stringify(error)}`)
+  }
 }
 
 // ─── Per-member monthly statements (feature E) ────────────────────────────────
 
+export interface MemberStatementResult {
+  sent: number
+  failed: number
+}
+
 // Sends each member who logged ≥1 transaction their own itemized statement.
-// Sequential with light throttling to respect Resend rate limits; individual
-// failures are logged and skipped so one bad address never aborts the run.
-// Returns how many statements were sent.
+// Sequential with light throttling to respect Resend rate limits. Individual
+// failures are counted and logged (not thrown) so one bad address never aborts
+// the run — but the count is returned so the caller can surface it rather than
+// silently swallowing delivery failures. `idempotencyKey` scopes the per-member
+// Resend idempotency keys to this run so retries don't double-send.
 export async function sendMemberStatements(
   transactions: EnrichedTransaction[],
   monthLabel: string,
   reportMonth: string,
   format: ReportFormat,
-): Promise<number> {
+  idempotencyKey: string,
+): Promise<MemberStatementResult> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
   const resend = new Resend(resendKey)
@@ -518,7 +558,8 @@ export async function sendMemberStatements(
   }
 
   let sent = 0
-  for (const { name, email, entries } of byMember.values()) {
+  let failed = 0
+  for (const [memberId, { name, email, entries }] of byMember) {
     if (!email) continue // no reachable address — skip silently
     const firstName = name.trim().split(/\s+/)[0] || name
     const gesamt = formatEuro(entries.reduce((s, e) => s + e.total_cents, 0))
@@ -530,20 +571,25 @@ export async function sendMemberStatements(
       ? renderTemplate(format.memberIntro, vars)
       : undefined
     try {
-      await resend.emails.send({
-        from: 'Kaffeelisten <bericht@kaffeelisten.de>',
-        to: [email],
-        subject,
-        html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro }),
-      })
+      const { error } = await resend.emails.send(
+        {
+          from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+          to: [email],
+          subject,
+          html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro }),
+        },
+        { idempotencyKey: `member-${idempotencyKey}-${memberId}` },
+      )
+      if (error) throw new Error(error.message ?? JSON.stringify(error))
       sent++
       // Light throttle — Resend free tier limits requests/second.
       await new Promise(r => setTimeout(r, 120))
     } catch (err) {
+      failed++
       console.error(`[member-statement] failed for ${email}:`, err instanceof Error ? err.message : err)
     }
   }
-  return sent
+  return { sent, failed }
 }
 
 // ─── Archive and reset ────────────────────────────────────────────────────────
@@ -584,10 +630,11 @@ export async function pruneOldTransactions(): Promise<void> {
   const now = new Date()
   const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
 
-  const { error: liveErr } = await supabase
-    .from('transactions')
-    .delete()
-    .lt('logged_at', cutoff)
+  // Only delete live transactions that have actually been archived. A month that
+  // was never reported (and therefore never archived) is retained rather than
+  // silently lost — the delete goes through prune_reported_transactions, which
+  // filters on existence in transactions_archive.
+  const { error: liveErr } = await supabase.rpc('prune_reported_transactions', { p_cutoff: cutoff })
   if (liveErr) throw new Error(`Prune transactions failed: ${liveErr.message}`)
 
   // Keep transactions_archive within the same 90-day window to stay within
@@ -639,37 +686,130 @@ export async function deactivateInactiveMembers(): Promise<void> {
   if (updErr) throw new Error(`deactivateInactiveMembers update failed: ${updErr.message}`)
 }
 
-// ─── Orchestrator ─────────────────────────────────────────────────────────────
+// ─── Run ledger (idempotency at the run level) ────────────────────────────────
 
-export async function runMonthlyReport(forMonth?: string): Promise<void> {
-  const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
-  const summaries = computeSummary(transactions)
-  const settings = await fetchReportSettings()
-  const { format } = settings
+// A stale 'running' row older than this is treated as a crashed attempt and may
+// be retried; a fresh one blocks a concurrent double-fire.
+const RUNNING_STALE_MS = 15 * 60 * 1000
 
-  // Only build the attachments that will actually be sent.
-  const [pdfBuffer, xlsxBuffer] = await Promise.all([
-    format.includePdf ? generatePdf(summaries, transactions, monthLabel, reportMonth) : Promise.resolve(null),
-    format.includeExcel ? generateExcel(summaries, transactions) : Promise.resolve(null),
-  ])
-  await sendEmail(
-    pdfBuffer,
-    xlsxBuffer,
-    summaries,
-    transactions,
-    monthLabel,
-    reportMonth,
-    settings.recipients,
-    settings.ccEmails,
-    format,
-  )
+interface RunResult {
+  status: 'sent' | 'skipped'
+  memberStatements?: MemberStatementResult
+}
 
-  // Per-member statements augment (never replace) the company report.
-  if (settings.memberStatementsEnabled && transactions.length > 0) {
-    await sendMemberStatements(transactions, monthLabel, reportMonth, format)
+// Acquire the run for a month. Returns false when it should be skipped (already
+// completed, or another attempt is actively running) unless force is set.
+async function beginReportRun(reportMonth: string, force: boolean): Promise<boolean> {
+  const supabase = makeSupabase()
+  const { data: existing } = await supabase
+    .from('report_runs')
+    .select('status, updated_at')
+    .eq('report_month', reportMonth)
+    .maybeSingle()
+
+  if (existing) {
+    // Concurrency lock applies even to a forced re-send: never run two attempts
+    // for the same month at once.
+    if (
+      existing.status === 'running' &&
+      Date.now() - new Date(existing.updated_at as string).getTime() < RUNNING_STALE_MS
+    ) {
+      return false // another invocation is in flight
+    }
+    // Skip an already-completed month unless the caller forces a re-send.
+    if (existing.status === 'completed' && !force) return false
   }
 
-  await archiveTransactions(transactions, reportMonth)
-  await pruneOldTransactions()
-  await deactivateInactiveMembers()
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('report_runs').upsert(
+    { report_month: reportMonth, status: 'running', started_at: now, updated_at: now, last_error: null },
+    { onConflict: 'report_month' },
+  )
+  if (error) throw new Error(`report_runs begin failed: ${error.message}`)
+  return true
+}
+
+async function completeReportRun(reportMonth: string): Promise<void> {
+  const supabase = makeSupabase()
+  const now = new Date().toISOString()
+  await supabase
+    .from('report_runs')
+    .update({ status: 'completed', completed_at: now, updated_at: now })
+    .eq('report_month', reportMonth)
+}
+
+async function failReportRun(reportMonth: string, message: string): Promise<void> {
+  const supabase = makeSupabase()
+  await supabase
+    .from('report_runs')
+    .update({ status: 'failed', last_error: message.slice(0, 500), updated_at: new Date().toISOString() })
+    .eq('report_month', reportMonth)
+}
+
+// ─── Orchestrator ─────────────────────────────────────────────────────────────
+
+// force: bypass the run ledger's skip-if-completed guard (admin explicit re-send)
+// and use a fresh idempotency key so the emails actually go out again.
+export async function runMonthlyReport(
+  forMonth?: string,
+  opts: { force?: boolean } = {},
+): Promise<RunResult> {
+  const { transactions, reportMonth, monthLabel } = await fetchAndEnrich(forMonth)
+
+  const force = opts.force ?? false
+  const acquired = await beginReportRun(reportMonth, force)
+  if (!acquired) return { status: 'skipped' }
+
+  // Stable key dedupes retries of this run; a forced re-send gets a unique key so
+  // Resend actually delivers it again.
+  const idempotencyKey = force ? `${reportMonth}-${Date.now()}` : reportMonth
+
+  try {
+    const summaries = computeSummary(transactions)
+    const settings = await fetchReportSettings()
+    const { format } = settings
+
+    // Build attachments. A PDF failure must NOT sink the whole report — fall back
+    // to sending the Excel/email only, so the report still goes out.
+    let pdfBuffer: Buffer | null = null
+    if (format.includePdf) {
+      try {
+        pdfBuffer = await generatePdf(summaries, transactions, monthLabel, reportMonth)
+      } catch (err) {
+        console.error('[report] PDF generation failed — sending without PDF:', err instanceof Error ? err.message : err)
+      }
+    }
+    const xlsxBuffer = format.includeExcel ? await generateExcel(summaries, transactions) : null
+
+    await sendEmail(
+      pdfBuffer,
+      xlsxBuffer,
+      summaries,
+      transactions,
+      monthLabel,
+      reportMonth,
+      settings.recipients,
+      settings.ccEmails,
+      format,
+      idempotencyKey,
+    )
+
+    // Per-member statements augment (never replace) the company report.
+    let memberStatements: MemberStatementResult | undefined
+    if (settings.memberStatementsEnabled && transactions.length > 0) {
+      memberStatements = await sendMemberStatements(transactions, monthLabel, reportMonth, format, idempotencyKey)
+    }
+
+    // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
+    await archiveTransactions(transactions, reportMonth)
+    await pruneOldTransactions()
+    await deactivateInactiveMembers()
+
+    await completeReportRun(reportMonth)
+    return { status: 'sent', memberStatements }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await failReportRun(reportMonth, message)
+    throw err
+  }
 }
