@@ -220,8 +220,15 @@ export default function AdminDashboard() {
       String(r.quantity),
       (r.price_cents / 100).toFixed(2).replace('.', ','),
     ])
+    // Neutralize spreadsheet formula injection: a cell beginning with = + - @ or
+    // a leading control char can be executed as a formula by Excel/Sheets when the
+    // CSV is opened. Prefix those with an apostrophe (renders as text), then quote.
+    const csvCell = (value: string): string => {
+      const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+      return `"${guarded.replace(/"/g, '""')}"`
+    }
     const csv = [header, ...rows]
-      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(';'))
+      .map(row => row.map(csvCell).join(';'))
       .join('\r\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
