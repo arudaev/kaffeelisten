@@ -82,19 +82,22 @@ interface SettingsData {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function adminPin(): string {
-  return sessionStorage.getItem('adminPin') ?? ''
-}
-
 function formatDay(iso: string | null): string | null {
   if (!iso) return null
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-function lastDayOfMonthLabel(): string {
+// The report always covers the previous, closed month; `autoDay` (default 1) is
+// the day of the following month it goes out. This shows the next such send date:
+// the configured day of the current month if still ahead, otherwise next month.
+// Display hint only — the cron evaluates the authoritative check in Europe/Berlin.
+function nextSendLabel(autoDay: number | null): string {
   const now = new Date()
-  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  return last.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
+  const daysThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dueDay = Math.max(1, Math.min(autoDay ?? 1, daysThisMonth))
+  const monthOffset = now.getDate() <= dueDay ? 0 : 1
+  const next = new Date(now.getFullYear(), now.getMonth() + monthOffset, dueDay)
+  return next.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 export default function SettingsPage({ onToast, onMenuClick }: Props) {
@@ -180,8 +183,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       setLoading(true)
       try {
         const [res, tRes] = await Promise.all([
-          fetch('/api/admin/settings', { headers: { 'x-admin-pin': adminPin() } }),
-          fetch('/api/admin/theme', { headers: { 'x-admin-pin': adminPin() } }),
+          fetch('/api/admin/settings'),
+          fetch('/api/admin/theme'),
         ])
         if (res.ok) {
           const data = (await res.json()) as SettingsData
@@ -264,7 +267,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       const [res, tRes] = await Promise.all([
         fetch('/api/admin/settings', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             report_recipients: recipients,
             ceo_email: ceoEmail.trim() || null,
@@ -278,7 +281,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
         }),
         fetch('/api/admin/theme', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             default_mode: themeDefaultMode,
             active_palette: activePalette,
@@ -309,7 +312,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     try {
       const res = await fetch('/api/admin/preview-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, format: formatPayload() }),
       })
       if (res.ok) {
@@ -352,8 +355,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
         body: JSON.stringify({ currentPin: curPin, newPin: nextPin }),
       })
       if (res.ok) {
-        // The changed PIN becomes the session PIN so other admin calls keep working.
-        sessionStorage.setItem('adminPin', nextPin)
+        // The session cookie stays valid across a PIN change (it isn't tied to
+        // the PIN value), so no client-side credential needs updating.
         setModal(null)
         onToast('PIN erfolgreich geändert.')
         void refreshPinMeta()
@@ -370,7 +373,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
 
   const refreshPinMeta = async () => {
     try {
-      const res = await fetch('/api/admin/settings', { headers: { 'x-admin-pin': adminPin() } })
+      const res = await fetch('/api/admin/settings')
       if (res.ok) applySettings((await res.json()) as SettingsData)
     } catch { /* non-fatal */ }
   }
@@ -595,7 +598,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-center justify-between gap-4 pb-2.5 border-b border-border">
                     <span className="text-sm text-fg-muted">Nächster automatischer Versand</span>
-                    <span className="text-sm font-semibold text-fg">{lastDayOfMonthLabel()}</span>
+                    <span className="text-sm font-semibold text-fg">{nextSendLabel(autoDay)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-sm text-fg-muted">Mitglieder-Aufstellungen</span>
@@ -612,12 +615,14 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                     Steuere, ob und wann der Monatsbericht automatisch versendet wird.
                   </p>
                 </div>
-                <Toggle checked={autoEnabled} onChange={setAutoEnabled} label="Bericht automatisch am Monatsende senden" />
+                <Toggle checked={autoEnabled} onChange={setAutoEnabled} label="Monatsbericht automatisch senden" />
                 <div className="flex flex-col gap-2">
                   <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Versandtag</span>
                   <DayGridPicker value={autoDay} onChange={setAutoDay} disabled={!autoEnabled} />
                   <p className="text-[13px] text-fg-muted leading-relaxed">
-                    Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an.
+                    Der Bericht umfasst immer den abgeschlossenen Vormonat und geht am gewählten
+                    Tag des Folgemonats abends (22:00) raus. Wird ein Tag verpasst, holt das
+                    System den Versand automatisch nach.
                   </p>
                 </div>
               </section>

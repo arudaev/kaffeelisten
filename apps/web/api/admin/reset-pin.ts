@@ -10,6 +10,7 @@ import {
   consumeRateLimit,
   resetRateLimit,
   clientKey,
+  issueSessionCookie,
 } from '../_lib/adminAuth'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -50,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { error } = await supabase.rpc('set_admin_pin', { p_pin: newPin })
       if (error) throw new Error(error.message)
       await resetRateLimit(rlKey)
+      res.setHeader('Set-Cookie', issueSessionCookie())
       return res.status(200).json({ ok: true })
     }
 
@@ -64,6 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: 'Code ungültig oder abgelaufen.' })
     }
     await resetRateLimit(rlKey)
+    res.setHeader('Set-Cookie', issueSessionCookie())
     return res.status(200).json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

@@ -154,13 +154,22 @@ export default function AdminDashboard() {
     setTimeout(() => setToast(null), 3500)
   }, [])
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' })
+    } catch {
+      /* clear locally regardless */
+    }
+    sessionStorage.removeItem('adminSession')
+    navigate('/admin', { replace: true })
+  }
+
   const handleSendReport = async () => {
     setReportSending(true)
     try {
-      const pin = sessionStorage.getItem('adminPin') ?? ''
       const res = await fetch('/api/send-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: selectedMonth }),
       })
       setReportOpen(false)
@@ -301,6 +310,7 @@ export default function AdminDashboard() {
         active={activePage}
         onNavigate={setActivePage}
         onSendReport={() => setReportOpen(true)}
+        onLogout={handleLogout}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

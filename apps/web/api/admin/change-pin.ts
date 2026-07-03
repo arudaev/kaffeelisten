@@ -10,12 +10,18 @@ import {
   consumeRateLimit,
   resetRateLimit,
   clientKey,
+  requireAdmin,
 } from '../_lib/adminAuth'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  // Changing the PIN requires an active admin session AND the current PIN — a
+  // stolen session alone can't rotate the credential without knowing it.
+  const auth = await requireAdmin(req.headers)
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
   const rlKey = `change:${clientKey(req.headers)}`
   if (!(await consumeRateLimit(rlKey))) {

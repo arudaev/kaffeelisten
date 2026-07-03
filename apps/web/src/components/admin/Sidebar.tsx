@@ -25,11 +25,12 @@ interface SidebarProps {
   active: PageId
   onNavigate: (page: PageId) => void
   onSendReport: () => void
+  onLogout: () => void
   open: boolean
   onClose: () => void
 }
 
-export default function Sidebar({ active, onNavigate, onSendReport, open, onClose }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, onSendReport, onLogout, open, onClose }: SidebarProps) {
   return (
     <>
       {/* Mobile backdrop */}
@@ -97,6 +98,13 @@ export default function Sidebar({ active, onNavigate, onSendReport, open, onClos
           >
             <AdminIcon name="send" size={16} strokeWidth={2} />
             Bericht senden
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="h-9 rounded-md text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            Abmelden
           </button>
           <div className="flex items-center gap-2">
             <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyAdminPin, consumeRateLimit, resetRateLimit, clientKey } from '../_lib/adminAuth'
+import { verifyAdminPin, consumeRateLimit, resetRateLimit, clientKey, issueSessionCookie } from '../_lib/adminAuth'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (await verifyAdminPin(pin)) {
       await resetRateLimit(rlKey)
+      res.setHeader('Set-Cookie', issueSessionCookie())
       return res.status(200).json({ ok: true })
     }
     return res.status(403).json({ error: 'Ungültige PIN' })
