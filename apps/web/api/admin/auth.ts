@@ -54,15 +54,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 // POST verify — validates the PIN and, on success, issues the session cookie.
+//
+// The PIN is checked BEFORE the rate limit is consumed: the durable limiter only
+// counts *failed* attempts, and a correct PIN always succeeds (and clears the
+// counter). This is what keeps a brute-force lock from also locking out the real
+// admin — a locked key blocks further wrong guesses, never the right one.
 async function verify(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  // Durable, cross-instance brute-force limit on the 6-digit space.
   const rlKey = `verify:${clientKey(req.headers)}`
-  if (!(await consumeRateLimit(rlKey))) {
-    return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut versuchen.' })
-  }
-
   const { pin } = (req.body ?? {}) as { pin?: string }
 
   try {
@@ -70,6 +70,13 @@ async function verify(req: VercelRequest, res: VercelResponse) {
       await resetRateLimit(rlKey)
       res.setHeader('Set-Cookie', issueSessionCookie())
       return res.status(200).json({ ok: true })
+    }
+    // Wrong PIN — count it. consumeRateLimit returns false once this attempt
+    // trips (or is already past) the cap; surface that as 429 so the client can
+    // show a throttle message instead of another "wrong PIN".
+    const allowed = await consumeRateLimit(rlKey)
+    if (!allowed) {
+      return res.status(429).json({ error: 'Zu viele Versuche. Bitte einige Minuten warten.' })
     }
     return res.status(403).json({ error: 'Ungültige PIN' })
   } catch (err) {
@@ -88,14 +95,14 @@ async function change(req: VercelRequest, res: VercelResponse) {
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
   const rlKey = `change:${clientKey(req.headers)}`
-  if (!(await consumeRateLimit(rlKey))) {
-    return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut versuchen.' })
-  }
-
   const { currentPin, newPin } = (req.body ?? {}) as { currentPin?: string; newPin?: string }
 
   try {
+    // Verify the current PIN first, throttling only failed attempts (see verify()).
     if (!(await verifyAdminPin(currentPin))) {
+      if (!(await consumeRateLimit(rlKey))) {
+        return res.status(429).json({ error: 'Zu viele Versuche. Bitte einige Minuten warten.' })
+      }
       return res.status(403).json({ error: 'Aktuelle PIN ist falsch.' })
     }
     await resetRateLimit(rlKey)
