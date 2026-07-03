@@ -157,6 +157,7 @@ export default function AdminLogin() {
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
         onForgot={openRecovery}
+        onHome={() => navigate('/')}
       />
     )
   }
@@ -166,7 +167,13 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-[400px] flex flex-col gap-6">
         <div className="text-center">
-          <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">Kaffeelisten</p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+          >
+            Kaffeelisten
+          </button>
           <h1 className="text-[26px] font-bold text-fg tracking-tight">PIN zurücksetzen</h1>
         </div>
 
