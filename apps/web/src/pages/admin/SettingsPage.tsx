@@ -67,6 +67,7 @@ interface SettingsData {
   member_statements_enabled: boolean
   auto_report_enabled: boolean
   auto_report_day: number | null
+  max_items_per_order: number | null
   report_accent: string
   report_subject: string | null
   report_intro: string | null
@@ -112,6 +113,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   // Scheduling
   const [autoEnabled, setAutoEnabled] = useState(true)
   const [autoDay, setAutoDay] = useState<number | null>(null)
+  // Per-order item cap ('' = unlimited).
+  const [maxItemsInput, setMaxItemsInput] = useState('')
 
   // Format
   const [includePdf, setIncludePdf] = useState(true)
@@ -159,6 +162,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setMemberReport(d.member_statements_enabled)
     setAutoEnabled(d.auto_report_enabled)
     setAutoDay(d.auto_report_day)
+    setMaxItemsInput(d.max_items_per_order != null ? String(d.max_items_per_order) : '')
     setIncludePdf(d.report_include_pdf)
     setIncludeExcel(d.report_include_excel)
     setReportSubject(d.report_subject ?? '')
@@ -268,6 +272,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             member_statements_enabled: memberReport,
             auto_report_enabled: autoEnabled,
             auto_report_day: autoDay,
+            max_items_per_order: maxItemsInput.trim() === '' ? null : Number(maxItemsInput),
             ...formatPayload(),
           }),
         }),
@@ -614,6 +619,29 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   <p className="text-[13px] text-fg-muted leading-relaxed">
                     Der Versand erfolgt abends (22:00). „Letzter Tag“ passt sich an kurze Monate an.
                   </p>
+                </div>
+              </section>
+
+              {/* Card 6b — Bestellung */}
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-[18px]">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-fg">Bestellung</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
+                    Begrenze, wie viele Artikel eine Person in einer Bestellung erfassen kann.
+                  </p>
+                </div>
+                <div className="max-w-[220px]">
+                  <AdminField
+                    label="Max. Artikel pro Bestellung"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={999}
+                    value={maxItemsInput}
+                    onChange={e => setMaxItemsInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="Unbegrenzt"
+                    hint="Leer lassen für unbegrenzt."
+                  />
                 </div>
               </section>
 

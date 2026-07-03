@@ -1,7 +1,7 @@
 // Member-facing logging flow: start → company → member → item → confirm → success
 // Design spec: docs/design-foundation.md, ui_kits/member-flow/
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
@@ -16,7 +16,11 @@ import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 
 type Company = Database['public']['Tables']['companies']['Row']
-type Member = Database['public']['Tables']['members']['Row']
+// The anonymous member flow may only read the non-PII columns of members
+// (work_email is admin-only — migration 015). Keep this shape in sync with the
+// column-level SELECT grant.
+type Member = Pick<Database['public']['Tables']['members']['Row'], 'id' | 'name' | 'company_id' | 'active'>
+const MEMBER_PUBLIC_COLS = 'id, name, company_id, active' as const
 type Item = Database['public']['Tables']['items']['Row']
 type Step = 'start' | 'company' | 'member' | 'item' | 'confirm' | 'success'
 
@@ -131,12 +135,19 @@ export default function MemberFlow() {
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Admin-configured cap on total quantity per order (null = unlimited).
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState<number | null>(null)
+  const [limitReached, setLimitReached] = useState(false)
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [cart, setCart] = useState<Map<string, CartEntry>>(new Map())
   const [activeCategory, setActiveCategory] = useState<string>('coffee')
   const [submitting, setSubmitting] = useState(false)
+  // Transaction ids of the order just written, so "Rückgängig" can delete them
+  // (anon has no direct DELETE — undo goes through the undo_order RPC).
+  const [lastOrderIds, setLastOrderIds] = useState<string[]>([])
+  const [undoing, setUndoing] = useState(false)
 
   // Self-registration modal
   const [addSelfOpen, setAddSelfOpen] = useState(false)
@@ -172,6 +183,16 @@ export default function MemberFlow() {
       if (cats.length > 0) setActiveCategory(cats[0])
     }
     fetchInitial()
+
+    // Non-sensitive runtime config (per-order cap). Fails open to unlimited so a
+    // config hiccup never blocks logging.
+    fetch('/api/config')
+      .then(r => (r.ok ? r.json() : null))
+      .then(cfg => {
+        const max = cfg?.maxItemsPerOrder
+        if (typeof max === 'number' && Number.isFinite(max)) setMaxItemsPerOrder(max)
+      })
+      .catch(() => { /* keep unlimited */ })
   }, [])
 
   // Load members when company is selected
@@ -181,7 +202,7 @@ export default function MemberFlow() {
       setLoadingMembers(true)
       const { data, error: err } = await supabase
         .from('members')
-        .select('*')
+        .select(MEMBER_PUBLIC_COLS)
         .eq('company_id', selectedCompany.id)
         .eq('active', true)
         .order('name')
@@ -199,17 +220,23 @@ export default function MemberFlow() {
     }
   }, [addSelfOpen])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setStep('start')
     setSelectedCompany(null)
     setSelectedMember(null)
     setCart(new Map())
     setError(null)
+    setLimitReached(false)
     const cats = [...new Set(items.map(i => i.category))]
     if (cats.length > 0) setActiveCategory(cats[0])
-  }
+  }, [items])
 
   const addToCart = (item: Item) => {
+    // Enforce the admin-configured per-order cap on total quantity.
+    if (maxItemsPerOrder != null && cartCount >= maxItemsPerOrder) {
+      setLimitReached(true)
+      return
+    }
     setCart(prev => {
       const next = new Map(prev)
       const entry = next.get(item.id)
@@ -219,6 +246,7 @@ export default function MemberFlow() {
   }
 
   const removeFromCart = (itemId: string) => {
+    setLimitReached(false)
     setCart(prev => {
       const next = new Map(prev)
       const entry = next.get(itemId)
@@ -232,20 +260,46 @@ export default function MemberFlow() {
     })
   }
 
+  // "Bestätigen" writes the order immediately through the validated log_order RPC
+  // (server derives company_id + timestamp, checks the member/items/quantities and
+  // the per-order cap). Success is only shown once the write resolves, so the
+  // "Gespeichert" screen never lies. The confirm → back → confirm double-order
+  // path is closed too: if the person undoes, the rows are deleted before they can
+  // re-confirm.
   const handleConfirm = async () => {
-    if (!selectedMember || !selectedCompany || cartEntries.length === 0) return
+    if (!selectedMember || !selectedCompany || cartEntries.length === 0 || submitting) return
     setSubmitting(true)
-    const rows = cartEntries.map(e => ({
-      member_id: selectedMember.id,
-      company_id: selectedCompany.id,
-      item_id: e.item.id,
-      quantity: e.quantity,
-    }))
-    const { error: err } = await supabase.from('transactions').insert(rows)
+    setError(null)
+    const { data, error: err } = await supabase.rpc('log_order', {
+      p_member_id: selectedMember.id,
+      p_items: cartEntries.map(e => ({ item_id: e.item.id, quantity: e.quantity })),
+    })
     setSubmitting(false)
-    if (err) { setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
+    if (err || !data) {
+      setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
+      return
+    }
+    setLastOrderIds(data)
     setStep('success')
   }
+
+  // "Rückgängig" — delete the rows this order just created (only possible within
+  // the undo window; anon can't DELETE directly, so it goes through undo_order).
+  const handleUndo = useCallback(async () => {
+    if (undoing) return
+    if (lastOrderIds.length === 0) { setStep('confirm'); return }
+    setUndoing(true)
+    const { error: err } = await supabase.rpc('undo_order', { p_ids: lastOrderIds })
+    setUndoing(false)
+    if (err) {
+      // The order stays saved; make that clear rather than pretending it's gone.
+      setError('Rückgängig machen fehlgeschlagen — der Eintrag wurde gespeichert.')
+      reset()
+      return
+    }
+    setLastOrderIds([])
+    setStep('confirm')
+  }, [undoing, lastOrderIds, reset])
 
   const openAddSelf = () => {
     setSelfFirstName('')
@@ -267,15 +321,16 @@ export default function MemberFlow() {
     setAddingMember(true)
     setAddSelfError(null)
     const storedName = `${capitalizeName(first)} ${capitalizeName(last)}`
-    const { data, error: err } = await supabase
-      .from('members')
-      .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
-      .select()
-      .single()
+    const { data, error: err } = await supabase.rpc('register_member', {
+      p_company_id: selectedCompany.id,
+      p_name: storedName,
+      p_email: email,
+    })
     setAddingMember(false)
-    if (err || !data) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
-    setMembers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
-    setSelectedMember(data)
+    const created = data?.[0]
+    if (err || !created) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
+    setMembers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+    setSelectedMember(created)
     setAddSelfOpen(false)
     setCart(new Map())
     setStep('item')
@@ -293,7 +348,7 @@ export default function MemberFlow() {
     return (
       <SuccessScreen
         summary={successSummary}
-        onUndo={() => setStep('confirm')}
+        onUndo={handleUndo}
         onReset={reset}
       />
     )
@@ -573,6 +628,7 @@ export default function MemberFlow() {
         totalSteps={4}
         onBack={() => {
           setCart(new Map())
+          setLimitReached(false)
           setStep('member')
         }}
         header={
@@ -590,7 +646,7 @@ export default function MemberFlow() {
                 {cartCount} {cartCount === 1 ? 'Artikel' : 'Artikel'} · {formatPrice(cartTotal)}
               </span>
               <div className="flex-1" />
-              <BigButton variant="secondary" onClick={() => setCart(new Map())}>
+              <BigButton variant="secondary" onClick={() => { setCart(new Map()); setLimitReached(false) }}>
                 Auswahl löschen
               </BigButton>
               <BigButton variant="primary" onClick={() => setStep('confirm')}>
@@ -601,6 +657,11 @@ export default function MemberFlow() {
         }
       >
         <div className="flex flex-col gap-4">
+          {maxItemsPerOrder != null && (limitReached || cartCount >= maxItemsPerOrder) && (
+            <div className="rounded-xl border border-accent bg-accent-subtle px-4 py-3 text-sm text-accent">
+              Maximal {maxItemsPerOrder} {maxItemsPerOrder === 1 ? 'Artikel' : 'Artikel'} pro Bestellung.
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap">
             {availableCategories.map(cat => {
               const isActive = cat === activeCategory

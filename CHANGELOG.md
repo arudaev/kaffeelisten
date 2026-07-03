@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — fix/rls-lockdown
+
+### Security
+- **The public (anon) Supabase key can no longer read personal data or write catalogue data.** Previously the key shipped in the browser bundle had table-wide `SELECT` on members (including `work_email`) and transactions, plus `INSERT`/`UPDATE` on companies, members and items — so anyone with the key could read every member's work email and every transaction and corrupt the catalogue. Migration 015 revokes all of that. The anonymous member flow keeps only what it needs: reading active companies/items, reading the non-PII columns (`id, name, company_id, active`) of active members, and inserting its own member row and transactions.
+- **All admin data access now runs server-side through a PIN-protected, service-role API** (`/api/admin/data`). The admin dashboard and the Companies/Items/Members pages no longer query Supabase with the anon key; reads (including work emails) and all catalogue writes are authenticated server-side. Admin writes are now validated on the server (name/price/category/email bounds, company existence). This makes the privacy notice's "only campus admins have access" statement actually enforced by the database.
+- **Anonymous writes are now validated server-side.** Logging and self-registration go through `SECURITY DEFINER` RPCs (`log_order`, `register_member`; migration 017) instead of raw table inserts. The server derives the company and timestamp (no longer trusted from the client), rejects unknown/inactive members and items, bounds each quantity, and enforces the per-order cap — so quantities/timestamps/relationships can no longer be forged and inactive items can't be charged. Migration 018 then removes the direct anon `INSERT` grants, leaving the RPCs as the only write path.
+
+### Fixed
+- **Duplicate orders via „Bestätigen“ → „Rückgängig“ → „Bestätigen“.** The success screen's undo returned to the confirm step but the order had already been written, so re-confirming logged it a second time. „Bestätigen“ now writes the order once through the validated RPC and only then shows „Gespeichert“ (so success is never shown before the data is saved), and „Rückgängig“ genuinely deletes the just-logged rows via `undo_order`. Re-confirming after an undo therefore can't duplicate.
+
+### Added
+- **Configurable per-order item limit.** Admins can cap how many items a single person may log in one order (Settings → Bestellung → „Max. Artikel pro Bestellung“; leave empty for unlimited). Enforced both in the member flow (with a notice when reached) and server-side in `log_order`.
+
+### Known follow-ups (not in this branch)
+- Anonymous request **rate limiting** for the write RPCs is not yet in place (validation is, abuse-volume throttling isn't).
+- Admin auth hardening (durable rate limiting, HttpOnly session instead of the PIN in `sessionStorage`, removing the fail-open bootstrap and `Math.random()` recovery codes), report reliability (Resend error handling + idempotency + atomic archive/prune), PDF HTML escaping/sandboxing, and dependency upgrades remain open v1.0 gate items.
+
 ## [Unreleased] — feat/deathstar-theme
 
 ### Added
