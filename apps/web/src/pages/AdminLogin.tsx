@@ -47,9 +47,11 @@ export default function AdminLogin() {
     return () => { cancelled = true }
   }, [])
 
-  const enter = (pin: string) => {
+  // The server sets an HttpOnly session cookie on a successful verify/reset; the
+  // clear PIN is never stored client-side. `adminSession` is a non-sensitive flag
+  // used only for client-side route guarding (the cookie is the real auth).
+  const enter = () => {
     sessionStorage.setItem('adminSession', 'true')
-    sessionStorage.setItem('adminPin', pin)
     navigate('/admin/dashboard')
   }
 
@@ -62,7 +64,7 @@ export default function AdminLogin() {
         body: JSON.stringify({ pin }),
       })
       if (res.ok) {
-        enter(pin)
+        enter()
         return
       }
     } catch {
@@ -120,7 +122,7 @@ export default function AdminLogin() {
         body: JSON.stringify({ code: code.trim(), newPin }),
       })
       if (res.ok) {
-        enter(newPin)
+        enter()
       } else {
         const err = await res.json().catch(() => ({}))
         setResetError(err.error ?? 'Zurücksetzen fehlgeschlagen.')
