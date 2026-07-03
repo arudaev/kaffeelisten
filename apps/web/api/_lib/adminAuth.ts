@@ -5,6 +5,7 @@
 // bootstrap fallback, used ONLY while no PIN hash has been set yet — once the
 // admin sets a real PIN from the dashboard, the env value stops working.
 
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
 
@@ -48,12 +49,6 @@ export async function verifyAdminPin(pin: unknown): Promise<boolean> {
   // Bootstrap fallback — DB PIN not set yet.
   const envPin = process.env.ADMIN_PIN
   return !!envPin && pin === envPin
-}
-
-/** Read the PIN header from an incoming request (case-insensitive helper). */
-export function pinFromHeader(headers: Record<string, string | string[] | undefined>): string {
-  const raw = headers['x-admin-pin']
-  return Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '')
 }
 
 /** A PIN is exactly `pin_length` digits (default 6). */
@@ -108,6 +103,81 @@ export async function resetRateLimit(key: string): Promise<void> {
   }
 }
 
+// ─── Admin session (stateless, signed HttpOnly cookie) ────────────────────────
+//
+// After a successful PIN check the login endpoints issue a short-lived session
+// cookie; every other admin request is authenticated by that cookie, so the
+// clear PIN never has to be stored client-side or sent on each request. The
+// token is HMAC-signed with ADMIN_SESSION_SECRET (server-only) and carries an
+// expiry — it is not brute-forceable, so requireAdmin no longer rate-limits.
+
+const SESSION_COOKIE = 'kl_admin'
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000 // 12h
+
+function b64url(buf: Buffer): string {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function sign(payloadB64: string, secret: string): string {
+  return b64url(createHmac('sha256', secret).update(payloadB64).digest())
+}
+
+/** Build the signed token `<payload>.<hmac>` for an expiry `expMs` from now. */
+function makeToken(secret: string): string {
+  const payload = b64url(Buffer.from(JSON.stringify({ v: 1, exp: Date.now() + SESSION_TTL_MS })))
+  return `${payload}.${sign(payload, secret)}`
+}
+
+function requireSessionSecret(): string {
+  const secret = process.env.ADMIN_SESSION_SECRET
+  if (!secret) throw new Error('Missing ADMIN_SESSION_SECRET')
+  return secret
+}
+
+/** `Set-Cookie` value that establishes an admin session. */
+export function issueSessionCookie(): string {
+  const token = makeToken(requireSessionSecret())
+  const maxAge = Math.floor(SESSION_TTL_MS / 1000)
+  return `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`
+}
+
+/** `Set-Cookie` value that clears the admin session (logout / 401). */
+export function clearSessionCookie(): string {
+  return `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0`
+}
+
+function readCookie(headers: Record<string, string | string[] | undefined>, name: string): string | null {
+  const raw = headers['cookie']
+  const cookieHeader = Array.isArray(raw) ? raw.join('; ') : raw
+  if (!cookieHeader) return null
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=')
+    if (idx === -1) continue
+    if (part.slice(0, idx).trim() === name) return part.slice(idx + 1).trim()
+  }
+  return null
+}
+
+/** True when the request carries a valid, unexpired admin session cookie. */
+export function verifySession(headers: Record<string, string | string[] | undefined>, secret: string): boolean {
+  try {
+    const token = readCookie(headers, SESSION_COOKIE)
+    if (!token) return false
+    const [payloadB64, sig] = token.split('.')
+    if (!payloadB64 || !sig) return false
+
+    const expected = sign(payloadB64, secret)
+    const a = Buffer.from(sig)
+    const b = Buffer.from(expected)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return false
+
+    const payload = JSON.parse(Buffer.from(payloadB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString())
+    return typeof payload?.exp === 'number' && payload.exp > Date.now()
+  } catch {
+    return false
+  }
+}
+
 export interface AdminAuthResult {
   ok: boolean
   status: number
@@ -115,20 +185,20 @@ export interface AdminAuthResult {
 }
 
 /**
- * Single entry point for authenticating a PIN-protected admin request: applies
- * the durable rate limit, then verifies the PIN. Every admin endpoint should use
- * this so throttling is uniform (previously only /verify-pin was limited). On a
- * correct PIN the limiter is reset so honest admins aren't progressively slowed.
+ * Single entry point for authenticating a session-protected admin request:
+ * verifies the signed HttpOnly cookie issued at login. Fails CLOSED (500) if the
+ * signing secret is not configured, so a misconfigured deploy can never treat
+ * requests as authenticated.
  */
 export async function requireAdmin(
   headers: Record<string, string | string[] | undefined>,
 ): Promise<AdminAuthResult> {
-  const key = `admin:${clientKey(headers)}`
-  if (!(await consumeRateLimit(key))) {
-    return { ok: false, status: 429, error: 'Zu viele Versuche. Bitte später erneut versuchen.' }
+  const secret = process.env.ADMIN_SESSION_SECRET
+  if (!secret) {
+    console.error('[requireAdmin] ADMIN_SESSION_SECRET is not set')
+    return { ok: false, status: 500, error: 'Serverfehler' }
   }
-  const valid = await verifyAdminPin(pinFromHeader(headers)) // throws on DB error → 500 (fail closed)
-  if (!valid) return { ok: false, status: 401, error: 'Unauthorized' }
-  await resetRateLimit(key)
-  return { ok: true, status: 200 }
+  return verifySession(headers, secret)
+    ? { ok: true, status: 200 }
+    : { ok: false, status: 401, error: 'Unauthorized' }
 }
