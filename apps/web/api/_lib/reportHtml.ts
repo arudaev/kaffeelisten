@@ -64,7 +64,8 @@ export function renderTemplate(
 function consolidatedItems(entries: EnrichedTransaction[]): string {
   const map: Record<string, number> = {}
   for (const e of entries) map[e.item_name] = (map[e.item_name] ?? 0) + e.quantity
-  return Object.entries(map).map(([name, qty]) => `${qty}× ${name}`).join(' · ')
+  // Item names are user-controlled — escape before inlining into the PDF HTML.
+  return Object.entries(map).map(([name, qty]) => `${qty}× ${escapeHtml(name)}`).join(' · ')
 }
 
 // ── Per-member monthly statement (Phase 2 feature E) ──────────────────────────
@@ -285,7 +286,7 @@ export function buildReportHtml(
   const overviewRows = summaries.map((c, i) => `
     <tr style="background:${i % 2 === 0 ? '#FFFFFF' : '#FAFAF9'};">
       <td style="padding:9px 16px;color:#A8A29E;font-size:11px;font-weight:600;">${i + 1}.</td>
-      <td style="padding:9px 16px;color:#1C1917;font-weight:500;">${c.company_name}</td>
+      <td style="padding:9px 16px;color:#1C1917;font-weight:500;">${escapeHtml(c.company_name)}</td>
       <td style="padding:9px 16px;text-align:center;color:#57534E;">${c.total_entries}</td>
       <td style="padding:9px 16px;text-align:right;font-weight:700;color:#D97706;font-variant-numeric:tabular-nums;">${formatEuro(c.total_cents)}</td>
     </tr>`).join('')
@@ -293,7 +294,7 @@ export function buildReportHtml(
   const companySections = summaries.map(company => {
     const memberRows = company.members.map((m, i) => `
       <tr style="background:${i % 2 === 0 ? '#FFFFFF' : '#FAFAF9'};">
-        <td style="padding:9px 16px;font-weight:500;color:#1C1917;">${m.member_name}</td>
+        <td style="padding:9px 16px;font-weight:500;color:#1C1917;">${escapeHtml(m.member_name)}</td>
         <td style="padding:9px 16px;text-align:center;color:#57534E;">${m.entries.length}</td>
         <td style="padding:9px 16px;text-align:right;font-weight:600;color:#1C1917;font-variant-numeric:tabular-nums;">${formatEuro(m.subtotal_cents)}</td>
         <td style="padding:9px 16px;color:#78716C;font-size:11.5px;">${consolidatedItems(m.entries)}</td>
@@ -302,7 +303,7 @@ export function buildReportHtml(
     return `
     <div style="margin:0 40px;padding-top:20px;page-break-inside:avoid;break-inside:avoid;">
       <div style="background:#D97706;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0;">
-        <span style="font-size:13px;font-weight:700;">${company.company_name}</span>
+        <span style="font-size:13px;font-weight:700;">${escapeHtml(company.company_name)}</span>
         <span style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;">${formatEuro(company.total_cents)}</span>
       </div>
       <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;">
@@ -330,6 +331,10 @@ export function buildReportHtml(
 <html lang="de">
 <head>
   <meta charset="UTF-8">
+  <!-- Defense-in-depth: no scripts, no external fetches. Only inline styles and
+       data: images are allowed. Combined with escaping + JS-disabled rendering,
+       this neutralizes any markup that slips through in user-provided names. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src 'none'">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
