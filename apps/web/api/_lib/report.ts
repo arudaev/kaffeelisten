@@ -221,9 +221,12 @@ export async function generatePdf(
   const chromium = (await import('@sparticuz/chromium-min')).default
   const puppeteer = (await import('puppeteer-core')).default
 
+  // The pack version MUST match the installed @sparticuz/chromium-min major
+  // (package.json → ^147). A mismatch ships a chromium binary the bundled
+  // puppeteer-core can't drive. Bump this URL whenever chromium-min is upgraded.
   const executablePath = process.env.CHROMIUM_PATH
     ?? await chromium.executablePath(
-        'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+        'https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.tar'
       )
 
   // Drop --disable-web-security: the report HTML is fully self-contained (inline
