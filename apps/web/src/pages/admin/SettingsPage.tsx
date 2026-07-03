@@ -349,7 +349,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setChangeSaving(true)
     setChangeError('')
     try {
-      const res = await fetch('/api/admin/change-pin', {
+      const res = await fetch('/api/admin/auth?action=change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPin: curPin, newPin: nextPin }),

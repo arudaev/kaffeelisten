@@ -157,7 +157,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' })
+      await fetch('/api/admin/auth?action=logout', { method: 'POST' })
     } catch {
       /* clear locally regardless */
     }

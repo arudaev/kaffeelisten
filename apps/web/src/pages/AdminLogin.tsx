@@ -1,6 +1,6 @@
 // Admin PIN entry + self-service recovery.
 //
-// PIN is validated server-side via /api/admin/verify-pin. After too many failed
+// PIN is validated server-side via /api/admin/auth?action=verify. After too many failed
 // attempts the keypad locks and the recovery flow opens: the admin enters their
 // email, a one-time code is sent to that address (if it's a known admin), and
 // they set a new PIN with it — so a locked-out admin can always regain access
@@ -38,7 +38,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/admin/pin-meta')
+    fetch('/api/admin/auth?action=meta')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (!cancelled && data && typeof data.pin_length === 'number') setPinLength(data.pin_length)
@@ -58,7 +58,7 @@ export default function AdminLogin() {
   const handleSubmit = async (pin: string) => {
     setError(false)
     try {
-      const res = await fetch('/api/admin/verify-pin', {
+      const res = await fetch('/api/admin/auth?action=verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),
@@ -91,7 +91,7 @@ export default function AdminLogin() {
     setSending(true)
     setEmailError('')
     try {
-      await fetch('/api/admin/request-pin-reset', {
+      await fetch('/api/admin/auth?action=request-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: value }),
@@ -116,7 +116,7 @@ export default function AdminLogin() {
     setResetting(true)
     setResetError('')
     try {
-      const res = await fetch('/api/admin/reset-pin', {
+      const res = await fetch('/api/admin/auth?action=reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: code.trim(), newPin }),
