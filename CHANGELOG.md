@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### feat/member-identity-validation
+
+#### Fixed
+- **International member names are no longer corrupted on save.** The admin member form force-title-cased every name, mangling names like _McDonald_, _van der Berg_, _de la Cruz_ and _O'Brien_. Names are now stored with the casing the admin typed (only surrounding/duplicate whitespace is trimmed).
+
+#### Changed
+- **Member work-email addresses are now checked for deliverability when saved.** Beyond the existing shape check, the admin API verifies the email's domain actually accepts mail (MX record, with an A/AAAA fallback), rejecting typos like `chef@firma.col` or `anna@gmial.com`. Transient DNS failures never block a save.
+
+---
+
 ## [1.0.0] - 2026-07-03
 
 _First production release for the ITC1 Deggendorf campus. Consolidates all development since the initial scaffold; entries below are grouped by the change that introduced them._
