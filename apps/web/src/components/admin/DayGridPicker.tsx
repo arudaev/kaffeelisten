@@ -1,5 +1,8 @@
 interface DayGridPickerProps {
-  /** Selected day of month (1–28), or null for "last day of month". */
+  /**
+   * Day of the *following* month on which the just-closed month is sent (1–28),
+   * or null for "as early as possible" (the 1st).
+   */
   value: number | null
   onChange: (value: number | null) => void
   disabled?: boolean
@@ -8,9 +11,10 @@ interface DayGridPickerProps {
 /**
  * Calendar-style day picker: a readable summary line, a 7-column grid of days
  * 1–28 with tactile rounded cells (hover lift, solid-amber selected state),
- * and a divided "Letzter Tag des Monats" row with a calendar glyph and a
- * confirmation check. Days are capped at 28 so the chosen day exists in every
- * month (matches the DB check constraint).
+ * and a divided "So früh wie möglich" row with a calendar glyph and a
+ * confirmation check. The report always covers the previous, closed month; this
+ * chooses the day of the following month it goes out. Days are capped at 28 so
+ * the chosen day exists in every month.
  */
 export default function DayGridPicker({ value, onChange, disabled = false }: DayGridPickerProps) {
   const days = Array.from({ length: 28 }, (_, i) => i + 1)
@@ -34,11 +38,11 @@ export default function DayGridPicker({ value, onChange, disabled = false }: Day
       <p className="text-[13px] text-fg-muted">
         {lastSelected ? (
           <>
-            Versand am <b className="font-semibold text-fg">letzten Tag</b> des Monats
+            Versand <b className="font-semibold text-fg">so früh wie möglich</b> (am 1. des Folgemonats)
           </>
         ) : (
           <>
-            Versand am <b className="font-semibold text-fg">{value}.</b> jedes Monats
+            Versand am <b className="font-semibold text-fg">{value}.</b> des Folgemonats
           </>
         )}
       </p>
@@ -87,7 +91,7 @@ export default function DayGridPicker({ value, onChange, disabled = false }: Day
           <path d="M3 9h18M8 2.5v4M16 2.5v4" />
           <path d="M15 15.5l-2.6 2.6-1.4-1.4" />
         </svg>
-        <span>Letzter Tag des Monats</span>
+        <span>So früh wie möglich</span>
         <span
           className={[
             'ml-auto flex text-accent transition-all',
