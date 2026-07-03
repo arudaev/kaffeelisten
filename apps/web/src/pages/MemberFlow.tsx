@@ -143,9 +143,11 @@ export default function MemberFlow() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [cart, setCart] = useState<Map<string, CartEntry>>(new Map())
   const [activeCategory, setActiveCategory] = useState<string>('coffee')
-  // Guards the deferred insert so an order is written at most once, even if the
-  // success-screen countdown effect fires onReset more than once (see below).
-  const orderWrittenRef = useRef(false)
+  const [submitting, setSubmitting] = useState(false)
+  // Transaction ids of the order just written, so "Rückgängig" can delete them
+  // (anon has no direct DELETE — undo goes through the undo_order RPC).
+  const [lastOrderIds, setLastOrderIds] = useState<string[]>([])
+  const [undoing, setUndoing] = useState(false)
 
   // Self-registration modal
   const [addSelfOpen, setAddSelfOpen] = useState(false)
@@ -258,41 +260,46 @@ export default function MemberFlow() {
     })
   }
 
-  // "Bestätigen" does NOT write yet — it opens the success screen with an undo
-  // window (Gmail "Undo Send" model). The insert is deferred to finalizeOrder,
-  // which runs when the window elapses. This makes "Rückgängig" a true cancel and
-  // removes the confirm → back → confirm double-order path: nothing is written
-  // while undo is available, so an order can never be inserted twice.
-  const handleConfirm = () => {
-    if (!selectedMember || !selectedCompany || cartEntries.length === 0) return
+  // "Bestätigen" writes the order immediately through the validated log_order RPC
+  // (server derives company_id + timestamp, checks the member/items/quantities and
+  // the per-order cap). Success is only shown once the write resolves, so the
+  // "Gespeichert" screen never lies. The confirm → back → confirm double-order
+  // path is closed too: if the person undoes, the rows are deleted before they can
+  // re-confirm.
+  const handleConfirm = async () => {
+    if (!selectedMember || !selectedCompany || cartEntries.length === 0 || submitting) return
+    setSubmitting(true)
     setError(null)
-    orderWrittenRef.current = false // arm the write for this order
+    const { data, error: err } = await supabase.rpc('log_order', {
+      p_member_id: selectedMember.id,
+      p_items: cartEntries.map(e => ({ item_id: e.item.id, quantity: e.quantity })),
+    })
+    setSubmitting(false)
+    if (err || !data) {
+      setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
+      return
+    }
+    setLastOrderIds(data)
     setStep('success')
   }
 
-  // Commits the order to the database, then returns to the start screen. Invoked
-  // by SuccessScreen when its countdown reaches zero (the undo window closed).
-  const finalizeOrder = useCallback(async () => {
-    if (orderWrittenRef.current) return // already written — never write twice
-    if (!selectedMember || !selectedCompany) { reset(); return }
-    const rows = [...cart.values()].map(e => ({
-      member_id: selectedMember.id,
-      company_id: selectedCompany.id,
-      item_id: e.item.id,
-      quantity: e.quantity,
-    }))
-    if (rows.length === 0) { reset(); return }
-    orderWrittenRef.current = true
-    const { error: err } = await supabase.from('transactions').insert(rows)
+  // "Rückgängig" — delete the rows this order just created (only possible within
+  // the undo window; anon can't DELETE directly, so it goes through undo_order).
+  const handleUndo = useCallback(async () => {
+    if (undoing) return
+    if (lastOrderIds.length === 0) { setStep('confirm'); return }
+    setUndoing(true)
+    const { error: err } = await supabase.rpc('undo_order', { p_ids: lastOrderIds })
+    setUndoing(false)
     if (err) {
-      // Let the person retry from the confirm screen — nothing was committed.
-      orderWrittenRef.current = false
-      setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
-      setStep('confirm')
+      // The order stays saved; make that clear rather than pretending it's gone.
+      setError('Rückgängig machen fehlgeschlagen — der Eintrag wurde gespeichert.')
+      reset()
       return
     }
-    reset()
-  }, [selectedMember, selectedCompany, cart, reset])
+    setLastOrderIds([])
+    setStep('confirm')
+  }, [undoing, lastOrderIds, reset])
 
   const openAddSelf = () => {
     setSelfFirstName('')
@@ -314,15 +321,16 @@ export default function MemberFlow() {
     setAddingMember(true)
     setAddSelfError(null)
     const storedName = `${capitalizeName(first)} ${capitalizeName(last)}`
-    const { data, error: err } = await supabase
-      .from('members')
-      .insert({ company_id: selectedCompany.id, name: storedName, work_email: email, active: true })
-      .select(MEMBER_PUBLIC_COLS)
-      .single()
+    const { data, error: err } = await supabase.rpc('register_member', {
+      p_company_id: selectedCompany.id,
+      p_name: storedName,
+      p_email: email,
+    })
     setAddingMember(false)
-    if (err || !data) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
-    setMembers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
-    setSelectedMember(data)
+    const created = data?.[0]
+    if (err || !created) { setAddSelfError('Konnte nicht gespeichert werden. Bitte erneut versuchen.'); return }
+    setMembers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+    setSelectedMember(created)
     setAddSelfOpen(false)
     setCart(new Map())
     setStep('item')
@@ -340,8 +348,8 @@ export default function MemberFlow() {
     return (
       <SuccessScreen
         summary={successSummary}
-        onUndo={() => setStep('confirm')}
-        onReset={finalizeOrder}
+        onUndo={handleUndo}
+        onReset={reset}
       />
     )
   }
@@ -710,9 +718,10 @@ export default function MemberFlow() {
             <BigButton
               variant="primary"
               onClick={handleConfirm}
+              disabled={submitting}
               icon={<Icon name="check" size={22} strokeWidth={2.5} />}
             >
-              Bestätigen
+              {submitting ? 'Speichern…' : 'Bestätigen'}
             </BigButton>
           </>
         }
