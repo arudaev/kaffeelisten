@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { adminApi } from '../lib/adminApi'
 import Sidebar from '../components/admin/Sidebar'
 import { Topbar, MonthSelector } from '../components/admin/Topbar'
 import SummaryCard from '../components/admin/SummaryCard'
@@ -108,26 +108,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
+      try {
+        const { transactions: txs, members, companies: cos, items } = await adminApi.getDashboard()
 
-      const txRes = await supabase
-        .from('transactions')
-        .select('*')
-        .order('logged_at', { ascending: false })
+        const memberMap = new Map(members.map(m => [m.id, { name: m.name, work_email: m.work_email ?? null }]))
+        const companyMap = new Map(cos.map(c => [c.id, c.name]))
+        const itemMap = new Map(items.map(i => [i.id, { name: i.name, price_cents: i.price_cents }]))
 
-      const [membersRes, companiesRes, itemsRes] = await Promise.all([
-        supabase.from('members').select('*'),
-        supabase.from('companies').select('*').eq('active', true).order('name'),
-        supabase.from('items').select('*'),
-      ])
-
-      if (txRes.data && membersRes.data && companiesRes.data && itemsRes.data) {
-        const memberMap = new Map(membersRes.data.map(m => [m.id, { name: m.name, work_email: m.work_email ?? null }]))
-        const companyMap = new Map(companiesRes.data.map(c => [c.id, c.name]))
-        const itemMap = new Map(
-          itemsRes.data.map(i => [i.id, { name: i.name, price_cents: i.price_cents }])
-        )
-
-        const rows: TransactionRow[] = txRes.data.map(t => {
+        const rows: TransactionRow[] = txs.map(t => {
           const member = memberMap.get(t.member_id)
           const item = itemMap.get(t.item_id)
           return {
@@ -145,15 +133,18 @@ export default function AdminDashboard() {
         setTransactions(rows)
 
         // company totals are computed per-month in the useMemo below
-        const coRows: CompanySummaryRow[] = companiesRes.data.map(c => ({
+        const coRows: CompanySummaryRow[] = cos.map(c => ({
           id: c.id, name: c.name, month_total_cents: 0, active: c.active,
         }))
         setCompanies(coRows)
+      } catch {
+        showToast('Daten konnten nicht geladen werden.')
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Stable identity so child effects that depend on it (e.g. SettingsPage's
