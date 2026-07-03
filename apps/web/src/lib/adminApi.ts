@@ -3,10 +3,10 @@
 // The admin panel no longer talks to Supabase directly with the public anon key
 // — that key can no longer read work emails/transactions or write catalogue data
 // (migration 015). All admin reads/writes go through the serverless API, which
-// authenticates the PIN server-side and uses the service-role key.
+// authenticates the request server-side and uses the service-role key.
 //
-// The PIN lives in sessionStorage (set by the login flow). Replacing this with a
-// real HttpOnly session is tracked separately (security-audit blocker #5).
+// Auth is a signed HttpOnly session cookie set at login; the browser sends it
+// automatically on same-origin requests, so no PIN is stored or sent here.
 
 export interface AdminCompany {
   id: string
@@ -47,10 +47,6 @@ export interface DashboardData {
   items: { id: string; name: string; price_cents: number }[]
 }
 
-function adminPin(): string {
-  return sessionStorage.getItem('adminPin') ?? ''
-}
-
 async function call<T>(
   method: 'GET' | 'POST' | 'PATCH',
   query: string,
@@ -58,10 +54,7 @@ async function call<T>(
 ): Promise<T> {
   const res = await fetch(`/api/admin/data${query}`, {
     method,
-    headers: {
-      'x-admin-pin': adminPin(),
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-    },
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   })
   if (!res.ok) {

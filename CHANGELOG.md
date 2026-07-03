@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — feat/v1-gate-scheduling-session
+
+### Security
+- **Admin sessions now use a signed, HttpOnly cookie instead of the PIN held in `sessionStorage`.** After a successful PIN entry (or reset) the server sets a `Secure`, `SameSite=Strict`, `HttpOnly` cookie carrying an HMAC-signed, expiring token (new `ADMIN_SESSION_SECRET`); the clear PIN is no longer stored in the browser or sent on every admin request. Admin endpoints authenticate the cookie and fail closed (500) if the signing secret is unconfigured. Changing the PIN now requires both an active session and the current PIN. Added a `/api/admin/logout` endpoint and an **Abmelden** action in the admin sidebar.
+
+### Fixed
+- **The automatic monthly report now only sends closed periods, in Europe/Berlin time.** Previously the cron reported the *current, still-open* month and evaluated the send day in the server's timezone — a configured send day fired mid-month against an incomplete period. The report now always covers the **previous, fully-closed month**, the send day is the day of the following month it goes out (evaluated in Europe/Berlin), and a missed day is retried automatically on the next nightly run (idempotent per month, no double-send).
+
+### Changed
+- The automatic-send day picker now reflects the new model: the chosen day is the day of the *following* month on which the closed month is sent, and the default ("So früh wie möglich") is the 1st.
+
+### Deploy note
+- Set **`ADMIN_SESSION_SECRET`** (a long random value) in Vercel before/with this deploy — admin endpoints fail closed without it. No database migration is required. Any admin logged in before the deploy is signed out once and re-enters their PIN.
+
 ## [Unreleased] — fix/admin-auth-hardening
 
 ### Security
@@ -15,7 +29,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **PIN-reset codes now use a cryptographically-secure RNG** (`crypto.randomInt`) instead of `Math.random()`, which is predictable and unsuitable for a security token.
 
 ### Known follow-ups (not in this branch)
-- The admin session still uses the PIN sent per request (held in `sessionStorage`) rather than an HttpOnly, Secure, SameSite session cookie. Moving to a real server-side session is the remaining admin-auth item and is deferred to a focused change that can be verified end-to-end against the deployed cookie flow.
+- The admin session still uses the PIN sent per request (held in `sessionStorage`) rather than an HttpOnly, Secure, SameSite session cookie. **Resolved in `feat/v1-gate-scheduling-session`** (see the top of this changelog).
 
 ## [Unreleased] — fix/security-headers-csv
 
