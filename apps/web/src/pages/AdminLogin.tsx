@@ -1,6 +1,6 @@
 // Admin PIN entry + self-service recovery.
 //
-// PIN is validated server-side via /api/admin/verify-pin. After too many failed
+// PIN is validated server-side via /api/admin/auth?action=verify. After too many failed
 // attempts the keypad locks and the recovery flow opens: the admin enters their
 // email, a one-time code is sent to that address (if it's a known admin), and
 // they set a new PIN with it — so a locked-out admin can always regain access
@@ -24,6 +24,7 @@ export default function AdminLogin() {
 
   const [view, setView] = useState<View>('pin')
   const [error, setError] = useState(false)
+  const [notice, setNotice] = useState('')
   const attemptsRef = useRef(0)
   const [lockedOut, setLockedOut] = useState(false)
 
@@ -38,7 +39,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/admin/pin-meta')
+    fetch('/api/admin/auth?action=meta')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (!cancelled && data && typeof data.pin_length === 'number') setPinLength(data.pin_length)
@@ -57,8 +58,9 @@ export default function AdminLogin() {
 
   const handleSubmit = async (pin: string) => {
     setError(false)
+    let status = 0
     try {
-      const res = await fetch('/api/admin/verify-pin', {
+      const res = await fetch('/api/admin/auth?action=verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),
@@ -67,10 +69,22 @@ export default function AdminLogin() {
         enter()
         return
       }
+      status = res.status
     } catch {
-      /* fall through to error handling */
+      /* network error — treat as a generic failure below */
     }
+
     setError(true)
+
+    // 429 = throttled, not a wrong PIN. Don't count it toward the lockout and
+    // don't bounce to recovery — just tell the user to wait. Otherwise the real
+    // admin gets kicked into the email flow the moment the limiter kicks in.
+    if (status === 429) {
+      setNotice('Zu viele Versuche. Bitte einige Minuten warten und erneut versuchen.')
+      return
+    }
+
+    setNotice('')
     attemptsRef.current += 1
     if (attemptsRef.current >= MAX_ATTEMPTS) {
       setLockedOut(true)
@@ -91,7 +105,7 @@ export default function AdminLogin() {
     setSending(true)
     setEmailError('')
     try {
-      await fetch('/api/admin/request-pin-reset', {
+      await fetch('/api/admin/auth?action=request-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: value }),
@@ -116,7 +130,7 @@ export default function AdminLogin() {
     setResetting(true)
     setResetError('')
     try {
-      const res = await fetch('/api/admin/reset-pin', {
+      const res = await fetch('/api/admin/auth?action=reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: code.trim(), newPin }),
@@ -139,9 +153,11 @@ export default function AdminLogin() {
       <PinKeypad
         onSubmit={handleSubmit}
         error={error}
+        notice={notice}
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
         onForgot={openRecovery}
+        onHome={() => navigate('/')}
       />
     )
   }
@@ -151,7 +167,13 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-[400px] flex flex-col gap-6">
         <div className="text-center">
-          <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">Kaffeelisten</p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+          >
+            Kaffeelisten
+          </button>
           <h1 className="text-[26px] font-bold text-fg tracking-tight">PIN zurücksetzen</h1>
         </div>
 

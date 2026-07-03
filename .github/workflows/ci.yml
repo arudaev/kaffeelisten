@@ -28,6 +28,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Typecheck API
+        run: npm run typecheck:api
+
+      - name: Test
+        run: npm test
+
   build:
     name: Build
     runs-on: ubuntu-latest
