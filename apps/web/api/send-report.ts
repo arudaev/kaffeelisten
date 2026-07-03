@@ -16,8 +16,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { month } = (req.body ?? {}) as { month?: string }
-    await runMonthlyReport(month)
-    return res.status(200).json({ ok: true })
+    // A manual send is an explicit admin action, so force past the "already sent
+    // this month" guard. The concurrency lock still prevents a double-click from
+    // sending twice.
+    const result = await runMonthlyReport(month, { force: true })
+    return res.status(200).json({
+      ok: true,
+      status: result.status,
+      memberStatements: result.memberStatements ?? null,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[send-report]', message)
