@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminApi } from '../lib/adminApi'
+import { toCsv } from '../lib/csv'
 import Sidebar from '../components/admin/Sidebar'
 import { Topbar, MonthSelector } from '../components/admin/Topbar'
 import SummaryCard from '../components/admin/SummaryCard'
@@ -229,16 +230,8 @@ export default function AdminDashboard() {
       String(r.quantity),
       (r.price_cents / 100).toFixed(2).replace('.', ','),
     ])
-    // Neutralize spreadsheet formula injection: a cell beginning with = + - @ or
-    // a leading control char can be executed as a formula by Excel/Sheets when the
-    // CSV is opened. Prefix those with an apostrophe (renders as text), then quote.
-    const csvCell = (value: string): string => {
-      const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
-      return `"${guarded.replace(/"/g, '""')}"`
-    }
-    const csv = [header, ...rows]
-      .map(row => row.map(csvCell).join(';'))
-      .join('\r\n')
+    // toCsv neutralizes spreadsheet formula injection (see lib/csv.ts).
+    const csv = toCsv([header, ...rows])
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
