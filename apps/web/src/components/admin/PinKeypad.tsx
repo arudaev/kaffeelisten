@@ -10,9 +10,11 @@ interface PinKeypadProps {
   length?: number
   /** When provided, renders a "PIN vergessen?" link that starts the reset flow. */
   onForgot?: () => void
+  /** When provided, the "Kaffeelisten" wordmark becomes a link back to the landing page. */
+  onHome?: () => void
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome }: PinKeypadProps) {
   const [pin, setPin] = useState('')
   const MAX = length
 
@@ -66,9 +68,19 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, not
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-8 p-10 font-sans">
       {/* Title */}
       <div className="text-center">
-        <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">
-          Kaffeelisten
-        </p>
+        {onHome ? (
+          <button
+            type="button"
+            onClick={onHome}
+            className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+          >
+            Kaffeelisten
+          </button>
+        ) : (
+          <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">
+            Kaffeelisten
+          </p>
+        )}
         <h1 className="text-[28px] font-bold text-fg tracking-tight">Administration</h1>
         <p className="text-base text-fg-muted mt-1.5">PIN eingeben</p>
       </div>
