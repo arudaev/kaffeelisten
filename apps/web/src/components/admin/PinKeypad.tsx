@@ -1,18 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface PinKeypadProps {
   onSubmit: (pin: string) => void
   error?: boolean
   onErrorAnimEnd?: () => void
+  /** Optional status message shown below the dots (e.g. a throttle notice). */
+  notice?: string
   /** Expected PIN length. Phase 2 uses 6; defaults to 6. */
   length?: number
   /** When provided, renders a "PIN vergessen?" link that starts the reset flow. */
   onForgot?: () => void
+  /** When provided, the "Kaffeelisten" wordmark becomes a link back to the landing page. */
+  onHome?: () => void
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, length = 6, onForgot }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome }: PinKeypadProps) {
   const [pin, setPin] = useState('')
   const MAX = length
+
+  // Guard against submitting the same full PIN more than once. Without this, the
+  // OK button and the auto-submit effect (and effect re-runs while the pin stays
+  // full during the error animation) each fire a request, burning rate-limit
+  // attempts several-fold per entry. Reset once the pin drops below full again.
+  const submittedRef = useRef(false)
+
+  const submitOnce = (value: string) => {
+    if (submittedRef.current) return
+    submittedRef.current = true
+    onSubmit(value)
+  }
 
   const handleKey = (k: string) => {
     if (k === 'del') {
@@ -20,18 +36,22 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, len
       return
     }
     if (k === 'ok') {
-      if (pin.length === MAX) onSubmit(pin)
+      if (pin.length === MAX) submitOnce(pin)
       return
     }
     setPin(p => (p.length >= MAX ? p : p + k))
   }
 
   useEffect(() => {
-    if (pin.length === MAX) {
-      const t = setTimeout(() => onSubmit(pin), 250)
-      return () => clearTimeout(t)
+    if (pin.length < MAX) {
+      submittedRef.current = false
+      return
     }
-  }, [pin, onSubmit, MAX])
+    if (submittedRef.current) return
+    const t = setTimeout(() => submitOnce(pin), 250)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, MAX])
 
   // Reset pin after error
   useEffect(() => {
@@ -48,9 +68,19 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, len
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-8 p-10 font-sans">
       {/* Title */}
       <div className="text-center">
-        <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">
-          Kaffeelisten
-        </p>
+        {onHome ? (
+          <button
+            type="button"
+            onClick={onHome}
+            className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+          >
+            Kaffeelisten
+          </button>
+        ) : (
+          <p className="text-[12px] font-medium text-fg-muted uppercase tracking-[0.06em] mb-2">
+            Kaffeelisten
+          </p>
+        )}
         <h1 className="text-[28px] font-bold text-fg tracking-tight">Administration</h1>
         <p className="text-base text-fg-muted mt-1.5">PIN eingeben</p>
       </div>
@@ -74,6 +104,12 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, len
           )
         })}
       </div>
+
+      {notice && (
+        <p className="-mt-4 max-w-[280px] text-center text-sm font-medium text-accent leading-relaxed" role="status">
+          {notice}
+        </p>
+      )}
 
       {/* Keypad grid */}
       <div className="grid grid-cols-3 gap-3">
