@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — fix/admin-auth-hardening
+
+### Security
+- **Admin PIN is no longer practically brute-forceable.** Rate limiting is now durable and cross-instance (a shared `auth_throttle` table + `pin_rate_consume`/`pin_rate_reset` RPCs, migration 020) instead of per-serverless-instance memory, and it is applied on **every** PIN-verifying endpoint via a single `requireAdmin` helper — previously only `/verify-pin` was throttled while `/api/admin/data`, `settings`, `theme`, `preview-report` and `send-report` had none. A correct PIN resets the counter so honest admins aren't progressively slowed. The reset/recovery endpoints (`request-pin-reset`, `reset-pin`, `change-pin`) are throttled too.
+- **Removed the fail-open authentication path.** A transient database error while checking whether a PIN is set now throws (fails closed) instead of silently re-enabling the `ADMIN_PIN` env bootstrap.
+- **PIN-reset codes now use a cryptographically-secure RNG** (`crypto.randomInt`) instead of `Math.random()`, which is predictable and unsuitable for a security token.
+
+### Known follow-ups (not in this branch)
+- The admin session still uses the PIN sent per request (held in `sessionStorage`) rather than an HttpOnly, Secure, SameSite session cookie. Moving to a real server-side session is the remaining admin-auth item and is deferred to a focused change that can be verified end-to-end against the deployed cookie flow.
+
 ## [Unreleased] — fix/security-headers-csv
 
 ### Security

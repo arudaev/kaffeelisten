@@ -7,7 +7,8 @@ import {
   makeAdminClient,
   verifyAdminPin,
   isValidPinFormat,
-  rateLimit,
+  consumeRateLimit,
+  resetRateLimit,
   clientKey,
 } from '../_lib/adminAuth'
 
@@ -16,8 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!rateLimit(`change:${clientKey(req.headers)}`, 10, 60_000)) {
-    return res.status(429).json({ error: 'Zu viele Versuche. Bitte kurz warten.' })
+  const rlKey = `change:${clientKey(req.headers)}`
+  if (!(await consumeRateLimit(rlKey))) {
+    return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut versuchen.' })
   }
 
   const { currentPin, newPin } = (req.body ?? {}) as { currentPin?: string; newPin?: string }
@@ -26,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!(await verifyAdminPin(currentPin))) {
       return res.status(403).json({ error: 'Aktuelle PIN ist falsch.' })
     }
+    await resetRateLimit(rlKey)
 
     const supabase = makeAdminClient()
     const { data, error: readErr } = await supabase

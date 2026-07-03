@@ -7,7 +7,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   makeAdminClient,
   isValidPinFormat,
-  rateLimit,
+  consumeRateLimit,
+  resetRateLimit,
   clientKey,
 } from '../_lib/adminAuth'
 
@@ -16,8 +17,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  if (!rateLimit(`reset:${clientKey(req.headers)}`, 10, 60_000)) {
-    return res.status(429).json({ error: 'Zu viele Versuche. Bitte kurz warten.' })
+  // Durable limit — throttles brute force of the 6-digit reset code AND the
+  // ADMIN_RECOVERY_PIN backstop across instances.
+  const rlKey = `reset:${clientKey(req.headers)}`
+  if (!(await consumeRateLimit(rlKey))) {
+    return res.status(429).json({ error: 'Zu viele Versuche. Bitte später erneut versuchen.' })
   }
 
   const { code, newPin } = (req.body ?? {}) as { code?: string; newPin?: string }
@@ -45,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (recoveryPin && code === recoveryPin) {
       const { error } = await supabase.rpc('set_admin_pin', { p_pin: newPin })
       if (error) throw new Error(error.message)
+      await resetRateLimit(rlKey)
       return res.status(200).json({ ok: true })
     }
 
@@ -58,6 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (ok !== true) {
       return res.status(403).json({ error: 'Code ungültig oder abgelaufen.' })
     }
+    await resetRateLimit(rlKey)
     return res.status(200).json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
