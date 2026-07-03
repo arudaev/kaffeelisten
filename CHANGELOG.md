@@ -7,6 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — fix/security-headers-csv
+
+### Security
+- **CSV export is no longer vulnerable to spreadsheet formula injection.** Cells beginning with `=`, `+`, `-`, `@`, or a leading control character (which Excel/Sheets can execute as formulas when the CSV is opened) are now prefixed with an apostrophe so they render as text.
+- **Added HTTP security headers** (Vercel): a `Content-Security-Policy` (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, restricted `connect-src`/`script-src`/`style-src`, with Google Fonts allow-listed), plus `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, and an explicit `Strict-Transport-Security`. All `/api/*` responses now send `Cache-Control: no-store`.
+
 ## [Unreleased] — fix/rls-lockdown
 
 ### Security
