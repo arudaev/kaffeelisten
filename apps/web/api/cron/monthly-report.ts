@@ -1,22 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport, fetchReportSettings } from '../_lib/report'
+import { computeDueReport } from '../_lib/schedule'
 
 export const config = { maxDuration: 60 }
 
-function isLastDayOfMonth(): boolean {
-  const today = new Date()
-  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-  return tomorrow.getDate() === 1
-}
-
-// The cron fires every day on the last days of the month (see vercel.json). The
-// function decides whether today is the configured send day: a specific day of
-// month, or the last day when none is set.
-function isSendDay(autoDay: number | null): boolean {
-  if (autoDay == null) return isLastDayOfMonth()
-  return new Date().getDate() === autoDay
-}
-
+// The cron fires nightly (see vercel.json). Each fire asks whether an automatic
+// report is due: the report always covers the PREVIOUS, fully-closed month
+// (evaluated in Europe/Berlin), and `auto_report_day` is the day of this month
+// on which that closed month is sent. Because runMonthlyReport is idempotent per
+// report_month, a missed day is retried on the next fire (automatic catch-up).
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET
   const authHeader = req.headers['authorization']
@@ -26,16 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { schedule } = await fetchReportSettings()
+    const { due, targetMonth, reason } = computeDueReport(new Date(), schedule)
 
-    if (!schedule.autoEnabled) {
-      return res.status(200).json({ ok: true, skipped: true, reason: 'Automatic send disabled' })
-    }
-    if (!isSendDay(schedule.autoDay)) {
-      return res.status(200).json({ ok: true, skipped: true, reason: 'Not the configured send day' })
+    if (!due) {
+      return res.status(200).json({ ok: true, skipped: true, reason, targetMonth })
     }
 
-    await runMonthlyReport()
-    return res.status(200).json({ ok: true })
+    const result = await runMonthlyReport(targetMonth)
+    return res.status(200).json({ ok: true, targetMonth, status: result.status })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[cron/monthly-report]', message)
