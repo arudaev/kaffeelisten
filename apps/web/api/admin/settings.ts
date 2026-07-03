@@ -5,7 +5,7 @@
 // token. Service-role only — see docs/phase-2-production.md §F.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, verifyAdminPin, pinFromHeader, isDbPinSet } from '../_lib/adminAuth'
+import { makeAdminClient, requireAdmin, isDbPinSet } from '../_lib/adminAuth'
 import type { Database } from '../../src/lib/database.types'
 
 type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
@@ -47,9 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    const auth = await requireAdmin(req.headers)
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
     const supabase = makeAdminClient()
 

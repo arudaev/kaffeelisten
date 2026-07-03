@@ -5,7 +5,7 @@
 // PIN-protected. Returns { subject, html }.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyAdminPin, pinFromHeader } from '../_lib/adminAuth'
+import { requireAdmin } from '../_lib/adminAuth'
 import {
   fetchAndEnrich,
   computeSummary,
@@ -87,9 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    const auth = await requireAdmin(req.headers)
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
     const body = (req.body ?? {}) as { type?: string; format?: unknown }
     const type = String(req.query.type ?? body.type ?? 'company')

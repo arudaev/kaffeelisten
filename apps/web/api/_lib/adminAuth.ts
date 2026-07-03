@@ -15,13 +15,18 @@ export function makeAdminClient(): SupabaseClient<Database> {
   return createClient<Database>(url, key)
 }
 
-/** True when a DB PIN hash has been set (env bootstrap no longer applies). */
+/**
+ * True when a DB PIN hash has been set (env bootstrap no longer applies).
+ * Fails CLOSED: a DB read error throws rather than returning false, so a
+ * transient failure can never silently re-enable the ADMIN_PIN env bootstrap.
+ */
 export async function isDbPinSet(supabase: SupabaseClient<Database>): Promise<boolean> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('app_settings')
     .select('admin_pin_hash')
     .eq('id', 1)
     .maybeSingle()
+  if (error) throw new Error(`isDbPinSet failed: ${error.message}`)
   return !!data?.admin_pin_hash
 }
 
@@ -56,27 +61,74 @@ export function isValidPinFormat(pin: string, length: number): boolean {
   return new RegExp(`^\\d{${length}}$`).test(pin)
 }
 
-/**
- * Best-effort in-memory rate limiter. Serverless instances are ephemeral, so
- * this only blunts brute force within a single warm instance — it is a speed
- * bump, not a guarantee. Reset codes/PINs are still single-use and time-boxed.
- */
-const attempts = new Map<string, { count: number; resetAt: number }>()
-
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now()
-  const entry = attempts.get(key)
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + windowMs })
-    return true
-  }
-  if (entry.count >= max) return false
-  entry.count += 1
-  return true
-}
-
 export function clientKey(headers: Record<string, string | string[] | undefined>): string {
   const fwd = headers['x-forwarded-for']
   const ip = Array.isArray(fwd) ? fwd[0] : (fwd ?? 'unknown')
   return String(ip).split(',')[0].trim() || 'unknown'
+}
+
+/**
+ * Durable, cross-instance rate limiter backed by the auth_throttle table
+ * (migration 020). Records one attempt for `key` and returns whether it is
+ * allowed. Fails OPEN on infrastructure errors (returns true) so a throttle
+ * outage — or a deploy that precedes the migration — never locks admins out;
+ * the PIN check still gates access. `key` is namespaced by the caller
+ * (e.g. "verify:<ip>", "reset:<ip>", "admin:<ip>").
+ */
+export async function consumeRateLimit(
+  key: string,
+  opts: { max: number; windowSecs: number; lockSecs: number } = { max: 8, windowSecs: 600, lockSecs: 900 },
+): Promise<boolean> {
+  try {
+    const supabase = makeAdminClient()
+    const { data, error } = await supabase.rpc('pin_rate_consume', {
+      p_key: key,
+      p_max: opts.max,
+      p_window_secs: opts.windowSecs,
+      p_lock_secs: opts.lockSecs,
+    })
+    if (error) {
+      console.error('[rate-limit] consume failed (allowing):', error.message)
+      return true
+    }
+    return data !== false
+  } catch (err) {
+    console.error('[rate-limit] consume threw (allowing):', err instanceof Error ? err.message : err)
+    return true
+  }
+}
+
+/** Clear a rate-limit key after a successful auth. Best-effort. */
+export async function resetRateLimit(key: string): Promise<void> {
+  try {
+    const supabase = makeAdminClient()
+    await supabase.rpc('pin_rate_reset', { p_key: key })
+  } catch {
+    /* non-fatal */
+  }
+}
+
+export interface AdminAuthResult {
+  ok: boolean
+  status: number
+  error?: string
+}
+
+/**
+ * Single entry point for authenticating a PIN-protected admin request: applies
+ * the durable rate limit, then verifies the PIN. Every admin endpoint should use
+ * this so throttling is uniform (previously only /verify-pin was limited). On a
+ * correct PIN the limiter is reset so honest admins aren't progressively slowed.
+ */
+export async function requireAdmin(
+  headers: Record<string, string | string[] | undefined>,
+): Promise<AdminAuthResult> {
+  const key = `admin:${clientKey(headers)}`
+  if (!(await consumeRateLimit(key))) {
+    return { ok: false, status: 429, error: 'Zu viele Versuche. Bitte später erneut versuchen.' }
+  }
+  const valid = await verifyAdminPin(pinFromHeader(headers)) // throws on DB error → 500 (fail closed)
+  if (!valid) return { ok: false, status: 401, error: 'Unauthorized' }
+  await resetRateLimit(key)
+  return { ok: true, status: 200 }
 }

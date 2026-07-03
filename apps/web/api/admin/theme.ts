@@ -3,7 +3,7 @@
 // but only the service role may write. See docs/phase-2-production.md.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, verifyAdminPin, pinFromHeader } from '../_lib/adminAuth'
+import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { PRESET_PALETTES, CUSTOM_SLOTS, isHex } from '../_lib/palettes'
 import type { Database } from '../../src/lib/database.types'
 
@@ -41,9 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    const auth = await requireAdmin(req.headers)
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
     const supabase = makeAdminClient()
 
