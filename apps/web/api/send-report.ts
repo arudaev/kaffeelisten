@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport } from './_lib/report'
-import { verifyAdminPin, pinFromHeader } from './_lib/adminAuth'
+import { requireAdmin } from './_lib/adminAuth'
 
 export const config = { maxDuration: 60 }
 
@@ -11,9 +11,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Auth against the DB PIN (with ADMIN_PIN env fallback until a PIN is set),
   // so the manual send keeps working after the admin changes their PIN.
-  if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
+  const auth = await requireAdmin(req.headers)
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
   try {
     const { month } = (req.body ?? {}) as { month?: string }
