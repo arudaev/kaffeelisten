@@ -32,8 +32,11 @@ interface MemberForm {
   active: boolean
 }
 
-function capitalizeName(s: string): string {
-  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+// Preserve the admin's casing verbatim — only trim and collapse internal
+// whitespace. Force-title-casing corrupts international names (McDonald,
+// van der Berg, de la Cruz, O'Brien), and the admin knows the correct spelling.
+function normalizeName(s: string): string {
+  return s.trim().replace(/\s+/g, ' ')
 }
 
 // Basic email shape check — the server/DB is the source of truth, this just
@@ -127,8 +130,8 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   }
 
   const handleSubmit = async () => {
-    const firstName = capitalizeName(form.firstName)
-    const lastName = capitalizeName(form.lastName)
+    const firstName = normalizeName(form.firstName)
+    const lastName = normalizeName(form.lastName)
     const workEmail = form.workEmail.trim()
     // All identity fields are mandatory: every member must be reachable for the
     // per-member monthly statement.
