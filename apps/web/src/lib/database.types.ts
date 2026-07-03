@@ -292,6 +292,14 @@ export type Database = {
         Args: { p_company_id: string; p_name: string; p_email: string }
         Returns: { id: string; name: string; company_id: string; active: boolean }[]
       }
+      pin_rate_consume: {
+        Args: { p_key: string; p_max: number; p_window_secs: number; p_lock_secs: number }
+        Returns: boolean
+      }
+      pin_rate_reset: {
+        Args: { p_key: string }
+        Returns: undefined
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

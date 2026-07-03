@@ -6,14 +6,16 @@
 // The emailed code is used with reset-pin to set a new PIN. Service-role only.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { randomInt } from 'node:crypto'
 import { Resend } from 'resend'
-import { makeAdminClient, rateLimit, clientKey } from '../_lib/adminAuth'
+import { makeAdminClient, consumeRateLimit, clientKey } from '../_lib/adminAuth'
 
 const TTL_MINUTES = 15
 
+// Cryptographically-secure 6-digit code (Math.random is not suitable for a
+// security token — it's predictable and low-entropy).
 function sixDigitCode(): string {
-  const n = Math.floor(Math.random() * 1_000_000)
-  return String(n).padStart(6, '0')
+  return String(randomInt(0, 1_000_000)).padStart(6, '0')
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -22,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Tight limit — this sends email and issues a recovery code.
-  if (!rateLimit(`reset-req:${clientKey(req.headers)}`, 5, 10 * 60_000)) {
+  if (!(await consumeRateLimit(`reset-req:${clientKey(req.headers)}`, { max: 5, windowSecs: 600, lockSecs: 900 }))) {
     return res.status(429).json({ error: 'Zu viele Anfragen. Bitte später erneut versuchen.' })
   }
 

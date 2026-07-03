@@ -11,7 +11,7 @@
 // Never exposes secrets. Reads work_email only for the admin (members/dashboard).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, verifyAdminPin, pinFromHeader } from '../_lib/adminAuth'
+import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const NAME_MAX = 120
@@ -124,9 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (!(await verifyAdminPin(pinFromHeader(req.headers)))) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    const auth = await requireAdmin(req.headers)
+    if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
     const supabase = makeAdminClient()
 
