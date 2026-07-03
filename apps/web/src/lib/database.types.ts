@@ -280,6 +280,18 @@ export type Database = {
         Args: { p_code: string; p_new_pin: string }
         Returns: boolean
       }
+      log_order: {
+        Args: { p_member_id: string; p_items: { item_id: string; quantity: number }[] }
+        Returns: string[]
+      }
+      undo_order: {
+        Args: { p_ids: string[] }
+        Returns: number
+      }
+      register_member: {
+        Args: { p_company_id: string; p_name: string; p_email: string }
+        Returns: { id: string; name: string; company_id: string; active: boolean }[]
+      }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
