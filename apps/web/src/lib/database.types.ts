@@ -30,6 +30,9 @@ export type Database = {
           work_email: string | null
           active: boolean
           created_at: string
+          email_verified_at: string | null
+          email_verify_token_hash: string | null
+          email_verify_expires_at: string | null
         }
         Insert: {
           id?: string
@@ -38,6 +41,9 @@ export type Database = {
           work_email?: string | null
           active?: boolean
           created_at?: string
+          email_verified_at?: string | null
+          email_verify_token_hash?: string | null
+          email_verify_expires_at?: string | null
         }
         Update: {
           id?: string
@@ -46,6 +52,9 @@ export type Database = {
           work_email?: string | null
           active?: boolean
           created_at?: string
+          email_verified_at?: string | null
+          email_verify_token_hash?: string | null
+          email_verify_expires_at?: string | null
         }
         Relationships: [
           {
@@ -299,6 +308,14 @@ export type Database = {
       pin_rate_reset: {
         Args: { p_key: string }
         Returns: undefined
+      }
+      set_member_email_token: {
+        Args: { p_member_id: string; p_token: string; p_ttl_minutes?: number }
+        Returns: undefined
+      }
+      confirm_member_email: {
+        Args: { p_member_id: string; p_token: string }
+        Returns: string | null
       }
     }
     Enums: { [_ in never]: never }
