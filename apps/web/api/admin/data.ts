@@ -13,6 +13,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { resolveMx, resolve } from 'node:dns/promises'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
+import { sendMemberConfirmation } from '../_lib/confirmationEmail'
+
+// Request origin (e.g. https://kaffeelisten.de) for building confirmation links.
+function baseUrl(req: VercelRequest): string {
+  const proto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0] ?? 'https'
+  const host = (req.headers['x-forwarded-host'] as string | undefined) ?? req.headers.host ?? 'kaffeelisten.de'
+  return `${proto}://${host}`
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const NAME_MAX = 120
@@ -196,7 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ items: data ?? [] })
       }
       // members
-      const { data, error } = await supabase.from('members').select('id, name, company_id, work_email, active').order('name')
+      const { data, error } = await supabase.from('members').select('id, name, company_id, work_email, active, email_verified_at').order('name')
       if (error) throw new Error(error.message)
       return res.status(200).json({ members: data ?? [] })
     }
@@ -204,6 +212,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── writes (POST create / PATCH update) ───────────────────────────────────
     const resource = parseResource(req)
     if (!resource) return res.status(400).json({ error: 'Unbekannte Ressource.' })
+
+    // Manual resend of a member's confirmation email (POST ?resource=members&action=send-confirmation).
+    const action = Array.isArray(req.query.action) ? req.query.action[0] : req.query.action
+    if (action === 'send-confirmation') {
+      if (method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+      if (resource !== 'members') return res.status(400).json({ error: 'Nur für Mitarbeitende möglich.' })
+      const id = String((req.body as { id?: unknown })?.id ?? '').trim()
+      if (!id) return res.status(400).json({ error: 'id fehlt.' })
+      const { data: member, error } = await supabase
+        .from('members').select('id, name, work_email').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!member) return res.status(404).json({ error: 'Mitarbeitende(r) nicht gefunden.' })
+      const ok = await sendMemberConfirmation(supabase, member, baseUrl(req))
+      if (!ok) return res.status(502).json({ error: 'Bestätigungs-E-Mail konnte nicht gesendet werden.' })
+      return res.status(200).json({ ok: true })
+    }
 
     const body = (req.body ?? {}) as { id?: unknown; values?: unknown }
     const values = (body.values ?? {}) as Record<string, unknown>
@@ -216,6 +240,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isErr(validated)) return res.status(400).json({ error: validated.error })
 
     if (method === 'POST') {
+      if (resource === 'members') {
+        // Capture the new id so we can send the confirmation email. The send is
+        // non-fatal: the member is already created and the admin can resend.
+        const { data, error } = await supabase
+          .from('members').insert(validated.value as never).select('id, name, work_email').single()
+        if (error) throw new Error(error.message)
+        await sendMemberConfirmation(supabase, data, baseUrl(req))
+        return res.status(201).json({ ok: true })
+      }
       const { error } = await supabase.from(resource).insert(validated.value as never)
       if (error) throw new Error(error.message)
       return res.status(201).json({ ok: true })
@@ -227,6 +260,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (Object.keys(validated.value).length === 0) {
       return res.status(400).json({ error: 'Keine Änderungen übermittelt.' })
     }
+
+    if (resource === 'members') {
+      const patch = { ...(validated.value as Record<string, unknown>) }
+      let emailChanged = false
+      if (typeof patch.work_email === 'string') {
+        const { data: current, error: curErr } = await supabase
+          .from('members').select('work_email').eq('id', id).maybeSingle()
+        if (curErr) throw new Error(curErr.message)
+        emailChanged = !current || current.work_email !== patch.work_email
+        // A new address is unverified until the member confirms it.
+        if (emailChanged) patch.email_verified_at = null
+      }
+      const { error } = await supabase.from('members').update(patch as never).eq('id', id)
+      if (error) throw new Error(error.message)
+      if (emailChanged) {
+        const { data: member } = await supabase
+          .from('members').select('id, name, work_email').eq('id', id).maybeSingle()
+        if (member) await sendMemberConfirmation(supabase, member, baseUrl(req))
+      }
+      return res.status(200).json({ ok: true })
+    }
+
     const { error } = await supabase.from(resource).update(validated.value as never).eq('id', id)
     if (error) throw new Error(error.message)
     return res.status(200).json({ ok: true })

@@ -29,6 +29,7 @@ import {
   issueSessionCookie,
   clearSessionCookie,
 } from '../_lib/adminAuth'
+import { replyTo } from '../_lib/mail'
 
 const RESET_TTL_MINUTES = 15
 
@@ -258,6 +259,7 @@ async function requestReset(req: VercelRequest, res: VercelResponse) {
           await resend.emails.send({
             from: 'Kaffeelisten <bericht@kaffeelisten.de>',
             to: [match],
+            ...(replyTo() ? { replyTo: replyTo()! } : {}),
             subject: 'Kaffeelisten – PIN zurücksetzen',
             html: `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:24px;background:#FAFAF9;font-family:Arial,Helvetica,sans-serif;color:#1C1917;">
   <div style="max-width:460px;margin:0 auto;background:#fff;border:1px solid #E7E5E4;border-radius:12px;padding:28px;">
