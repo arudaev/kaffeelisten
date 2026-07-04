@@ -27,21 +27,22 @@ one by breaking another:
 
 ## 1. DNS records — current status
 
-As of the last check, the three records Resend requires are **already live and correct**; only DMARC
-is missing. Verified with `nslookup` (see §3).
+All four records are **live and correct** — the three Resend requires (DKIM, `send` MX, `send` SPF)
+plus the recommended DMARC policy. Verified with `nslookup` (see §3). DMARC resolves on Google's
+resolver; a lag on other resolvers (e.g. Cloudflare `1.1.1.1`) is just propagation on the 7200s TTL.
 
 | Status | Type | Host (FQDN)                          | Value                                   |
 |--------|------|--------------------------------------|-----------------------------------------|
 | ✅ live | TXT  | `resend._domainkey.kaffeelisten.de`  | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6rMSKiJR1i/KokKxlCSWn4F3Kp3COrJwnG6D7OBgaL52JpGoXUpYSiqI5UHh5IZ/gLs5jJqwDLns/s2cbxSAdGSjuKQHR5EEHBVIvOGL1QhNaGTQlLFH2ppCZgM9UTX/kgXncfw/UnRcw/L1+AdarIhdVOenHPmouU6+U3E5k2wIDAQAB` |
 | ✅ live | MX   | `send.kaffeelisten.de`               | `10 feedback-smtp.eu-west-1.amazonses.com` |
 | ✅ live | TXT  | `send.kaffeelisten.de`               | `v=spf1 include:amazonses.com ~all`     |
-| ⬜ **add** | TXT | `_dmarc.kaffeelisten.de`           | `v=DMARC1; p=none; rua=mailto:hlexhelftd@gmail.com; fo=1` |
+| ✅ live | TXT | `_dmarc.kaffeelisten.de`           | `v=DMARC1; p=none; rua=mailto:hlexhelftd@gmail.com; fo=1` |
 
-**What's left to do:**
-1. **Add the DMARC `TXT` record** above. It's the only missing piece and is optional for Resend, but
-   it's what turns on aggregate reporting and lets you later enforce a policy. `rua=` sends the daily
-   XML reports to a mailbox you watch; `fo=1` asks for failure samples.
-2. **Click Verify on Resend** (§2) — DKIM + SPF should already pass.
+**Ongoing:**
+- The DMARC record turns on aggregate reporting (`rua=` sends the daily XML reports to
+  `hlexhelftd@gmail.com`; `fo=1` asks for failure samples). Watch a few of those reports and confirm
+  both Resend **and** your Hetzner mailbox mail align, **then** tighten the policy from `p=none` →
+  `p=quarantine` → `p=reject`. Nothing further to add in DNS.
 
 Notes:
 - **DMARC covers the whole domain**, including your Hetzner mailbox mail. Resend already passes via
