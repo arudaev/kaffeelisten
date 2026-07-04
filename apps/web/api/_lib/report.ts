@@ -16,6 +16,7 @@ import {
 } from './reportHtml'
 
 import { findPalette } from './palettes'
+import { replyTo } from './mail'
 
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
@@ -510,6 +511,7 @@ export async function sendEmail(
       from: 'Kaffeelisten <bericht@kaffeelisten.de>',
       to: recipients,
       ...(ccEmails.length > 0 ? { cc: ccEmails } : {}),
+      ...(replyTo() ? { replyTo: replyTo()! } : {}),
       subject: resolveReportSubject(format, monthLabel, reportMonth),
       html,
       attachments,
@@ -578,6 +580,7 @@ export async function sendMemberStatements(
         {
           from: 'Kaffeelisten <bericht@kaffeelisten.de>',
           to: [email],
+          ...(replyTo() ? { replyTo: replyTo()! } : {}),
           subject,
           html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro }),
         },
