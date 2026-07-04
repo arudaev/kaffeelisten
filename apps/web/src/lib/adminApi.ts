@@ -29,6 +29,7 @@ export interface AdminMember {
   company_id: string
   work_email: string | null
   active: boolean
+  email_verified_at: string | null
 }
 
 export interface DashboardTransaction {
@@ -95,4 +96,6 @@ export const adminApi = {
     id: string,
     values: Partial<{ name: string; company_id: string; work_email: string; active: boolean }>,
   ) => call<{ ok: true }>('PATCH', '?resource=members', { id, values }),
+  sendMemberConfirmation: (id: string) =>
+    call<{ ok: true }>('POST', '?resource=members&action=send-confirmation', { id }),
 }

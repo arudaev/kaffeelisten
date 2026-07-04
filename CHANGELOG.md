@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### feat/member-identity-validation
+
+#### Added
+- **Member email confirmation (proof of ownership).** When a member is added — or their work email is changed — Kaffeelisten now emails them a one-time confirmation link. Clicking it verifies the address on the new public page `/email-bestaetigen`. The admin _Mitarbeitende_ table shows a **Bestätigt / Ausstehend** badge per person and a per-row action to (re-)send the confirmation email. Unverified members still receive their monthly statement — they are only flagged, never skipped. See `docs/email-deliverability.md`.
+
+#### Fixed
+- **International member names are no longer corrupted on save.** The admin member form force-title-cased every name, mangling names like _McDonald_, _van der Berg_, _de la Cruz_ and _O'Brien_. Names are now stored with the casing the admin typed (only surrounding/duplicate whitespace is trimmed).
+
+#### Changed
+- **Member work-email addresses are now checked for deliverability when saved.** Beyond the existing shape check, the admin API verifies the email's domain actually accepts mail (MX record, with an A/AAAA fallback), rejecting typos like `chef@firma.col` or `anna@gmial.com`. Transient DNS failures never block a save.
+- **All outgoing email now sets a `Reply-To`.** Reports, member statements, PIN-reset codes and the new confirmation mail point replies at the first configured `ADMIN_EMAIL` address instead of the no-reply from-address, improving deliverability and trust. New DNS/Resend audit checklist for SPF/DKIM/DMARC in `docs/email-deliverability.md`.
+
+---
+
 ## [1.0.0] - 2026-07-03
 
 _First production release for the ITC1 Deggendorf campus. Consolidates all development since the initial scaffold; entries below are grouped by the change that introduced them._

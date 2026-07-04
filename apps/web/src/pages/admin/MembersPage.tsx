@@ -17,6 +17,7 @@ interface MemberRow {
   company_name: string
   work_email: string | null
   active: boolean
+  email_verified: boolean
 }
 
 interface CompanyOption {
@@ -32,8 +33,11 @@ interface MemberForm {
   active: boolean
 }
 
-function capitalizeName(s: string): string {
-  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+// Preserve the admin's casing verbatim — only trim and collapse internal
+// whitespace. Force-title-casing corrupts international names (McDonald,
+// van der Berg, de la Cruz, O'Brien), and the admin knows the correct spelling.
+function normalizeName(s: string): string {
+  return s.trim().replace(/\s+/g, ' ')
 }
 
 // Basic email shape check — the server/DB is the source of truth, this just
@@ -86,6 +90,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
         company_name: companyMap.get(m.company_id) ?? '—',
         work_email: m.work_email ?? null,
         active: m.active,
+        email_verified: !!m.email_verified_at,
       }))
       setMembers(rows)
       setCompanies(activeCompanies)
@@ -127,8 +132,8 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   }
 
   const handleSubmit = async () => {
-    const firstName = capitalizeName(form.firstName)
-    const lastName = capitalizeName(form.lastName)
+    const firstName = normalizeName(form.firstName)
+    const lastName = normalizeName(form.lastName)
     const workEmail = form.workEmail.trim()
     // All identity fields are mandatory: every member must be reachable for the
     // per-member monthly statement.
@@ -155,6 +160,15 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       onToast(err instanceof Error ? err.message : 'Fehler beim Speichern.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const sendConfirmation = async (member: MemberRow) => {
+    try {
+      await adminApi.sendMemberConfirmation(member.id)
+      onToast('Bestätigungs-E-Mail gesendet.')
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'E-Mail konnte nicht gesendet werden.')
     }
   }
 
@@ -191,6 +205,15 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     },
     { key: 'company_name', label: 'Unternehmen', muted: true },
     {
+      key: 'email_verified',
+      label: 'E-Mail',
+      render: r => (
+        <Badge kind={r.email_verified ? 'verified' : 'pending'}>
+          {r.email_verified ? 'Bestätigt' : 'Ausstehend'}
+        </Badge>
+      ),
+    },
+    {
       key: 'active',
       label: 'Status',
       render: r => (
@@ -205,6 +228,14 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       align: 'right',
       render: r => (
         <div className="inline-flex gap-1">
+          <button
+            type="button"
+            onClick={() => sendConfirmation(r)}
+            title="Bestätigungs-E-Mail senden"
+            className="text-fg-muted hover:text-accent p-1 rounded transition-colors"
+          >
+            <AdminIcon name="send" size={16} />
+          </button>
           <button
             type="button"
             onClick={() => openEdit(r)}

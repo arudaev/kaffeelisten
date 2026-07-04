@@ -160,6 +160,81 @@ export function buildMemberStatementHtml(
 </html>`
 }
 
+// ── Email-confirmation message ────────────────────────────────────────────────
+// Sent when a member is added or their work email changes. Confirms the mailbox
+// exists and is watched (MX validation only proves the domain accepts mail), so
+// the monthly statement reaches a real, owned address. Same Outlook-safe,
+// table-based shell as the member statement above.
+export function buildEmailConfirmationHtml(
+  memberName: string,
+  confirmUrl: string,
+  opts: { accent?: string } = {},
+): string {
+  const accent = opts.accent || '#D97706'
+  const firstName = memberName.trim().split(/\s+/)[0] || memberName
+  // confirmUrl is a server-built URL (origin + signed token), not user copy, but
+  // it lands in href/text attributes — escape it defensively all the same.
+  const safeUrl = escapeHtml(confirmUrl)
+
+  return `<!DOCTYPE html>
+<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background:${accent};padding:26px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">E-Mail-Adresse best&auml;tigen</p>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="padding:28px 32px 24px;background:#ffffff;">
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${escapeHtml(firstName)},</p>
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">deine Arbeits-E-Mail-Adresse wurde bei Kaffeelisten am ITC1 Deggendorf hinterlegt. Bitte best&auml;tige mit einem Klick, dass diese Adresse dir geh&ouml;rt &ndash; so erh&auml;ltst du deine monatliche Aufstellung zuverl&auml;ssig.</p>
+
+            <!-- BUTTON (bulletproof for Outlook) -->
+            <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 0 22px;">
+              <tr>
+                <td align="center" bgcolor="${accent}" style="border-radius:8px;">
+                  <a href="${safeUrl}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">E-Mail best&auml;tigen</a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#A8A29E;">Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:</p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;word-break:break-all;"><a href="${safeUrl}" target="_blank" style="color:#B45309;">${safeUrl}</a></p>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">ITC1 Deggendorf &middot; Wenn du dich nicht bei Kaffeelisten angemeldet hast, ignoriere diese E-Mail einfach.</p>
+          </td>
+        </tr>
+
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+}
+
 // ── Company report email (admin + CEO) ───────────────────────────────────────
 // The month-end email body (PDF + Excel are attached separately by report.ts).
 // Table-based layout — required for Outlook (Word renderer ignores div/CSS).
