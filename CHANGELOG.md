@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/service-role-write-grants
+
+#### Fixed
+- **Admin can create and edit members, companies and items again.** After the RLS lockdown moved all admin writes to the service-role API, saving any member, company or item in the admin panel failed with a server error — the `service_role` database role had never been granted `INSERT`/`UPDATE` on those tables (only `SELECT`). Reads were unaffected, so the breakage only showed on save. Requires applying migration `022` to the database.
+
 ### feat/member-identity-validation
 
 #### Added

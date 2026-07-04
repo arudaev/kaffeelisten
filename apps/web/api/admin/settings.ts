@@ -1,8 +1,9 @@
 // GET  /api/admin/settings — read the non-secret admin configuration
 // PUT  /api/admin/settings — update recipients, CEO email/CC, member toggle
 //
-// PIN-protected (x-admin-pin header). Never returns admin_pin_hash or the reset
-// token. Service-role only — see docs/phase-2-production.md §F.
+// Session-protected via requireAdmin (signed HttpOnly cookie). Never returns
+// admin_pin_hash or the reset token. Service-role only — see
+// docs/phase-2-production.md §F.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin, isDbPinSet } from '../_lib/adminAuth'
