@@ -1,4 +1,4 @@
-type BadgeKind = 'active' | 'inactive' | 'warn' | 'error'
+type BadgeKind = 'active' | 'inactive' | 'warn' | 'error' | 'verified' | 'pending'
 
 interface BadgeProps {
   kind?: BadgeKind
@@ -10,6 +10,8 @@ const kindClasses: Record<BadgeKind, string> = {
   inactive: 'bg-surface-2 text-fg-subtle',
   warn: 'bg-accent-subtle text-accent',
   error: 'bg-error-subtle text-error',
+  verified: 'bg-success-subtle text-success',
+  pending: 'bg-accent-subtle text-accent',
 }
 
 export default function Badge({ kind = 'active', children }: BadgeProps) {
