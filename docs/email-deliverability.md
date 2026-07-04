@@ -11,35 +11,52 @@ them.
 > `apps/web/api/_lib/mail.ts`). A from-address that silently drops replies hurts reputation, so make
 > sure `ADMIN_EMAIL`'s first entry is a real, monitored mailbox.
 
-## 1. DNS records to add
+## 0. Your DNS setup (context)
 
-Add these at the DNS registrar for `kaffeelisten.de`, exactly as Resend issued them. Host names are
-**relative to the domain** — depending on the registrar you enter either the short label (`send`) or
-the fully-qualified name (`send.kaffeelisten.de`); both forms are shown.
+`kaffeelisten.de` runs three services off one zone; keep them mentally separate so you don't "fix"
+one by breaking another:
 
-| Type | Host (short)        | Host (FQDN)                          | Value                                                   | Priority |
-|------|---------------------|--------------------------------------|---------------------------------------------------------|----------|
-| TXT  | `resend._domainkey` | `resend._domainkey.kaffeelisten.de`  | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6rMSKiJR1i/KokKxlCSWn4F3Kp3COrJwnG6D7OBgaL52JpGoXUpYSiqI5UHh5IZ/gLs5jJqwDLns/s2cbxSAdGSjuKQHR5EEHBVIvOGL1QhNaGTQlLFH2ppCZgM9UTX/kgXncfw/UnRcw/L1+AdarIhdVOenHPmouU6+U3E5k2wIDAQAB` | —  |
-| MX   | `send`              | `send.kaffeelisten.de`               | `feedback-smtp.eu-west-1.amazonses.com`                 | 10       |
-| TXT  | `send`              | `send.kaffeelisten.de`               | `v=spf1 include:amazonses.com ~all`                     | —        |
-| TXT  | `_dmarc`            | `_dmarc.kaffeelisten.de`             | `v=DMARC1; p=none;`                                      | —        |
+- **Web → Vercel:** `A @ → 216.198.79.1`, `CNAME www → cname.vercel-dns.com`. (Production confirmation
+  links resolve here.)
+- **Mailboxes → Hetzner:** `MX @ → www4.your-server.de`, root `TXT @ → "v=spf1 +a +mx ?all"`, plus the
+  `autoconfig` / `_autodiscover` / `_imaps` / `_pop3s` / `_submission` records. This is real mail
+  **from** `@kaffeelisten.de`.
+- **Transactional → Resend (AWS SES, `eu-west-1`):** uses the **`send.` subdomain** for the bounce /
+  return-path and a **root-domain DKIM key** (`resend._domainkey`). It does **not** use the root MX or
+  root SPF, so it neither needs nor touches the Hetzner records above.
+
+## 1. DNS records — current status
+
+As of the last check, the three records Resend requires are **already live and correct**; only DMARC
+is missing. Verified with `nslookup` (see §3).
+
+| Status | Type | Host (FQDN)                          | Value                                   |
+|--------|------|--------------------------------------|-----------------------------------------|
+| ✅ live | TXT  | `resend._domainkey.kaffeelisten.de`  | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6rMSKiJR1i/KokKxlCSWn4F3Kp3COrJwnG6D7OBgaL52JpGoXUpYSiqI5UHh5IZ/gLs5jJqwDLns/s2cbxSAdGSjuKQHR5EEHBVIvOGL1QhNaGTQlLFH2ppCZgM9UTX/kgXncfw/UnRcw/L1+AdarIhdVOenHPmouU6+U3E5k2wIDAQAB` |
+| ✅ live | MX   | `send.kaffeelisten.de`               | `10 feedback-smtp.eu-west-1.amazonses.com` |
+| ✅ live | TXT  | `send.kaffeelisten.de`               | `v=spf1 include:amazonses.com ~all`     |
+| ⬜ **add** | TXT | `_dmarc.kaffeelisten.de`           | `v=DMARC1; p=none; rua=mailto:hlexhelftd@gmail.com; fo=1` |
+
+**What's left to do:**
+1. **Add the DMARC `TXT` record** above. It's the only missing piece and is optional for Resend, but
+   it's what turns on aggregate reporting and lets you later enforce a policy. `rua=` sends the daily
+   XML reports to a mailbox you watch; `fo=1` asks for failure samples.
+2. **Click Verify on Resend** (§2) — DKIM + SPF should already pass.
 
 Notes:
-- **DKIM (`resend._domainkey`)** — paste the `p=…` value as **one unbroken string**. Some registrars
-  split long TXT records at 255 characters automatically; that's fine, but never insert line breaks
-  or spaces yourself.
-- **The `send` MX/SPF pair** governs only the bounce / return-path **subdomain** (`send.kaffeelisten.de`).
-  It does **not** touch the root-domain MX, so it will not interfere with any mailbox hosting on
-  `kaffeelisten.de` itself.
-- **DMARC `p=none`** is monitoring-only: it reports alignment but does not quarantine anything. Leave
-  it at `none` for the first few monthly sends, then, once the Resend dashboard shows DKIM + SPF
-  consistently aligned, tighten to `p=quarantine` and eventually `p=reject` for full protection.
+- **DMARC covers the whole domain**, including your Hetzner mailbox mail. Resend already passes via
+  **DKIM alignment** (`d=kaffeelisten.de`). Keep `p=none` until you've watched a few `rua` reports and
+  confirmed your Hetzner mail also aligns, **then** tighten to `p=quarantine` and eventually `p=reject`.
+- **Root SPF is `?all` (neutral)** — very permissive. Harmless for Resend (which doesn't rely on it),
+  but once you're confident in your senders you may want to tighten the root `@` record to `~all`.
+- **Do not** add `include:amazonses.com` to the **root** SPF or change the root MX — Resend's SPF lives
+  on the `send.` subdomain by design.
 
 ## 2. Verify on Resend
 
 1. Resend dashboard → **Domains** → `kaffeelisten.de`.
-2. Click **Verify DNS Records**. DKIM and SPF must both read **Verified** (green). DNS propagation
-   can take from minutes up to ~48h depending on the registrar's TTL.
+2. Click **Verify DNS Records**. DKIM and SPF should read **Verified** (green) immediately, since those
+   records are already live. (DMARC is not required for Resend to verify.)
 3. Send a test from the dashboard (or add a member in the admin panel) and confirm delivery to a real
    inbox — check that it lands in the inbox, not spam.
 
