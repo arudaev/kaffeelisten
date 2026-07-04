@@ -3,12 +3,14 @@ import MemberFlow from './pages/MemberFlow'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import Datenschutz from './pages/Datenschutz'
+import EmailBestaetigen from './pages/EmailBestaetigen'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<MemberFlow />} />
       <Route path="/datenschutz" element={<Datenschutz />} />
+      <Route path="/email-bestaetigen" element={<EmailBestaetigen />} />
       <Route path="/admin" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
     </Routes>

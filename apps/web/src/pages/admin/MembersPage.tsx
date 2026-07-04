@@ -17,6 +17,7 @@ interface MemberRow {
   company_name: string
   work_email: string | null
   active: boolean
+  email_verified: boolean
 }
 
 interface CompanyOption {
@@ -89,6 +90,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
         company_name: companyMap.get(m.company_id) ?? '—',
         work_email: m.work_email ?? null,
         active: m.active,
+        email_verified: !!m.email_verified_at,
       }))
       setMembers(rows)
       setCompanies(activeCompanies)
@@ -161,6 +163,15 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     }
   }
 
+  const sendConfirmation = async (member: MemberRow) => {
+    try {
+      await adminApi.sendMemberConfirmation(member.id)
+      onToast('Bestätigungs-E-Mail gesendet.')
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'E-Mail konnte nicht gesendet werden.')
+    }
+  }
+
   const toggleActive = async (member: MemberRow) => {
     try {
       await adminApi.updateMember(member.id, { active: !member.active })
@@ -194,6 +205,15 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     },
     { key: 'company_name', label: 'Unternehmen', muted: true },
     {
+      key: 'email_verified',
+      label: 'E-Mail',
+      render: r => (
+        <Badge kind={r.email_verified ? 'verified' : 'pending'}>
+          {r.email_verified ? 'Bestätigt' : 'Ausstehend'}
+        </Badge>
+      ),
+    },
+    {
       key: 'active',
       label: 'Status',
       render: r => (
@@ -208,6 +228,14 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       align: 'right',
       render: r => (
         <div className="inline-flex gap-1">
+          <button
+            type="button"
+            onClick={() => sendConfirmation(r)}
+            title="Bestätigungs-E-Mail senden"
+            className="text-fg-muted hover:text-accent p-1 rounded transition-colors"
+          >
+            <AdminIcon name="send" size={16} />
+          </button>
           <button
             type="button"
             onClick={() => openEdit(r)}
