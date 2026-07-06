@@ -7,18 +7,30 @@ export type Database = {
           name: string
           active: boolean
           created_at: string
+          billing_mode: 'individual' | 'company_paid'
+          billing_contact_name: string | null
+          billing_contact_email: string | null
+          billing_notes: string | null
         }
         Insert: {
           id?: string
           name: string
           active?: boolean
           created_at?: string
+          billing_mode?: 'individual' | 'company_paid'
+          billing_contact_name?: string | null
+          billing_contact_email?: string | null
+          billing_notes?: string | null
         }
         Update: {
           id?: string
           name?: string
           active?: boolean
           created_at?: string
+          billing_mode?: 'individual' | 'company_paid'
+          billing_contact_name?: string | null
+          billing_contact_email?: string | null
+          billing_notes?: string | null
         }
         Relationships: []
       }
@@ -196,6 +208,15 @@ export type Database = {
           member_subject: string | null
           member_intro: string | null
           max_items_per_order: number | null
+          issue_invoices: boolean
+          issuer_legal_name: string | null
+          issuer_address: string | null
+          issuer_vat_id: string | null
+          issuer_iban: string | null
+          issuer_bic: string | null
+          invoice_number_prefix: string | null
+          invoice_payment_terms: string | null
+          invoice_vat_rate: number
           updated_at: string
         }
         Insert: {
@@ -219,6 +240,15 @@ export type Database = {
           member_subject?: string | null
           member_intro?: string | null
           max_items_per_order?: number | null
+          issue_invoices?: boolean
+          issuer_legal_name?: string | null
+          issuer_address?: string | null
+          issuer_vat_id?: string | null
+          issuer_iban?: string | null
+          issuer_bic?: string | null
+          invoice_number_prefix?: string | null
+          invoice_payment_terms?: string | null
+          invoice_vat_rate?: number
           updated_at?: string
         }
         Update: {
@@ -242,9 +272,121 @@ export type Database = {
           member_subject?: string | null
           member_intro?: string | null
           max_items_per_order?: number | null
+          issue_invoices?: boolean
+          issuer_legal_name?: string | null
+          issuer_address?: string | null
+          issuer_vat_id?: string | null
+          issuer_iban?: string | null
+          issuer_bic?: string | null
+          invoice_number_prefix?: string | null
+          invoice_payment_terms?: string | null
+          invoice_vat_rate?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      billing_runs: {
+        Row: {
+          report_month: string
+          status: 'running' | 'completed' | 'failed'
+          attempts: number
+          last_error: string | null
+          started_at: string
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          report_month: string
+          status?: 'running' | 'completed' | 'failed'
+          attempts?: number
+          last_error?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          report_month?: string
+          status?: 'running' | 'completed' | 'failed'
+          attempts?: number
+          last_error?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_documents: {
+        Row: {
+          id: string
+          report_month: string
+          document_number: string
+          recipient_type: 'member' | 'company' | 'itc1_archive'
+          recipient_name: string
+          recipient_email: string
+          company_id: string | null
+          member_id: string | null
+          subtotal_cents: number
+          tax_cents: number
+          total_cents: number
+          status: 'draft' | 'sent' | 'failed' | 'voided'
+          paid: boolean
+          sent_at: string | null
+          resend_message_id: string | null
+          voided_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          report_month: string
+          document_number: string
+          recipient_type: 'member' | 'company' | 'itc1_archive'
+          recipient_name: string
+          recipient_email: string
+          company_id?: string | null
+          member_id?: string | null
+          subtotal_cents?: number
+          tax_cents?: number
+          total_cents?: number
+          status?: 'draft' | 'sent' | 'failed' | 'voided'
+          paid?: boolean
+          sent_at?: string | null
+          resend_message_id?: string | null
+          voided_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          report_month?: string
+          document_number?: string
+          recipient_type?: 'member' | 'company' | 'itc1_archive'
+          recipient_name?: string
+          recipient_email?: string
+          company_id?: string | null
+          member_id?: string | null
+          subtotal_cents?: number
+          tax_cents?: number
+          total_cents?: number
+          status?: 'draft' | 'sent' | 'failed' | 'voided'
+          paid?: boolean
+          sent_at?: string | null
+          resend_message_id?: string | null
+          voided_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'billing_documents_company_id_fkey'
+            columns: ['company_id']
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'billing_documents_member_id_fkey'
+            columns: ['member_id']
+            referencedRelation: 'members'
+            referencedColumns: ['id']
+          }
+        ]
       }
       app_theme: {
         Row: {
@@ -316,6 +458,10 @@ export type Database = {
       confirm_member_email: {
         Args: { p_member_id: string; p_token: string }
         Returns: string | null
+      }
+      next_billing_document_number: {
+        Args: Record<string, never>
+        Returns: number
       }
     }
     Enums: { [_ in never]: never }
