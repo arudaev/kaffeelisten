@@ -9,6 +9,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/billing-invoice-mode
+
+#### Added
+- **Optional invoice mode.** In _Einstellungen → Rechnungsstellung_ the admin can switch the monthly member emails from an informational statement to a proper **invoice issued by ITC1**. When enabled, the admin fills ITC1's issuer block (legal name, address, USt-IdNr, receiving IBAN/BIC, number prefix, payment terms, VAT rate); the email then shows a document number, a net/VAT/gross breakdown and a prominent "wohin überweisen" box. The developers never appear as issuer. Requires applying migrations `023`–`025`.
+- **Per-company billing mode.** A company can be set to _Firma zahlt_ (`company_paid`): one invoice goes to a company billing contact covering all its members, instead of billing each member. `company_paid` requires a billing contact email; _Einzeln_ (individual) is unchanged and remains the default.
+- **Invoice numbering + ledger.** Every issued document gets a unique, never-reused number (`<Präfix><laufende Nummer>`), recorded in a billing ledger. Re-running a month re-sends the same numbers instead of allocating new ones.
+- **Payment tracking.** A _Rechnungen — Zahlungsstatus_ card lists each month's documents with a per-recipient bezahlt/offen toggle.
+
+#### Notes
+- Invoice mode is **off by default**; with it off, behaviour is unchanged (statements as before). Delivery is the email body — no per-user PDF is generated. See `docs/prd-billing-commercial-addendum.md`; invoice wording/VAT/retention are subject to confirmation by ITC1's tax adviser.
+
 ### fix/service-role-write-grants
 
 #### Fixed
