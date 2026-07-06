@@ -13,10 +13,26 @@ interface CompanyRow {
   id: string
   name: string
   active: boolean
+  billing_mode?: 'individual' | 'company_paid'
+  billing_contact_name?: string | null
+  billing_contact_email?: string | null
+  billing_notes?: string | null
 }
 
 interface CompanyForm {
   name: string
+  billing_mode: 'individual' | 'company_paid'
+  billing_contact_name: string
+  billing_contact_email: string
+  billing_notes: string
+}
+
+const EMPTY_FORM: CompanyForm = {
+  name: '',
+  billing_mode: 'individual',
+  billing_contact_name: '',
+  billing_contact_email: '',
+  billing_notes: '',
 }
 
 interface Props {
@@ -32,7 +48,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [editId, setEditId] = useState<string | null>(null)
-  const [form, setForm] = useState<CompanyForm>({ name: '' })
+  const [form, setForm] = useState<CompanyForm>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
   const fetchCompanies = async () => {
@@ -50,26 +66,43 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
   useEffect(() => { fetchCompanies() }, [])
 
   const openAdd = () => {
-    setForm({ name: '' })
+    setForm(EMPTY_FORM)
     setModalMode('add')
     setEditId(null)
     setModalOpen(true)
   }
 
   const openEdit = (company: CompanyRow) => {
-    setForm({ name: company.name })
+    setForm({
+      name: company.name,
+      billing_mode: company.billing_mode ?? 'individual',
+      billing_contact_name: company.billing_contact_name ?? '',
+      billing_contact_email: company.billing_contact_email ?? '',
+      billing_notes: company.billing_notes ?? '',
+    })
     setModalMode('edit')
     setEditId(company.id)
     setModalOpen(true)
   }
 
+  // company_paid requires a billing contact email (mirrors the server rule).
+  const formValid =
+    form.name.trim().length > 0 &&
+    (form.billing_mode !== 'company_paid' || form.billing_contact_email.trim().length > 0)
+
   const handleSubmit = async () => {
-    const name = form.name.trim()
-    if (!name) return
+    if (!formValid) return
     setSaving(true)
+    const values = {
+      name: form.name.trim(),
+      billing_mode: form.billing_mode,
+      billing_contact_name: form.billing_contact_name.trim() || null,
+      billing_contact_email: form.billing_contact_email.trim() || null,
+      billing_notes: form.billing_notes.trim() || null,
+    }
     try {
-      if (modalMode === 'add') await adminApi.createCompany({ name })
-      else await adminApi.updateCompany(editId!, { name })
+      if (modalMode === 'add') await adminApi.createCompany(values)
+      else await adminApi.updateCompany(editId!, values)
       setModalOpen(false)
       onToast(modalMode === 'add' ? 'Unternehmen hinzugefügt.' : 'Unternehmen aktualisiert.')
       fetchCompanies()
@@ -103,6 +136,21 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
       key: 'name',
       label: 'Unternehmen',
       render: r => <span className="font-semibold">{r.name}</span>,
+    },
+    {
+      key: 'billing',
+      label: 'Abrechnung',
+      render: r =>
+        r.billing_mode === 'company_paid' ? (
+          <span className="inline-flex flex-col">
+            <Badge kind="active">Firma zahlt</Badge>
+            {r.billing_contact_email && (
+              <span className="text-xs text-fg-muted mt-0.5">{r.billing_contact_email}</span>
+            )}
+          </span>
+        ) : (
+          <span className="text-sm text-fg-muted">Einzeln</span>
+        ),
     },
     {
       key: 'active',
@@ -224,7 +272,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             <AdminButton
               variant="primary"
               onClick={handleSubmit}
-              disabled={saving || !form.name.trim()}
+              disabled={saving || !formValid}
             >
               {saving ? 'Speichern…' : 'Speichern'}
             </AdminButton>
@@ -235,10 +283,43 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
           <AdminField
             label="Name"
             value={form.name}
-            onChange={e => setForm({ name: e.target.value })}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="z. B. Beispiel GmbH"
             autoFocus
           />
+          <AdminSelect
+            label="Abrechnung"
+            value={form.billing_mode}
+            onChange={e => setForm(f => ({ ...f, billing_mode: e.target.value as CompanyForm['billing_mode'] }))}
+            options={[
+              { value: 'individual', label: 'Jede Person zahlt selbst' },
+              { value: 'company_paid', label: 'Firma übernimmt den Kaffee' },
+            ]}
+          />
+          {form.billing_mode === 'company_paid' && (
+            <>
+              <AdminField
+                label="Rechnungskontakt (Name)"
+                value={form.billing_contact_name}
+                onChange={e => setForm(f => ({ ...f, billing_contact_name: e.target.value }))}
+                placeholder="z. B. Anna Bauer"
+              />
+              <AdminField
+                label="Rechnungs-E-Mail"
+                type="email"
+                value={form.billing_contact_email}
+                onChange={e => setForm(f => ({ ...f, billing_contact_email: e.target.value }))}
+                placeholder="rechnung@firma.de"
+                hint="Pflichtfeld: erhält die Sammelrechnung für alle Mitarbeitenden."
+              />
+              <AdminField
+                label="Notiz (intern)"
+                value={form.billing_notes}
+                onChange={e => setForm(f => ({ ...f, billing_notes: e.target.value }))}
+                placeholder="optional, nur für Admins"
+              />
+            </>
+          )}
         </div>
       </Modal>
     </>
