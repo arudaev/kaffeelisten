@@ -4,8 +4,11 @@
 
 import type { createClient } from '@supabase/supabase-js'
 import type { InvoiceRender } from './reportHtml'
+import type { Database } from '../../src/lib/database.types'
 
-type SupabaseClient = ReturnType<typeof createClient>
+// Match the service-role client shape report.ts creates via createClient(url, key)
+// (typed against the DB schema so ledger writes are checked, not `never`).
+type SupabaseClient = ReturnType<typeof createClient<Database, 'public'>>
 
 export interface IssuerConfig {
   legalName: string
