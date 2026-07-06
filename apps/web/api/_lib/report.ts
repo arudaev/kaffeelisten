@@ -7,14 +7,25 @@ import {
   buildReportHtml,
   buildCompanyEmailHtml,
   buildMemberStatementHtml,
+  buildCompanyInvoiceHtml,
   renderTemplate,
   formatEuro,
   formatDate,
   type EnrichedTransaction,
   type MemberSummary,
   type CompanySummary,
+  type InvoiceRender,
 } from './reportHtml'
 
+import {
+  resolveIssuer,
+  splitVat,
+  toInvoiceRender,
+  ensureBillingDocument,
+  markBillingDocumentSent,
+  markBillingDocumentFailed,
+  type IssuerConfig,
+} from './billing'
 import { findPalette } from './palettes'
 import { replyTo } from './mail'
 
@@ -55,6 +66,19 @@ export interface ReportSettings {
   memberStatementsEnabled: boolean
   format: ReportFormat
   schedule: ReportSchedule
+  // Present only when invoice mode is on and the issuer block is complete;
+  // otherwise null and the member/company emails render as statements.
+  issuer: IssuerConfig | null
+}
+
+// Per-company billing routing (migration 023). company_paid companies get one
+// invoice to the billing contact instead of per-member documents.
+export interface CompanyBilling {
+  id: string
+  name: string
+  billing_mode: 'individual' | 'company_paid'
+  billing_contact_name: string | null
+  billing_contact_email: string | null
 }
 
 // Reads the singleton app_settings row and resolves the effective recipients:
@@ -64,7 +88,7 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
   const supabase = makeSupabase()
   const { data, error } = await supabase
     .from('app_settings')
-    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro')
+    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate')
     .eq('id', 1)
     .maybeSingle()
 
@@ -112,7 +136,18 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
       autoEnabled: data?.auto_report_enabled ?? true,
       autoDay: data?.auto_report_day ?? null,
     },
+    issuer: resolveIssuer(data),
   }
+}
+
+// Reads per-company billing routing. Keyed by company id.
+export async function fetchCompanyBilling(): Promise<Map<string, CompanyBilling>> {
+  const supabase = makeSupabase()
+  const { data, error } = await supabase
+    .from('companies')
+    .select('id, name, billing_mode, billing_contact_name, billing_contact_email')
+  if (error) throw new Error(`Failed to read company billing: ${error.message}`)
+  return new Map((data ?? []).map(c => [c.id, c as CompanyBilling]))
 }
 
 // ─── Data fetching ────────────────────────────────────────────────────────────
@@ -548,54 +583,183 @@ export async function sendMemberStatements(
   reportMonth: string,
   format: ReportFormat,
   idempotencyKey: string,
+  // When present, render each email as an ITC1 invoice (with document number +
+  // payment details) and record it in the ledger. company_paid members are
+  // skipped here — they are billed once via sendCompanyInvoices.
+  invoiceCtx?: { issuer: IssuerConfig; companyBilling: Map<string, CompanyBilling> },
 ): Promise<MemberStatementResult> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
   const resend = new Resend(resendKey)
   const [yearStr] = reportMonth.split('-')
+  const supabase = invoiceCtx ? makeSupabase() : null
 
-  // Group by member; keep the member's name + work email alongside their entries.
-  const byMember = new Map<string, { name: string; email: string | null; entries: EnrichedTransaction[] }>()
+  // Group by member; keep name, work email and company alongside their entries.
+  const byMember = new Map<string, { name: string; email: string | null; companyId: string; entries: EnrichedTransaction[] }>()
   for (const t of transactions) {
-    const g = byMember.get(t.member_id) ?? { name: t.member_name, email: t.work_email, entries: [] }
+    const g = byMember.get(t.member_id) ?? { name: t.member_name, email: t.work_email, companyId: t.company_id, entries: [] }
     g.entries.push(t)
     byMember.set(t.member_id, g)
   }
 
   let sent = 0
   let failed = 0
-  for (const [memberId, { name, email, entries }] of byMember) {
+  for (const [memberId, { name, email, companyId, entries }] of byMember) {
+    // In invoice mode, a company_paid company is billed once to its contact.
+    if (invoiceCtx) {
+      const cb = invoiceCtx.companyBilling.get(companyId)
+      if (cb?.billing_mode === 'company_paid' && cb.billing_contact_email) continue
+    }
     if (!email) continue // no reachable address — skip silently
     const firstName = name.trim().split(/\s+/)[0] || name
-    const gesamt = formatEuro(entries.reduce((s, e) => s + e.total_cents, 0))
-    const vars = { monat: monthLabel, jahr: yearStr, name: firstName, gesamt }
+    const grossCents = entries.reduce((s, e) => s + e.total_cents, 0)
+    const vars = { monat: monthLabel, jahr: yearStr, name: firstName, gesamt: formatEuro(grossCents) }
+
+    // Allocate/reuse the invoice document (idempotent) before sending.
+    let invoiceRender: InvoiceRender | undefined
+    let ledgerId: string | null = null
+    if (invoiceCtx && supabase) {
+      const split = splitVat(grossCents, invoiceCtx.issuer.vatRate)
+      const doc = await ensureBillingDocument(supabase, invoiceCtx.issuer.numberPrefix, {
+        reportMonth, recipientType: 'member', recipientName: name, recipientEmail: email,
+        companyId, memberId, subtotalCents: split.netCents, taxCents: split.taxCents, totalCents: split.grossCents,
+      })
+      ledgerId = doc.id
+      invoiceRender = toInvoiceRender(invoiceCtx.issuer, doc.document_number, split)
+    }
+
     const subject = format.memberSubject
       ? renderTemplate(format.memberSubject, vars)
-      : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
+      : invoiceRender
+        ? `Kaffeelisten – Rechnung ${monthLabel}`
+        : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
     const intro = format.memberIntro
       ? renderTemplate(format.memberIntro, vars)
       : undefined
     try {
-      const { error } = await resend.emails.send(
+      const { data, error } = await resend.emails.send(
         {
           from: 'Kaffeelisten <bericht@kaffeelisten.de>',
           to: [email],
           ...(replyTo() ? { replyTo: replyTo()! } : {}),
           subject,
-          html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro }),
+          html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro, invoice: invoiceRender }),
         },
         { idempotencyKey: `member-${idempotencyKey}-${memberId}` },
       )
       if (error) throw new Error(error.message ?? JSON.stringify(error))
+      if (supabase && ledgerId) await markBillingDocumentSent(supabase, ledgerId, data?.id ?? null)
       sent++
       // Light throttle — Resend free tier limits requests/second.
       await new Promise(r => setTimeout(r, 120))
     } catch (err) {
       failed++
+      if (supabase && ledgerId) await markBillingDocumentFailed(supabase, ledgerId)
       console.error(`[member-statement] failed for ${email}:`, err instanceof Error ? err.message : err)
     }
   }
   return { sent, failed }
+}
+
+// Sends one invoice per company_paid company to its billing contact, covering
+// all its members' consumption. Records each in the ledger (idempotent).
+export async function sendCompanyInvoices(
+  transactions: EnrichedTransaction[],
+  monthLabel: string,
+  reportMonth: string,
+  format: ReportFormat,
+  idempotencyKey: string,
+  issuer: IssuerConfig,
+  companyBilling: Map<string, CompanyBilling>,
+): Promise<MemberStatementResult> {
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
+  const resend = new Resend(resendKey)
+  const supabase = makeSupabase()
+  const [yearStr] = reportMonth.split('-')
+
+  // company_id → (member_id → { name, entries }), only for company_paid companies.
+  const byCompany = new Map<string, Map<string, { name: string; entries: EnrichedTransaction[] }>>()
+  for (const t of transactions) {
+    const cb = companyBilling.get(t.company_id)
+    if (!(cb?.billing_mode === 'company_paid' && cb.billing_contact_email)) continue
+    const members = byCompany.get(t.company_id) ?? new Map<string, { name: string; entries: EnrichedTransaction[] }>()
+    const g = members.get(t.member_id) ?? { name: t.member_name, entries: [] }
+    g.entries.push(t)
+    members.set(t.member_id, g)
+    byCompany.set(t.company_id, members)
+  }
+
+  let sent = 0
+  let failed = 0
+  for (const [companyId, membersMap] of byCompany) {
+    const cb = companyBilling.get(companyId)!
+    const members: MemberSummary[] = [...membersMap.values()]
+      .map(({ name, entries }) => ({
+        member_name: name,
+        work_email: entries[0]?.work_email ?? null,
+        entries,
+        subtotal_cents: entries.reduce((s, e) => s + e.total_cents, 0),
+      }))
+      .sort((a, b) => b.subtotal_cents - a.subtotal_cents)
+    const grossCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
+    const split = splitVat(grossCents, issuer.vatRate)
+    const doc = await ensureBillingDocument(supabase, issuer.numberPrefix, {
+      reportMonth, recipientType: 'company', recipientName: cb.billing_contact_name || cb.name,
+      recipientEmail: cb.billing_contact_email!, companyId, memberId: null,
+      subtotalCents: split.netCents, taxCents: split.taxCents, totalCents: split.grossCents,
+    })
+    const invoice = toInvoiceRender(issuer, doc.document_number, split)
+    const intro = format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined
+    try {
+      const { data, error } = await resend.emails.send(
+        {
+          from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+          to: [cb.billing_contact_email!],
+          ...(replyTo() ? { replyTo: replyTo()! } : {}),
+          subject: `Kaffeelisten – Rechnung ${cb.name} ${monthLabel}`,
+          html: buildCompanyInvoiceHtml(cb.name, cb.billing_contact_name, members, monthLabel, { accent: format.accent, intro, invoice }),
+        },
+        { idempotencyKey: `company-${idempotencyKey}-${companyId}` },
+      )
+      if (error) throw new Error(error.message ?? JSON.stringify(error))
+      await markBillingDocumentSent(supabase, doc.id, data?.id ?? null)
+      sent++
+      await new Promise(r => setTimeout(r, 120))
+    } catch (err) {
+      failed++
+      await markBillingDocumentFailed(supabase, doc.id)
+      console.error(`[company-invoice] failed for ${cb.billing_contact_email}:`, err instanceof Error ? err.message : err)
+    }
+  }
+  return { sent, failed }
+}
+
+// ─── Billing run ledger (invoice mode) ────────────────────────────────────────
+
+async function beginBillingRun(reportMonth: string): Promise<void> {
+  const supabase = makeSupabase()
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('billing_runs').upsert(
+    { report_month: reportMonth, status: 'running', started_at: now, updated_at: now, last_error: null },
+    { onConflict: 'report_month' },
+  )
+  if (error) throw new Error(`billing_runs begin failed: ${error.message}`)
+}
+
+async function completeBillingRun(reportMonth: string): Promise<void> {
+  const supabase = makeSupabase()
+  const now = new Date().toISOString()
+  await supabase.from('billing_runs')
+    .update({ status: 'completed', completed_at: now, updated_at: now })
+    .eq('report_month', reportMonth)
+}
+
+async function failBillingRun(reportMonth: string, message: string): Promise<void> {
+  const supabase = makeSupabase()
+  await supabase.from('billing_runs')
+    .update({ status: 'failed', last_error: message.slice(0, 500), updated_at: new Date().toISOString() })
+    .eq('report_month', reportMonth)
 }
 
 // ─── Archive and reset ────────────────────────────────────────────────────────
@@ -800,9 +964,29 @@ export async function runMonthlyReport(
       idempotencyKey,
     )
 
-    // Per-member statements augment (never replace) the company report.
+    // Per-member documents augment (never replace) the company report.
+    //   • invoice mode (issuer configured): send member invoices + one invoice
+    //     per company_paid company, and record them in the billing ledger;
+    //   • otherwise: the existing per-member statements, gated by their toggle.
     let memberStatements: MemberStatementResult | undefined
-    if (settings.memberStatementsEnabled && transactions.length > 0) {
+    if (transactions.length > 0 && settings.issuer) {
+      const companyBilling = await fetchCompanyBilling()
+      await beginBillingRun(reportMonth)
+      try {
+        const memberRes = await sendMemberStatements(
+          transactions, monthLabel, reportMonth, format, idempotencyKey,
+          { issuer: settings.issuer, companyBilling },
+        )
+        const companyRes = await sendCompanyInvoices(
+          transactions, monthLabel, reportMonth, format, idempotencyKey, settings.issuer, companyBilling,
+        )
+        memberStatements = { sent: memberRes.sent + companyRes.sent, failed: memberRes.failed + companyRes.failed }
+        await completeBillingRun(reportMonth)
+      } catch (billErr) {
+        await failBillingRun(reportMonth, billErr instanceof Error ? billErr.message : String(billErr))
+        throw billErr
+      }
+    } else if (settings.memberStatementsEnabled && transactions.length > 0) {
       memberStatements = await sendMemberStatements(transactions, monthLabel, reportMonth, format, idempotencyKey)
     }
 
