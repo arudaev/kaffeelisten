@@ -14,6 +14,7 @@ import Icon from '../components/Icon'
 import CappuccinoMark from '../components/CappuccinoMark'
 import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
+import { usePwaInstall } from '../lib/pwaInstall'
 
 type Company = Database['public']['Tables']['companies']['Row']
 // The anonymous member flow may only read the non-PII columns of members
@@ -127,7 +128,9 @@ function getDisplayName(fullName: string, otherNames: string[]): string {
 
 export default function MemberFlow() {
   const { palette } = useTheme()
+  const { installMethod, promptInstall } = usePwaInstall()
   const [step, setStep] = useState<Step>('start')
+  const [showIosInstallHelp, setShowIosInstallHelp] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [items, setItems] = useState<Item[]>([])
@@ -344,6 +347,14 @@ export default function MemberFlow() {
     ? [getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)), selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
     : ''
 
+  const handleInstall = async () => {
+    if (installMethod === 'ios-help') {
+      setShowIosInstallHelp(current => !current)
+      return
+    }
+    await promptInstall()
+  }
+
   if (step === 'success') {
     return (
       <SuccessScreen
@@ -378,6 +389,25 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
+        {installMethod && (
+          <div className="flex flex-col items-center gap-2 max-w-sm text-center">
+            <button
+              type="button"
+              onClick={handleInstall}
+              aria-expanded={installMethod === 'ios-help' ? showIosInstallHelp : undefined}
+              aria-controls={installMethod === 'ios-help' ? 'ios-install-help' : undefined}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <Icon name="install" size={19} strokeWidth={1.8} />
+              App installieren
+            </button>
+            {showIosInstallHelp && installMethod === 'ios-help' && (
+              <p id="ios-install-help" className="rounded-xl border border-border bg-surface px-4 py-3 text-sm leading-relaxed text-fg-muted shadow-sm">
+                In Safari auf Teilen tippen, „Zum Home-Bildschirm“ wählen und Kaffeelisten danach dort starten.
+              </p>
+            )}
+          </div>
+        )}
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
           ITC1 Deggendorf ·{' '}
           <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">

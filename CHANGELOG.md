@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/mobile-standalone-display
+
+#### Fixed
+- **Kaffeelisten can now be installed directly from its start screen on supported Android browsers.** Opening the installed home-screen app hides the browser address and navigation bars; iPhone and iPad users see concise home-screen installation instructions. Added the matching standalone metadata and removed the forced landscape orientation so the installed app follows the phone or tablet orientation.
+
 ### fix/service-role-write-grants
 
 #### Fixed

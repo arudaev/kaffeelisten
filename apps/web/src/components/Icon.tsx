@@ -10,6 +10,7 @@ type IconName =
   | 'check'
   | 'undo'
   | 'home'
+  | 'install'
   | 'close'
 
 interface IconProps {
@@ -82,6 +83,13 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M3 11l9-7 9 7" />
       <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" />
+    </>
+  ),
+  install: (
+    <>
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 19h14" />
     </>
   ),
   close: (
