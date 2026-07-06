@@ -25,6 +25,10 @@ const REQUIRED: Record<string, Priv[]> = {
   members: ['select', 'insert', 'update'],
   companies: ['select', 'insert', 'update'],
   items: ['select', 'insert', 'update'],
+  // Invoice ledger (migration 025) — the billing run reads, inserts and updates
+  // (void/mark-paid) these through the service-role client.
+  billing_runs: ['select', 'insert', 'update'],
+  billing_documents: ['select', 'insert', 'update'],
 }
 
 /**
