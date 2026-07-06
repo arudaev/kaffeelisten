@@ -6,6 +6,8 @@
 **Status:** v1.0 shipped at the hackathon; in productization toward an ITC1 campus deployment  
 **Date:** 2026-05-08 (original); under active development since
 
+**Related attachment:** [`prd-billing-commercial-addendum.md`](prd-billing-commercial-addendum.md) documents the 2026-07 client-requested billing, invoice, company-contact, and ZIP-archive scope — with ITC1 as the invoice issuer — plus the one-time developer-handover posture. It supersedes the original billing non-goal only if ITC1 approves that new phase, and is subject to legal/tax review.
+
 ---
 
 ## Problem Statement
@@ -37,7 +39,7 @@ The proposed alternative — per-person magnet buttons linked to physical hardwa
 | Native iOS/Android app | A PWA covers the iPad wall-mount use case without App Store overhead |
 | Hardware integration (NFC, magnet buttons, card readers) | Explicitly the expensive path the client wants to avoid |
 | Multi-campus or multi-location support | ITC1 is the only location; generalizing adds complexity with no current benefit |
-| Automated billing or invoice generation | Out of scope per client requirements |
+| Automated billing or invoice generation | Original v1 non-goal. A requested post-v1 scope change is documented in `docs/prd-billing-commercial-addendum.md` |
 | Real-time notifications to companies | Monthly batch reporting is sufficient; real-time adds complexity for no stated need |
 
 ---
