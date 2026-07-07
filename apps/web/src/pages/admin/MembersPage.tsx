@@ -92,7 +92,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [payLoading, setPayLoading] = useState(false)
 
   // Inline last-3-months paid grid + per-company billing mode (for the Firma marker).
-  const [paidGrid, setPaidGrid] = useState<PaidGrid>({ months: [], paid: {} })
+  const [paidGrid, setPaidGrid] = useState<PaidGrid>({ enabled: false, months: [], paid: {} })
   const [companyMode, setCompanyMode] = useState<Record<string, 'individual' | 'company_paid'>>({})
 
   const fetchData = async () => {
@@ -265,7 +265,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     })
   }, [members, filterCompanyId, filterStatus, filterName, sortKey, sortDir])
 
-  const columns: Column<MemberRow>[] = [
+  const allColumns: Column<MemberRow>[] = [
     {
       key: 'name',
       label: 'Name',
@@ -392,6 +392,9 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       ),
     },
   ]
+  // The inline paid grid is opt-in (Settings → migration 028); hide the column
+  // entirely when disabled.
+  const columns = allColumns.filter(c => c.key !== 'bezahlt' || paidGrid.enabled)
 
   return (
     <>

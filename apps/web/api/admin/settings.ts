@@ -30,6 +30,7 @@ interface SettingsBody {
   cc_ceo_on_reports?: unknown
   member_statements_enabled?: unknown
   company_documents_enabled?: unknown
+  member_paid_grid_enabled?: unknown
   auto_report_enabled?: unknown
   auto_report_day?: unknown
   report_accent?: unknown
@@ -105,6 +106,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (body.company_documents_enabled !== undefined) {
         update.company_documents_enabled = Boolean(body.company_documents_enabled)
+      }
+
+      if (body.member_paid_grid_enabled !== undefined) {
+        update.member_paid_grid_enabled = Boolean(body.member_paid_grid_enabled)
       }
 
       // ── Scheduling ──
@@ -250,7 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the current non-secret settings (for both GET and after a PUT).
     const { data, error } = await supabase
       .from('app_settings')
-      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, pin_length, pin_updated_at')
+      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, member_paid_grid_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, pin_length, pin_updated_at')
       .eq('id', 1)
       .single()
     if (error) throw new Error(error.message)
@@ -271,6 +276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cc_ceo_on_reports: data.cc_ceo_on_reports,
       member_statements_enabled: data.member_statements_enabled,
       company_documents_enabled: data.company_documents_enabled,
+      member_paid_grid_enabled: data.member_paid_grid_enabled,
       auto_report_enabled: data.auto_report_enabled,
       auto_report_day: data.auto_report_day,
       report_accent: data.report_accent,
