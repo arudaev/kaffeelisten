@@ -240,15 +240,16 @@ export function buildMemberStatementHtml(
 </html>`
 }
 
-// ── Company invoice (company_paid mode) ──────────────────────────────────────
-// One invoice email to the company billing contact covering all members'
-// consumption for the month. Issued by ITC1; the money goes to ITC1's IBAN.
-export function buildCompanyInvoiceHtml(
+// ── Company document (per company): report/Aufstellung, or invoice ───────────
+// One email to the company billing contact covering all its members' consumption
+// for the month. With `invoice` set it is an ITC1 invoice (money to ITC1's IBAN);
+// without, an informational Aufstellung the company uses to bill its own people.
+export function buildCompanyDocumentHtml(
   companyName: string,
   contactName: string | null,
   members: MemberSummary[],
   monthLabel: string,
-  opts: { accent?: string; intro: string | undefined; invoice: InvoiceRender },
+  opts: { accent?: string; intro?: string; invoice?: InvoiceRender },
 ): string {
   const accent = opts.accent || '#D97706'
   const invoice = opts.invoice
@@ -256,7 +257,9 @@ export function buildCompanyInvoiceHtml(
   const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
   const introHtml = opts.intro
     ? escapeHtml(opts.intro)
-    : `anbei die Sammelrechnung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
+    : invoice
+      ? `anbei die Sammelrechnung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
+      : `anbei die Aufstellung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
 
   const rows = members
     .map(
@@ -286,12 +289,12 @@ export function buildCompanyInvoiceHtml(
         <tr>
           <td style="background:${accent};padding:26px 32px;">
             <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
-            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Rechnung Nr. ${escapeHtml(invoice.documentNumber)} &ndash; ${escapeHtml(monthLabel)}</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Aufstellung'} &ndash; ${escapeHtml(monthLabel)}</p>
           </td>
         </tr>
         <tr>
           <td style="padding:28px 32px 24px;background:#ffffff;">
-            ${issuerBlockHtml(invoice)}
+            ${invoice ? issuerBlockHtml(invoice) : ''}
             <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${greeting},</p>
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
@@ -306,12 +309,12 @@ export function buildCompanyInvoiceHtml(
                 <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
               </tr>
             </table>
-            ${vatAndPaymentHtml(invoice, accent)}
+            ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
           </td>
         </tr>
         <tr>
           <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">Rechnungssteller: ${escapeHtml(invoice.issuerLegalName)} &middot; erstellt mit Kaffeelisten</p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${invoice ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten' : 'ITC1 Deggendorf &middot; Diese Aufstellung dient der &Uuml;bersicht.'}</p>
           </td>
         </tr>
       </table>

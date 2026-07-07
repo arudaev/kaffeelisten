@@ -208,6 +208,7 @@ export type Database = {
           member_subject: string | null
           member_intro: string | null
           max_items_per_order: number | null
+          company_documents_enabled: boolean
           issue_invoices: boolean
           issuer_legal_name: string | null
           issuer_address: string | null
@@ -240,6 +241,7 @@ export type Database = {
           member_subject?: string | null
           member_intro?: string | null
           max_items_per_order?: number | null
+          company_documents_enabled?: boolean
           issue_invoices?: boolean
           issuer_legal_name?: string | null
           issuer_address?: string | null
@@ -272,6 +274,7 @@ export type Database = {
           member_subject?: string | null
           member_intro?: string | null
           max_items_per_order?: number | null
+          company_documents_enabled?: boolean
           issue_invoices?: boolean
           issuer_legal_name?: string | null
           issuer_address?: string | null
