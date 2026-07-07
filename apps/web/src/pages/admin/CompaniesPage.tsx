@@ -8,6 +8,7 @@ import Badge from '../../components/admin/Badge'
 import AdminIcon from '../../components/admin/AdminIcon'
 import AdminField from '../../components/admin/AdminField'
 import AdminSelect from '../../components/admin/AdminSelect'
+import SegmentedControl from '../../components/admin/SegmentedControl'
 
 interface CompanyRow {
   id: string
@@ -29,7 +30,10 @@ interface CompanyForm {
 
 const EMPTY_FORM: CompanyForm = {
   name: '',
-  billing_mode: 'individual',
+  // Default: the company covers the coffee (company-wide document/invoice). This
+  // only changes billing once invoice mode is on; in report mode both paths still
+  // produce a company report + member statements.
+  billing_mode: 'company_paid',
   billing_contact_name: '',
   billing_contact_email: '',
   billing_notes: '',
@@ -287,39 +291,52 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             placeholder="z. B. Beispiel GmbH"
             autoFocus
           />
-          <AdminSelect
-            label="Abrechnung"
-            value={form.billing_mode}
-            onChange={e => setForm(f => ({ ...f, billing_mode: e.target.value as CompanyForm['billing_mode'] }))}
-            options={[
-              { value: 'individual', label: 'Jede Person zahlt selbst' },
-              { value: 'company_paid', label: 'Firma übernimmt den Kaffee' },
-            ]}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <AdminField
+              label="Kontaktperson"
+              value={form.billing_contact_name}
+              onChange={e => setForm(f => ({ ...f, billing_contact_name: e.target.value }))}
+              placeholder="z. B. Anna Bauer"
+            />
+            <AdminField
+              label="Kontakt-E-Mail"
+              type="email"
+              value={form.billing_contact_email}
+              onChange={e => setForm(f => ({ ...f, billing_contact_email: e.target.value }))}
+              placeholder="rechnung@firma.de"
+              hint={
+                form.billing_mode === 'company_paid'
+                  ? 'Pflicht: erhält die Firmenrechnung.'
+                  : 'Erhält das Firmendokument.'
+              }
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Wer zahlt?</span>
+            <SegmentedControl
+              ariaLabel="Wer zahlt"
+              value={form.billing_mode}
+              onChange={billing_mode => setForm(f => ({ ...f, billing_mode }))}
+              options={[
+                { value: 'company_paid', label: 'Firma zahlt' },
+                { value: 'individual', label: 'Jede Person' },
+              ]}
+            />
+            <p className="text-[13px] text-fg-muted leading-relaxed">
+              {form.billing_mode === 'company_paid'
+                ? 'Die Firma erhält eine Sammelrechnung an die Kontaktperson; die Mitarbeitenden werden nicht einzeln belastet. Bei Rechnungsmodus ist die E-Mail Pflicht.'
+                : 'Jede Person erhält ihre eigene Rechnung. Die Kontaktperson bekommt zusätzlich eine Kopie der Firmenaufstellung.'}
+            </p>
+          </div>
+
+          <AdminField
+            label="Notiz (intern)"
+            value={form.billing_notes}
+            onChange={e => setForm(f => ({ ...f, billing_notes: e.target.value }))}
+            placeholder="optional, nur für Admins"
           />
-          {form.billing_mode === 'company_paid' && (
-            <>
-              <AdminField
-                label="Rechnungskontakt (Name)"
-                value={form.billing_contact_name}
-                onChange={e => setForm(f => ({ ...f, billing_contact_name: e.target.value }))}
-                placeholder="z. B. Anna Bauer"
-              />
-              <AdminField
-                label="Rechnungs-E-Mail"
-                type="email"
-                value={form.billing_contact_email}
-                onChange={e => setForm(f => ({ ...f, billing_contact_email: e.target.value }))}
-                placeholder="rechnung@firma.de"
-                hint="Pflichtfeld: erhält die Sammelrechnung für alle Mitarbeitenden."
-              />
-              <AdminField
-                label="Notiz (intern)"
-                value={form.billing_notes}
-                onChange={e => setForm(f => ({ ...f, billing_notes: e.target.value }))}
-                placeholder="optional, nur für Admins"
-              />
-            </>
-          )}
         </div>
       </Modal>
     </>

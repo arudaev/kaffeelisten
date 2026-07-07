@@ -18,6 +18,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Per-company billing mode.** A company can be set to _Firma zahlt_ (`company_paid`): one invoice goes to a company billing contact covering all its members, instead of billing each member. `company_paid` requires a billing contact email; _Einzeln_ (individual) is unchanged and remains the default.
 - **Invoice numbering + ledger.** Every issued document gets a unique, never-reused number (`<Präfix><laufende Nummer>`), recorded in a billing ledger. Re-running a month re-sends the same numbers instead of allocating new ones.
 - **Payment tracking.** A _Rechnungen — Zahlungsstatus_ card lists each month's documents with a per-recipient bezahlt/offen toggle.
+- **Per-member payment tracking in _Mitarbeitende_.** Each person now has a _Zahlungen_ action opening a month-by-month bezahlt/offen view, working with or without invoice mode. Amounts are derived live from the current month plus the archive. People whose company covers the coffee (_Firma zahlt_) are shown as _von Firma übernommen_ rather than billed personally. Requires migration `027`.
+- **Company editor redesign.** The company dialog now always shows the contact person (name + e-mail) and a compact _Wer zahlt?_ switch (_Firma zahlt_ / _Jede Person_), with inline copy explaining what each choice means. New companies default to _Firma zahlt_.
+
+#### Changed
+- **Supabase CLI config committed.** Added `supabase/config.toml` aligned to the linked project (Postgres 17), so `supabase link` no longer reports a config drift.
 
 #### Notes
 - Invoice mode is **off by default**; with it off, behaviour is unchanged (statements as before). Delivery is the email body — no per-user PDF is generated. See `docs/prd-billing-commercial-addendum.md`; invoice wording/VAT/retention are subject to confirmation by ITC1's tax adviser.

@@ -1,0 +1,98 @@
+# Supabase CLI config for the Kaffeelisten project.
+#
+# `project_id` is a LOCAL slug for the CLI's Docker containers — it is NOT the
+# remote project ref. The linked remote ref (fdnfdscpefxqvtggbbbr) lives in
+# supabase/.temp/project-ref after `supabase link` and is intentionally untracked.
+#
+# The values below are aligned to the linked remote project (Postgres 17, the
+# dashboard-configured auth settings) so `supabase link` no longer reports
+# "Local config differs from linked project". Applying migrations with
+# `supabase db push` does not depend on this file, but keeping it in sync keeps
+# the CLI quiet and makes `supabase start` reproduce production locally.
+project_id = "kaffeelisten"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Match the linked remote (Postgres 17). A mismatch makes `supabase db diff`
+# and `supabase start` build a shadow database on the wrong major version.
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = []
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 6
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.mfa.phone]
+enroll_enabled = false
+verify_enabled = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m0s"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.email.template]
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+template = "Your code is {{ .Code }}"
+max_frequency = "5s"
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+
+[analytics]
+enabled = true
+port = 54327
+backend = "postgres"

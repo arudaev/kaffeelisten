@@ -391,6 +391,40 @@ export type Database = {
           }
         ]
       }
+      member_payments: {
+        Row: {
+          member_id: string
+          report_month: string
+          amount_cents: number | null
+          paid: boolean
+          paid_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          member_id: string
+          report_month: string
+          amount_cents?: number | null
+          paid?: boolean
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          member_id?: string
+          report_month?: string
+          amount_cents?: number | null
+          paid?: boolean
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'member_payments_member_id_fkey'
+            columns: ['member_id']
+            referencedRelation: 'members'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       app_theme: {
         Row: {
           id: number
