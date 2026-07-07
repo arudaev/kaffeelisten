@@ -21,9 +21,13 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-# Match the linked remote (Postgres 17). A mismatch makes `supabase db diff`
-# and `supabase start` build a shadow database on the wrong major version.
-major_version = 17
+# The linked remote is Postgres 17, but the pinned CLI (v2.19.5) only validates
+# major versions up to 15 and rejects 17 at config-parse time ("Invalid
+# db.major_version: 17"), which breaks every command including `db push`. This
+# value only drives the LOCAL shadow database (`db diff` / `start`); `db push`
+# applies migrations straight to the remote and ignores it. Bump this to 17 once
+# the CLI is upgraded (>= v2.100) — that also clears the `link` drift warning.
+major_version = 15
 
 [db.pooler]
 enabled = false
