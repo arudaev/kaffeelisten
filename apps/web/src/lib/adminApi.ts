@@ -134,6 +134,7 @@ export const adminApi = {
 }
 
 export interface PaidGrid {
+  enabled: boolean
   months: string[]
   paid: Record<string, Record<string, boolean>>
 }

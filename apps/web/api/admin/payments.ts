@@ -67,6 +67,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
       }
+      // The grid is opt-in (migration 028). When off, the column is hidden — skip
+      // the read and tell the client so it doesn't render the column.
+      const { data: cfg } = await supabase
+        .from('app_settings')
+        .select('member_paid_grid_enabled')
+        .eq('id', 1)
+        .maybeSingle()
+      const enabled = cfg?.member_paid_grid_enabled ?? false
+      if (!enabled) return res.status(200).json({ enabled, months, paid: {} })
+
       const { data, error } = await supabase
         .from('member_payments')
         .select('member_id, report_month, paid')
@@ -76,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const r of data ?? []) {
         ;(paid[r.member_id] ??= {})[r.report_month] = r.paid
       }
-      return res.status(200).json({ months, paid })
+      return res.status(200).json({ enabled, months, paid })
     }
 
     // GET — one member's months.

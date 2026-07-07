@@ -68,6 +68,7 @@ interface SettingsData {
   cc_ceo_on_reports: boolean
   member_statements_enabled: boolean
   company_documents_enabled: boolean
+  member_paid_grid_enabled: boolean
   auto_report_enabled: boolean
   auto_report_day: number | null
   max_items_per_order: number | null
@@ -129,6 +130,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [ceoCc, setCeoCc] = useState(true)
   const [memberReport, setMemberReport] = useState(true)
   const [companyDocs, setCompanyDocs] = useState(true)
+  const [paidGridEnabled, setPaidGridEnabled] = useState(false)
 
   // Scheduling
   const [autoEnabled, setAutoEnabled] = useState(true)
@@ -200,6 +202,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setCeoCc(d.cc_ceo_on_reports)
     setMemberReport(d.member_statements_enabled)
     setCompanyDocs(d.company_documents_enabled)
+    setPaidGridEnabled(d.member_paid_grid_enabled)
     setAutoEnabled(d.auto_report_enabled)
     setAutoDay(d.auto_report_day)
     setMaxItemsInput(d.max_items_per_order != null ? String(d.max_items_per_order) : '')
@@ -364,6 +367,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             cc_ceo_on_reports: ceoCc,
             member_statements_enabled: memberReport,
             company_documents_enabled: companyDocs,
+            member_paid_grid_enabled: paidGridEnabled,
             auto_report_enabled: autoEnabled,
             auto_report_day: autoDay,
             max_items_per_order: maxItemsInput.trim() === '' ? null : Number(maxItemsInput),
@@ -689,6 +693,24 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                   <Toggle checked={memberReport} onChange={setMemberReport} label="Jede Person erhält am Monatsende ihre eigene Aufstellung" />
                   <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
                     Zusätzlich zum Firmenbericht. Nur Personen mit hinterlegter Arbeits-E-Mail werden angeschrieben.
+                  </p>
+                </div>
+              </section>
+
+              {/* Card 3b — Zahlungsübersicht (inline paid grid) */}
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-fg">Zahlungsübersicht</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
+                    Zeigt in der Liste „Mitarbeitende“ pro Person die letzten drei Monate als
+                    Bezahlt-Kästchen — zum schnellen Abhaken, wer bezahlt hat.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 pt-0.5">
+                  <Toggle checked={paidGridEnabled} onChange={setPaidGridEnabled} label="Bezahlt-Spalte in „Mitarbeitende“ anzeigen" />
+                  <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
+                    Standardmäßig aus. Die ausführliche Monatsübersicht pro Person bleibt über die
+                    Schaltfläche „Zahlungen“ immer erreichbar.
                   </p>
                 </div>
               </section>
