@@ -9,6 +9,26 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/billing-invoice-mode
+
+#### Added
+- **Per-company documents, split from the admin/CEO report.** The monthly email is now three independent streams: the **admin/CEO aggregate report** (all companies, to the report recipients), a **per-company document** to each company's billing contact, and the **per-member document**. Each company with a billing contact gets its own monthly **Aufstellung**, or an **invoice** when it's set to _Firma zahlt_ (`company_paid`) and invoicing is configured. Toggle _Firmendokumente_ turns the per-company stream off. `company_paid` members are covered by the company document and not billed individually. Requires migration `026`.
+- **Previews for every email variant.** _Einstellungen_ now previews the Admin-/CEO-Bericht, the Firmendokument (Aufstellung **and** Rechnung) and the Mitglieder-Dokument (Aufstellung **and** Rechnung). Invoice previews render with ITC1 placeholder values when the issuer block hasn't been filled in yet, and reflect unsaved edits.
+- **Optional invoice mode.** In _Einstellungen → Rechnungsstellung_ the admin can switch the monthly member emails from an informational statement to a proper **invoice issued by ITC1**. When enabled, the admin fills ITC1's issuer block (legal name, address, USt-IdNr, receiving IBAN/BIC, number prefix, payment terms, VAT rate); the email then shows a document number, a net/VAT/gross breakdown and a prominent "wohin überweisen" box. The developers never appear as issuer. Requires applying migrations `023`–`025`.
+- **Per-company billing mode.** A company can be set to _Firma zahlt_ (`company_paid`): one invoice goes to a company billing contact covering all its members, instead of billing each member. `company_paid` requires a billing contact email; _Einzeln_ (individual) is unchanged and remains the default.
+- **Invoice numbering + ledger.** Every issued document gets a unique, never-reused number (`<Präfix><laufende Nummer>`), recorded in a billing ledger. Re-running a month re-sends the same numbers instead of allocating new ones.
+- **Payment tracking.** A _Rechnungen — Zahlungsstatus_ card lists each month's documents with a per-recipient bezahlt/offen toggle.
+- **Per-member payment tracking in _Mitarbeitende_.** Each person now has a _Zahlungen_ action opening a month-by-month bezahlt/offen view, working with or without invoice mode. Amounts are derived live from the current month plus the archive. People whose company covers the coffee (_Firma zahlt_) are shown as _von Firma übernommen_ rather than billed personally. Requires migration `027`.
+- **Inline paid grid in _Mitarbeitende_.** A _Bezahlt_ column shows the last three months as compact checkboxes per person (current month emphasized, the two prior greyed but still toggleable), so the admin can see and update who has paid at a glance without opening the modal. The window rolls forward automatically each month; _Firma zahlt_ members show a muted _Firma_ marker instead. The column is **off by default** and toggled on under _Einstellungen → Zahlungsübersicht_ (requires migration `028`); the per-person _Zahlungen_ modal stays available regardless.
+- **Vercel Web Analytics.** Privacy-friendly, cookieless page/visit metrics via `@vercel/analytics`; active only on Vercel-hosted deployments (a no-op locally). Enable Web Analytics in the Vercel project dashboard to collect data.
+- **Company editor redesign.** The company dialog now always shows the contact person (name + e-mail) and a compact _Wer zahlt?_ switch (_Firma zahlt_ / _Jede Person_), with inline copy explaining what each choice means. New companies default to _Firma zahlt_.
+
+#### Changed
+- **Supabase CLI config committed.** Added `supabase/config.toml` aligned to the linked project (Postgres 17), so `supabase link` no longer reports a config drift.
+
+#### Notes
+- Invoice mode is **off by default**; with it off, behaviour is unchanged (statements as before). Delivery is the email body — no per-user PDF is generated. See `docs/prd-billing-commercial-addendum.md`; invoice wording/VAT/retention are subject to confirmation by ITC1's tax adviser.
+
 ### fix/service-role-write-grants
 
 #### Fixed

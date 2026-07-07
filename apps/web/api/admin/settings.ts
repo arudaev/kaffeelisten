@@ -13,14 +13,24 @@ type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
+// IBAN: 2 country letters, 2 check digits, up to 30 alphanumerics (spaces stripped).
+const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/
+// BIC/SWIFT: 8 or 11 alphanumerics.
+const BIC_RE = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/
 const SUBJECT_MAX = 200
 const INTRO_MAX = 1000
+const ISSUER_NAME_MAX = 200
+const ISSUER_ADDR_MAX = 500
+const PREFIX_MAX = 20
+const TERMS_MAX = 300
 
 interface SettingsBody {
   report_recipients?: unknown
   ceo_email?: unknown
   cc_ceo_on_reports?: unknown
   member_statements_enabled?: unknown
+  company_documents_enabled?: unknown
+  member_paid_grid_enabled?: unknown
   auto_report_enabled?: unknown
   auto_report_day?: unknown
   report_accent?: unknown
@@ -31,6 +41,15 @@ interface SettingsBody {
   member_subject?: unknown
   member_intro?: unknown
   max_items_per_order?: unknown
+  issue_invoices?: unknown
+  issuer_legal_name?: unknown
+  issuer_address?: unknown
+  issuer_vat_id?: unknown
+  issuer_iban?: unknown
+  issuer_bic?: unknown
+  invoice_number_prefix?: unknown
+  invoice_payment_terms?: unknown
+  invoice_vat_rate?: unknown
 }
 
 /** Normalize an optional text field to a trimmed string, null, or an error. */
@@ -83,6 +102,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (body.member_statements_enabled !== undefined) {
         update.member_statements_enabled = Boolean(body.member_statements_enabled)
+      }
+
+      if (body.company_documents_enabled !== undefined) {
+        update.company_documents_enabled = Boolean(body.company_documents_enabled)
+      }
+
+      if (body.member_paid_grid_enabled !== undefined) {
+        update.member_paid_grid_enabled = Boolean(body.member_paid_grid_enabled)
       }
 
       // ── Scheduling ──
@@ -141,6 +168,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // ── Invoice mode + ITC1 issuer block ──
+      // The document is always ITC1's — these are ITC1's own details, entered by
+      // the admin (never a developer's). See docs/prd-billing-commercial-addendum.md.
+      for (const [key, max] of [
+        ['issuer_legal_name', ISSUER_NAME_MAX],
+        ['issuer_address', ISSUER_ADDR_MAX],
+        ['invoice_number_prefix', PREFIX_MAX],
+        ['invoice_payment_terms', TERMS_MAX],
+      ] as const) {
+        if (body[key] !== undefined) {
+          const parsed = optText(body[key], max)
+          if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+          update[key] = parsed.value
+        }
+      }
+      if (body.issuer_vat_id !== undefined) {
+        const vat = body.issuer_vat_id === null ? '' : String(body.issuer_vat_id).replace(/\s+/g, '').toUpperCase()
+        if (vat && (vat.length < 4 || vat.length > 20)) {
+          return res.status(400).json({ error: 'USt-IdNr ist ungültig.' })
+        }
+        update.issuer_vat_id = vat || null
+      }
+      if (body.issuer_iban !== undefined) {
+        const iban = body.issuer_iban === null ? '' : String(body.issuer_iban).replace(/\s+/g, '').toUpperCase()
+        if (iban && !IBAN_RE.test(iban)) {
+          return res.status(400).json({ error: 'IBAN ist ungültig.' })
+        }
+        update.issuer_iban = iban || null
+      }
+      if (body.issuer_bic !== undefined) {
+        const bic = body.issuer_bic === null ? '' : String(body.issuer_bic).replace(/\s+/g, '').toUpperCase()
+        if (bic && !BIC_RE.test(bic)) {
+          return res.status(400).json({ error: 'BIC ist ungültig.' })
+        }
+        update.issuer_bic = bic || null
+      }
+      if (body.invoice_vat_rate !== undefined) {
+        const rate = Number(body.invoice_vat_rate)
+        if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+          return res.status(400).json({ error: 'USt-Satz muss zwischen 0 und 100 liegen.' })
+        }
+        update.invoice_vat_rate = rate
+      }
+      if (body.issue_invoices !== undefined) {
+        update.issue_invoices = Boolean(body.issue_invoices)
+      }
+
+      // Guard: invoice mode may only be ON when the mandatory issuer fields are
+      // set (in this request or already stored). Prevents issuing a document with
+      // no issuer, VAT id, or receiving account.
+      const willInvoice =
+        update.issue_invoices !== undefined ? update.issue_invoices : undefined
+      if (willInvoice === true || update.issuer_iban !== undefined || update.issuer_bic !== undefined
+        || update.issuer_vat_id !== undefined || update.issuer_legal_name !== undefined) {
+        const { data: cur, error: curErr } = await supabase
+          .from('app_settings')
+          .select('issue_invoices, issuer_legal_name, issuer_vat_id, issuer_iban, issuer_bic')
+          .eq('id', 1).single()
+        if (curErr) throw new Error(curErr.message)
+        const eff = (k: 'issuer_legal_name' | 'issuer_vat_id' | 'issuer_iban' | 'issuer_bic') =>
+          (k in update ? (update[k] as string | null) : cur[k])
+        const effOn = update.issue_invoices !== undefined ? update.issue_invoices : cur.issue_invoices
+        if (effOn) {
+          const labels: Record<string, string> = {
+            issuer_legal_name: 'Aussteller-Name',
+            issuer_vat_id: 'USt-IdNr',
+            issuer_iban: 'IBAN',
+            issuer_bic: 'BIC',
+          }
+          const missing = (['issuer_legal_name', 'issuer_vat_id', 'issuer_iban', 'issuer_bic'] as const)
+            .filter((k) => !eff(k))
+            .map((k) => labels[k])
+          if (missing.length > 0) {
+            return res.status(400).json({
+              error: `Rechnungsmodus benötigt vollständige Ausstellerdaten. Fehlt: ${missing.join(', ')}.`,
+            })
+          }
+        }
+      }
+
       const { error } = await supabase.from('app_settings').update(update).eq('id', 1)
       if (error) throw new Error(error.message)
     }
@@ -148,7 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the current non-secret settings (for both GET and after a PUT).
     const { data, error } = await supabase
       .from('app_settings')
-      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, pin_length, pin_updated_at')
+      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, member_paid_grid_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, pin_length, pin_updated_at')
       .eq('id', 1)
       .single()
     if (error) throw new Error(error.message)
@@ -168,6 +275,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ceo_email: data.ceo_email ?? null,
       cc_ceo_on_reports: data.cc_ceo_on_reports,
       member_statements_enabled: data.member_statements_enabled,
+      company_documents_enabled: data.company_documents_enabled,
+      member_paid_grid_enabled: data.member_paid_grid_enabled,
       auto_report_enabled: data.auto_report_enabled,
       auto_report_day: data.auto_report_day,
       report_accent: data.report_accent,
@@ -178,6 +287,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       member_subject: data.member_subject,
       member_intro: data.member_intro,
       max_items_per_order: data.max_items_per_order,
+      issue_invoices: data.issue_invoices,
+      issuer_legal_name: data.issuer_legal_name,
+      issuer_address: data.issuer_address,
+      issuer_vat_id: data.issuer_vat_id,
+      issuer_iban: data.issuer_iban,
+      issuer_bic: data.issuer_bic,
+      invoice_number_prefix: data.invoice_number_prefix,
+      invoice_payment_terms: data.invoice_payment_terms,
+      invoice_vat_rate: data.invoice_vat_rate,
       pin_length: data.pin_length,
       pin_updated_at: data.pin_updated_at,
       pin_is_set: await isDbPinSet(supabase),

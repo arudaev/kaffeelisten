@@ -61,6 +61,81 @@ export function renderTemplate(
     .replace(/\{gesamt\}/gi, vars.gesamt ?? '')
 }
 
+// ── Invoice rendering (invoice mode) ─────────────────────────────────────────
+// Everything ITC1's tax/issuer data needs to turn a statement into a legal
+// invoice email. Assembled in report.ts from the app_settings issuer block; the
+// document is always issued by ITC1, never by the developers.
+export interface InvoiceRender {
+  documentNumber: string
+  issuerLegalName: string
+  issuerAddress: string | null
+  issuerVatId: string
+  issuerIban: string
+  issuerBic: string
+  paymentTerms: string | null
+  vatRate: number
+  netCents: number
+  taxCents: number
+  grossCents: number
+}
+
+function todayDE(): string {
+  return new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+/** Issuer identity + "Rechnung Nr." block shown at the top of an invoice email. */
+function issuerBlockHtml(inv: InvoiceRender): string {
+  const addr = inv.issuerAddress
+    ? inv.issuerAddress.split(/\r?\n/).filter(Boolean).map(l => escapeHtml(l)).join('<br>')
+    : ''
+  return `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 0 22px;border-bottom:1px solid #E7E5E4;">
+              <tr>
+                <td style="vertical-align:top;padding:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#57534E;">
+                  <strong style="color:#1C1917;">${escapeHtml(inv.issuerLegalName)}</strong>${addr ? '<br>' + addr : ''}<br>USt-IdNr: ${escapeHtml(inv.issuerVatId)}
+                </td>
+                <td align="right" style="vertical-align:top;padding:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#57534E;">
+                  <strong style="color:#1C1917;font-size:15px;">Rechnung</strong><br>Nr. ${escapeHtml(inv.documentNumber)}<br>${todayDE()}
+                </td>
+              </tr>
+            </table>`
+}
+
+/** Net / VAT / gross breakdown plus the prominent "where to transfer" box. */
+function vatAndPaymentHtml(inv: InvoiceRender, accent: string): string {
+  const rate = Number.isInteger(inv.vatRate) ? String(inv.vatRate) : inv.vatRate.toFixed(2).replace('.', ',')
+  return `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:14px 0 0;">
+              <tr>
+                <td align="right" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">Nettobetrag</td>
+                <td align="right" width="120" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">${formatEuro(inv.netCents)}</td>
+              </tr>
+              <tr>
+                <td align="right" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">zzgl. ${rate}% USt</td>
+                <td align="right" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">${formatEuro(inv.taxCents)}</td>
+              </tr>
+              <tr>
+                <td align="right" style="padding:6px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;border-top:1px solid #E7E5E4;">Gesamtbetrag</td>
+                <td align="right" style="padding:6px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;border-top:1px solid #E7E5E4;">${formatEuro(inv.grossCents)}</td>
+              </tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:22px 0 0;">
+              <tr>
+                <td style="padding:16px 18px;background:#FFFBEB;border:1px solid ${accent};border-radius:8px;font-family:Arial,Helvetica,sans-serif;">
+                  <p style="margin:0 0 8px;font-size:12px;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;color:#92400E;">Zahlbar an</p>
+                  <p style="margin:0;font-size:14px;line-height:1.6;color:#1C1917;">
+                    <strong>${escapeHtml(inv.issuerLegalName)}</strong><br>
+                    IBAN: <strong>${escapeHtml(inv.issuerIban)}</strong><br>
+                    BIC: ${escapeHtml(inv.issuerBic)}<br>
+                    Verwendungszweck: <strong>${escapeHtml(inv.documentNumber)}</strong>
+                  </p>
+                  ${inv.paymentTerms ? `<p style="margin:10px 0 0;font-size:12px;line-height:1.5;color:#78716C;">${escapeHtml(inv.paymentTerms)}</p>` : ''}
+                </td>
+              </tr>
+            </table>`
+}
+
 function consolidatedItems(entries: EnrichedTransaction[]): string {
   const map: Record<string, number> = {}
   for (const e of entries) map[e.item_name] = (map[e.item_name] ?? 0) + e.quantity
@@ -76,14 +151,17 @@ export function buildMemberStatementHtml(
   memberName: string,
   entries: EnrichedTransaction[],
   monthLabel: string,
-  opts: { accent?: string; intro?: string } = {},
+  opts: { accent?: string; intro?: string; invoice?: InvoiceRender } = {},
 ): string {
   const accent = opts.accent || '#D97706'
+  const invoice = opts.invoice
   const firstName = memberName.trim().split(/\s+/)[0] || memberName
   const totalCents = entries.reduce((s, e) => s + e.total_cents, 0)
   const introHtml = opts.intro
     ? escapeHtml(opts.intro)
-    : `hier ist deine pers&ouml;nliche Aufstellung f&uuml;r ${escapeHtml(monthLabel)}.`
+    : invoice
+      ? `anbei deine Rechnung f&uuml;r deinen Verzehr im ${escapeHtml(monthLabel)}.`
+      : `hier ist deine pers&ouml;nliche Aufstellung f&uuml;r ${escapeHtml(monthLabel)}.`
 
   const rows = entries
     .map(
@@ -117,13 +195,14 @@ export function buildMemberStatementHtml(
         <tr>
           <td style="background:${accent};padding:26px 32px;">
             <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
-            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">Deine Kaffeeliste &ndash; ${escapeHtml(monthLabel)}</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Deine Kaffeeliste'} &ndash; ${escapeHtml(monthLabel)}</p>
           </td>
         </tr>
 
         <!-- BODY -->
         <tr>
           <td style="padding:28px 32px 24px;background:#ffffff;">
+            ${invoice ? issuerBlockHtml(invoice) : ''}
             <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${escapeHtml(firstName)},</p>
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
 
@@ -141,16 +220,103 @@ export function buildMemberStatementHtml(
                 <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
               </tr>
             </table>
+            ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
           </td>
         </tr>
 
         <!-- FOOTER -->
         <tr>
           <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">ITC1 Deggendorf &middot; Diese Aufstellung dient deiner &Uuml;bersicht.</p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${invoice ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten' : 'ITC1 Deggendorf &middot; Diese Aufstellung dient deiner &Uuml;bersicht.'}</p>
           </td>
         </tr>
 
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+}
+
+// ── Company document (per company): report/Aufstellung, or invoice ───────────
+// One email to the company billing contact covering all its members' consumption
+// for the month. With `invoice` set it is an ITC1 invoice (money to ITC1's IBAN);
+// without, an informational Aufstellung the company uses to bill its own people.
+export function buildCompanyDocumentHtml(
+  companyName: string,
+  contactName: string | null,
+  members: MemberSummary[],
+  monthLabel: string,
+  opts: { accent?: string; intro?: string; invoice?: InvoiceRender },
+): string {
+  const accent = opts.accent || '#D97706'
+  const invoice = opts.invoice
+  const greeting = contactName?.trim() ? escapeHtml(contactName.trim().split(/\s+/)[0]) : escapeHtml(companyName)
+  const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
+  const introHtml = opts.intro
+    ? escapeHtml(opts.intro)
+    : invoice
+      ? `anbei die Sammelrechnung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
+      : `anbei die Aufstellung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
+
+  const rows = members
+    .map(
+      m => `
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(m.member_name)}</td>
+          <td align="center" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${m.entries.length}</td>
+          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${formatEuro(m.subtotal_cents)}</td>
+        </tr>`,
+    )
+    .join('')
+
+  return `<!DOCTYPE html>
+<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+        <tr>
+          <td style="background:${accent};padding:26px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Aufstellung'} &ndash; ${escapeHtml(monthLabel)}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 24px;background:#ffffff;">
+            ${invoice ? issuerBlockHtml(invoice) : ''}
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${greeting},</p>
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <th align="left" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Person</th>
+                <th align="center" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Eintr&auml;ge</th>
+                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Betrag</th>
+              </tr>
+              ${rows}
+              <tr>
+                <td colspan="2" align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;">Gesamt</td>
+                <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
+              </tr>
+            </table>
+            ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${invoice ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten' : 'ITC1 Deggendorf &middot; Diese Aufstellung dient der &Uuml;bersicht.'}</p>
+          </td>
+        </tr>
       </table>
       <!--[if mso]></td></tr></table><![endif]-->
     </td>
