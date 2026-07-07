@@ -19,6 +19,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Invoice numbering + ledger.** Every issued document gets a unique, never-reused number (`<Präfix><laufende Nummer>`), recorded in a billing ledger. Re-running a month re-sends the same numbers instead of allocating new ones.
 - **Payment tracking.** A _Rechnungen — Zahlungsstatus_ card lists each month's documents with a per-recipient bezahlt/offen toggle.
 - **Per-member payment tracking in _Mitarbeitende_.** Each person now has a _Zahlungen_ action opening a month-by-month bezahlt/offen view, working with or without invoice mode. Amounts are derived live from the current month plus the archive. People whose company covers the coffee (_Firma zahlt_) are shown as _von Firma übernommen_ rather than billed personally. Requires migration `027`.
+- **Inline paid grid in _Mitarbeitende_.** A _Bezahlt_ column shows the last three months as compact checkboxes per person (current month emphasized, the two prior greyed but still toggleable), so the admin can see and update who has paid at a glance without opening the modal. The window rolls forward automatically each month; _Firma zahlt_ members show a muted _Firma_ marker instead.
 - **Company editor redesign.** The company dialog now always shows the contact person (name + e-mail) and a compact _Wer zahlt?_ switch (_Firma zahlt_ / _Jede Person_), with inline copy explaining what each choice means. New companies default to _Firma zahlt_.
 
 #### Changed

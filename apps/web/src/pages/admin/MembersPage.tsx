@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { adminApi, type MemberPaymentMonth } from '../../lib/adminApi'
+import { adminApi, type MemberPaymentMonth, type PaidGrid } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
@@ -55,6 +55,11 @@ function monthLabel(ym: string): string {
   return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
 }
 
+function monthAbbrev(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'short' }).replace('.', '')
+}
+
 interface Props {
   onToast: (msg: string) => void
   onMenuClick: () => void
@@ -86,17 +91,26 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [payMonths, setPayMonths] = useState<MemberPaymentMonth[]>([])
   const [payLoading, setPayLoading] = useState(false)
 
+  // Inline last-3-months paid grid + per-company billing mode (for the Firma marker).
+  const [paidGrid, setPaidGrid] = useState<PaidGrid>({ months: [], paid: {} })
+  const [companyMode, setCompanyMode] = useState<Record<string, 'individual' | 'company_paid'>>({})
+
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [memberList, companyList] = await Promise.all([
+      const [memberList, companyList, grid] = await Promise.all([
         adminApi.getMembers(),
         adminApi.getCompanies(),
+        adminApi.getPaidGrid(),
       ])
       const activeCompanies: CompanyOption[] = companyList
         .filter(c => c.active)
         .map(c => ({ id: c.id, name: c.name }))
       const companyMap = new Map(companyList.map(c => [c.id, c.name]))
+      const modeMap: Record<string, 'individual' | 'company_paid'> = {}
+      for (const c of companyList) modeMap[c.id] = c.billing_mode ?? 'individual'
+      setCompanyMode(modeMap)
+      setPaidGrid(grid)
       const rows: MemberRow[] = memberList.map(m => ({
         id: m.id,
         name: m.name,
@@ -203,10 +217,25 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     if (!payMember) return
     const next = !month.paid
     setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: next } : m)))
+    // Keep the inline grid in sync if this month is one of its last-3.
+    setPaidGrid(g => ({ ...g, paid: { ...g.paid, [payMember.id]: { ...(g.paid[payMember.id] ?? {}), [month.report_month]: next } } }))
     try {
       await adminApi.setMemberPaid(payMember.id, month.report_month, next)
     } catch {
       setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: month.paid } : m)))
+      setPaidGrid(g => ({ ...g, paid: { ...g.paid, [payMember.id]: { ...(g.paid[payMember.id] ?? {}), [month.report_month]: month.paid } } }))
+      onToast('Status konnte nicht gespeichert werden.')
+    }
+  }
+
+  // Inline grid toggle (Bezahlt column). Optimistic with rollback.
+  const toggleGridPaid = async (memberId: string, month: string, current: boolean) => {
+    const next = !current
+    setPaidGrid(g => ({ ...g, paid: { ...g.paid, [memberId]: { ...(g.paid[memberId] ?? {}), [month]: next } } }))
+    try {
+      await adminApi.setMemberPaid(memberId, month, next)
+    } catch {
+      setPaidGrid(g => ({ ...g, paid: { ...g.paid, [memberId]: { ...(g.paid[memberId] ?? {}), [month]: current } } }))
       onToast('Status konnte nicht gespeichert werden.')
     }
   }
@@ -260,6 +289,61 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
           {r.active ? 'Aktiv' : 'Inaktiv'}
         </Badge>
       ),
+    },
+    {
+      key: 'bezahlt',
+      align: 'center',
+      label: (
+        <div className="flex items-center justify-center gap-1.5">
+          {paidGrid.months.map((m, i) => (
+            <span
+              key={m}
+              className={[
+                'w-6 text-center',
+                i === paidGrid.months.length - 1 ? 'text-fg-muted' : 'text-fg-subtle',
+              ].join(' ')}
+            >
+              {monthAbbrev(m)}
+            </span>
+          ))}
+        </div>
+      ),
+      render: r => {
+        if (companyMode[r.company_id] === 'company_paid') {
+          return <span className="text-xs text-fg-subtle">Firma</span>
+        }
+        const memberPaid = paidGrid.paid[r.id] ?? {}
+        return (
+          <div className="flex items-center justify-center gap-1.5">
+            {paidGrid.months.map((m, i) => {
+              const isCurrent = i === paidGrid.months.length - 1
+              const checked = !!memberPaid[m]
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => toggleGridPaid(r.id, m, checked)}
+                  title={`${monthLabel(m)}: ${checked ? 'bezahlt' : 'offen'}`}
+                  aria-label={`${monthLabel(m)} ${checked ? 'bezahlt' : 'offen'}`}
+                  aria-pressed={checked}
+                  className={[
+                    'w-6 h-6 rounded-md border flex items-center justify-center transition-colors',
+                    checked
+                      ? isCurrent
+                        ? 'bg-accent border-accent text-white'
+                        : 'bg-accent/70 border-accent/70 text-white'
+                      : isCurrent
+                        ? 'border-border-strong text-transparent hover:border-accent'
+                        : 'border-border text-transparent hover:border-border-strong',
+                  ].join(' ')}
+                >
+                  <AdminIcon name="check" size={14} strokeWidth={2.5} />
+                </button>
+              )
+            })}
+          </div>
+        )
+      },
     },
     {
       key: 'actions',

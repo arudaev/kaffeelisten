@@ -127,8 +127,15 @@ export const adminApi = {
     (await paymentsCall<{ months: MemberPaymentMonth[] }>(
       'GET', `?member_id=${encodeURIComponent(memberId)}`,
     )).months,
+  // The last-3-months paid grid for all members (inline Mitarbeitende checkboxes).
+  getPaidGrid: () => paymentsCall<PaidGrid>('GET', ''),
   setMemberPaid: (memberId: string, reportMonth: string, paid: boolean) =>
     paymentsCall<{ ok: true }>('PATCH', '', { member_id: memberId, report_month: reportMonth, paid }),
+}
+
+export interface PaidGrid {
+  months: string[]
+  paid: Record<string, Record<string, boolean>>
 }
 
 export interface MemberPaymentMonth {
