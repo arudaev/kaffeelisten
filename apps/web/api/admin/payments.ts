@@ -55,9 +55,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true })
     }
 
+    const memberIdParam = Array.isArray(req.query.member_id) ? req.query.member_id[0] : req.query.member_id
+
+    // Bulk mode (no member_id): the last-3-months paid grid for ALL members, for
+    // the inline checkboxes in the Mitarbeitende table. Chronological order
+    // (oldest → newest) so the UI can emphasise the current (last) month.
+    if (!memberIdParam) {
+      const now = new Date()
+      const months: string[] = []
+      for (let i = 2; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+      }
+      const { data, error } = await supabase
+        .from('member_payments')
+        .select('member_id, report_month, paid')
+        .in('report_month', months)
+      if (error) throw new Error(error.message)
+      const paid: Record<string, Record<string, boolean>> = {}
+      for (const r of data ?? []) {
+        ;(paid[r.member_id] ??= {})[r.report_month] = r.paid
+      }
+      return res.status(200).json({ months, paid })
+    }
+
     // GET — one member's months.
-    const memberId = Array.isArray(req.query.member_id) ? req.query.member_id[0] : req.query.member_id
-    if (!memberId) return res.status(400).json({ error: 'member_id fehlt.' })
+    const memberId = memberIdParam
 
     // The member's company billing mode: when the company pays, the member is not
     // billed individually — surfaced so the UI can label it rather than let the
