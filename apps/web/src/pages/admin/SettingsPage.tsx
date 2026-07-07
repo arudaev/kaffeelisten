@@ -67,6 +67,7 @@ interface SettingsData {
   ceo_email: string | null
   cc_ceo_on_reports: boolean
   member_statements_enabled: boolean
+  company_documents_enabled: boolean
   auto_report_enabled: boolean
   auto_report_day: number | null
   max_items_per_order: number | null
@@ -127,6 +128,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [ceoEmail, setCeoEmail] = useState('')
   const [ceoCc, setCeoCc] = useState(true)
   const [memberReport, setMemberReport] = useState(true)
+  const [companyDocs, setCompanyDocs] = useState(true)
 
   // Scheduling
   const [autoEnabled, setAutoEnabled] = useState(true)
@@ -161,7 +163,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
   const [billingLoading, setBillingLoading] = useState(false)
 
   // Preview
-  const [previewType, setPreviewType] = useState<'company' | 'member' | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewTitle, setPreviewTitle] = useState('')
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewSubject, setPreviewSubject] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -196,6 +199,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     setCeoEmail(d.ceo_email ?? '')
     setCeoCc(d.cc_ceo_on_reports)
     setMemberReport(d.member_statements_enabled)
+    setCompanyDocs(d.company_documents_enabled)
     setAutoEnabled(d.auto_report_enabled)
     setAutoDay(d.auto_report_day)
     setMaxItemsInput(d.max_items_per_order != null ? String(d.max_items_per_order) : '')
@@ -359,6 +363,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             ceo_email: ceoEmail.trim() || null,
             cc_ceo_on_reports: ceoCc,
             member_statements_enabled: memberReport,
+            company_documents_enabled: companyDocs,
             auto_report_enabled: autoEnabled,
             auto_report_day: autoDay,
             max_items_per_order: maxItemsInput.trim() === '' ? null : Number(maxItemsInput),
@@ -398,9 +403,28 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
     }
   }
 
+  // The ITC1 issuer fields as the preview API expects them (unsaved values, so the
+  // invoice preview reflects what the admin is currently typing).
+  const issuerPayload = () => ({
+    issue_invoices: issueInvoices,
+    issuer_legal_name: issuerLegalName,
+    issuer_address: issuerAddress,
+    issuer_vat_id: issuerVatId,
+    issuer_iban: issuerIban,
+    issuer_bic: issuerBic,
+    invoice_number_prefix: invoiceNumberPrefix,
+    invoice_payment_terms: invoicePaymentTerms,
+    invoice_vat_rate: invoiceVatRate.trim() === '' ? 19 : Number(invoiceVatRate),
+  })
+
   // ── Preview ─────────────────────────────────────────────────────────────────
-  const openPreview = async (type: 'company' | 'member') => {
-    setPreviewType(type)
+  const openPreview = async (
+    type: 'admin' | 'company' | 'member',
+    variant: 'report' | 'invoice',
+    title: string,
+  ) => {
+    setPreviewOpen(true)
+    setPreviewTitle(title)
     setPreviewLoading(true)
     setPreviewHtml('')
     setPreviewSubject('')
@@ -408,7 +432,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       const res = await fetch('/api/admin/preview-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, format: formatPayload() }),
+        body: JSON.stringify({ type, variant, format: formatPayload(), issuer: issuerPayload() }),
       })
       if (res.ok) {
         const data = (await res.json()) as { html: string; subject: string }
@@ -416,11 +440,11 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
         setPreviewSubject(data.subject)
       } else {
         onToast('Vorschau konnte nicht geladen werden.')
-        setPreviewType(null)
+        setPreviewOpen(false)
       }
     } catch {
       onToast('Vorschau konnte nicht geladen werden.')
-      setPreviewType(null)
+      setPreviewOpen(false)
     } finally {
       setPreviewLoading(false)
     }
@@ -745,6 +769,32 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 </div>
               </section>
 
+              {/* Card 6b2 — Firmendokumente (per-company report/invoice) */}
+              <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-lg font-semibold text-fg">Firmendokumente</h3>
+                  <p className="text-sm text-fg-muted leading-relaxed">
+                    Zusätzlich zum Admin-/CEO-Bericht erhält jede Firma mit hinterlegtem Rechnungskontakt
+                    ihr eigenes Monatsdokument: eine Aufstellung, oder eine Rechnung, wenn die Firma den
+                    Kaffee übernimmt („Firma zahlt“ unter Unternehmen).
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 pt-0.5">
+                  <Toggle checked={companyDocs} onChange={setCompanyDocs} label="Jede Firma erhält ihr eigenes Monatsdokument" />
+                  <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
+                    Firmen ohne Rechnungskontakt werden übersprungen. Rechnungen erscheinen nur, wenn die
+                    Rechnungsstellung unten ausgefüllt ist — sonst wird eine Aufstellung versendet.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                  <span className="text-sm font-semibold text-fg">Vorschau Firmendokument</span>
+                  <div className="flex gap-2">
+                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company', 'report', 'Firmen-Aufstellung')}>Aufstellung</AdminButton>
+                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company', 'invoice', 'Firmen-Rechnung')}>Rechnung</AdminButton>
+                  </div>
+                </div>
+              </section>
+
               {/* Card 6c — Rechnungsstellung */}
               <section className="bg-surface border border-border rounded-lg shadow-sm p-6 flex flex-col gap-5">
                 <div className="flex flex-col gap-1.5">
@@ -866,8 +916,8 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 {/* Company report copy */}
                 <div className="flex flex-col gap-3 border-t border-border pt-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-fg">Firmenbericht (Admin + CEO)</span>
-                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('company')}>Vorschau</AdminButton>
+                    <span className="text-sm font-semibold text-fg">Admin-/CEO-Bericht (alle Firmen)</span>
+                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('admin', 'report', 'Admin-/CEO-Bericht')}>Vorschau</AdminButton>
                   </div>
                   <TemplateField
                     label="Betreff"
@@ -891,8 +941,11 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 {/* Member statement copy */}
                 <div className="flex flex-col gap-3 border-t border-border pt-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-fg">{issueInvoices ? 'Mitglieder-Rechnung' : 'Mitglieder-Aufstellung'}</span>
-                    <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member')}>Vorschau</AdminButton>
+                    <span className="text-sm font-semibold text-fg">Mitglieder-Dokument</span>
+                    <div className="flex gap-2">
+                      <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member', 'report', 'Mitglieder-Aufstellung')}>Aufstellung</AdminButton>
+                      <AdminButton variant="secondary" size="sm" onClick={() => openPreview('member', 'invoice', 'Mitglieder-Rechnung')}>Rechnung</AdminButton>
+                    </div>
                   </div>
                   <TemplateField
                     label="Betreff"
@@ -1008,10 +1061,10 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
       </Modal>
 
       {/* Report preview overlay (wider than the standard modal to fit a 600px email) */}
-      {previewType && (
+      {previewOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-          onClick={() => setPreviewType(null)}
+          onClick={() => setPreviewOpen(false)}
         >
           <div
             className="bg-surface rounded-2xl shadow-lg w-full max-w-[680px] max-h-[90vh] flex flex-col overflow-hidden"
@@ -1020,13 +1073,13 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
               <div className="min-w-0">
                 <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">
-                  {previewType === 'company' ? 'Firmenbericht (Admin + CEO)' : 'Mitglieder-Aufstellung'} · Vorschau
+                  {previewTitle} · Vorschau
                 </p>
                 <p className="text-sm font-semibold text-fg truncate">{previewSubject || '—'}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewType(null)}
+                onClick={() => setPreviewOpen(false)}
                 aria-label="Schließen"
                 className="text-fg-muted hover:text-fg p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
@@ -1049,7 +1102,7 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
             </div>
             <div className="flex items-center justify-between gap-3 px-6 py-3 border-t border-border">
               <span className="text-[13px] text-fg-muted">Zeigt die aktuellen — auch ungespeicherten — Einstellungen.</span>
-              <AdminButton variant="secondary" onClick={() => setPreviewType(null)}>Schließen</AdminButton>
+              <AdminButton variant="secondary" onClick={() => setPreviewOpen(false)}>Schließen</AdminButton>
             </div>
           </div>
         </div>

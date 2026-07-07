@@ -52,6 +52,20 @@ export function resolveIssuer(row: IssuerRow | null | undefined): IssuerConfig |
   }
 }
 
+// Sample issuer for previews before the admin has filled the real block — so an
+// invoice preview shows realistic placeholders instead of blanks. Values are from
+// ITC1's Kaffeerechnung-Vorlage; clearly a preview stand-in, never used to send.
+export const PLACEHOLDER_ISSUER: IssuerConfig = {
+  legalName: 'ITC Innovations Technologie Campus GmbH',
+  address: 'Ulrichsberger Str. 17\n94469 Deggendorf',
+  vatId: 'DE207285819',
+  iban: 'DE33 7415 0000 0380 0093 40',
+  bic: 'BYLADEM1DEG',
+  numberPrefix: 'K-',
+  paymentTerms: 'Zahlung ohne Abzug innerhalb 14 Tagen nach Rechnungsstellung.',
+  vatRate: 19,
+}
+
 export interface VatSplit {
   netCents: number
   taxCents: number
