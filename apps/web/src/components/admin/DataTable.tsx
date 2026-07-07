@@ -3,7 +3,7 @@ import EmptyState from './EmptyState'
 
 export interface Column<T> {
   key: string
-  label: string
+  label: ReactNode
   align?: 'left' | 'right' | 'center'
   mono?: boolean
   muted?: boolean

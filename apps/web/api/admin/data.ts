@@ -24,6 +24,7 @@ function baseUrl(req: VercelRequest): string {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const NAME_MAX = 120
+const NOTES_MAX = 1000
 const UNIT_MAX = 40
 const PRICE_MAX = 1_000_000 // €10 000 in cents — generous upper bound
 const CATEGORIES = ['coffee', 'drink', 'snack', 'food', 'other'] as const
@@ -45,8 +46,20 @@ function reqStr(v: unknown, field: string, max: number): Ok<string> | Err {
 
 // ── per-resource validation ───────────────────────────────────────────────────
 
-interface CompanyValues { name: string; active: boolean }
-function validateCompany(body: Record<string, unknown>, partial: boolean): Ok<Partial<CompanyValues>> | Err {
+interface CompanyValues {
+  name: string
+  active: boolean
+  billing_mode: 'individual' | 'company_paid'
+  billing_contact_name: string | null
+  billing_contact_email: string | null
+  billing_notes: string | null
+}
+async function validateCompany(
+  supabase: ReturnType<typeof makeAdminClient>,
+  body: Record<string, unknown>,
+  partial: boolean,
+  id: string | undefined,
+): Promise<Ok<Partial<CompanyValues>> | Err> {
   const out: Partial<CompanyValues> = {}
   if (!partial || body.name !== undefined) {
     const name = reqStr(body.name, 'Name', NAME_MAX)
@@ -54,6 +67,54 @@ function validateCompany(body: Record<string, unknown>, partial: boolean): Ok<Pa
     out.name = name.value
   }
   if (!partial || body.active !== undefined) out.active = Boolean(body.active ?? true)
+
+  // ── Billing (migration 023) ──
+  if (!partial || body.billing_mode !== undefined) {
+    const mode = String(body.billing_mode ?? 'individual')
+    if (mode !== 'individual' && mode !== 'company_paid') {
+      return { error: 'Ungültiger Abrechnungsmodus.' }
+    }
+    out.billing_mode = mode
+  }
+  if (!partial || body.billing_contact_name !== undefined) {
+    const s = String(body.billing_contact_name ?? '').trim()
+    if (s.length > NAME_MAX) return { error: `Ansprechpartner ist zu lang (max. ${NAME_MAX} Zeichen).` }
+    out.billing_contact_name = s || null
+  }
+  let emailProvided = false
+  if (!partial || body.billing_contact_email !== undefined) {
+    const e = String(body.billing_contact_email ?? '').trim()
+    if (e && !EMAIL_RE.test(e)) return { error: 'Ungültige Rechnungs-E-Mail-Adresse.' }
+    if (e.length > NAME_MAX) return { error: 'Rechnungs-E-Mail-Adresse ist zu lang.' }
+    out.billing_contact_email = e || null
+    emailProvided = true
+  }
+  if (!partial || body.billing_notes !== undefined) {
+    const s = String(body.billing_notes ?? '').trim()
+    if (s.length > NOTES_MAX) return { error: `Notiz ist zu lang (max. ${NOTES_MAX} Zeichen).` }
+    out.billing_notes = s || null
+  }
+
+  // company_paid requires a billing contact email (effective, across a partial
+  // update). Fetch the current row to fill any gap not present in this request.
+  const mightBeCompanyPaid =
+    out.billing_mode === 'company_paid' ||
+    (out.billing_mode === undefined && partial && (body.billing_mode !== undefined || emailProvided))
+  if (mightBeCompanyPaid) {
+    let curMode: string | undefined
+    let curEmail: string | null | undefined
+    if (partial && id) {
+      const { data } = await supabase
+        .from('companies').select('billing_mode, billing_contact_email').eq('id', id).maybeSingle()
+      curMode = data?.billing_mode
+      curEmail = data?.billing_contact_email
+    }
+    const finalMode = out.billing_mode ?? curMode ?? 'individual'
+    const finalEmail = emailProvided ? (out.billing_contact_email ?? null) : (curEmail ?? null)
+    if (finalMode === 'company_paid' && !finalEmail) {
+      return { error: 'Bei „Firma zahlt“ ist eine Rechnungs-E-Mail-Adresse erforderlich.' }
+    }
+  }
   return { value: out }
 }
 
@@ -194,7 +255,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!resource) return res.status(400).json({ error: 'Unbekannte Ressource.' })
 
       if (resource === 'companies') {
-        const { data, error } = await supabase.from('companies').select('id, name, active').order('name')
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name, active, billing_mode, billing_contact_name, billing_contact_email, billing_notes')
+          .order('name')
         if (error) throw new Error(error.message)
         return res.status(200).json({ companies: data ?? [] })
       }
@@ -234,7 +298,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const partial = method === 'PATCH'
 
     let validated: Ok<Record<string, unknown>> | Err
-    if (resource === 'companies') validated = validateCompany(values, partial)
+    if (resource === 'companies') validated = await validateCompany(supabase, values, partial, String(body.id ?? '').trim() || undefined)
     else if (resource === 'items') validated = validateItem(values, partial)
     else validated = await validateMember(supabase, values, partial)
     if (isErr(validated)) return res.status(400).json({ error: validated.error })
