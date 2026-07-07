@@ -121,6 +121,42 @@ export const adminApi = {
     )),
   setBillingPaid: (id: string, paid: boolean) =>
     billingCall<{ ok: true }>('PATCH', '', { id, paid }),
+
+  // ── Per-member payment tracking (migration 027) ──
+  getMemberPayments: async (memberId: string) =>
+    (await paymentsCall<{ months: MemberPaymentMonth[] }>(
+      'GET', `?member_id=${encodeURIComponent(memberId)}`,
+    )).months,
+  setMemberPaid: (memberId: string, reportMonth: string, paid: boolean) =>
+    paymentsCall<{ ok: true }>('PATCH', '', { member_id: memberId, report_month: reportMonth, paid }),
+}
+
+export interface MemberPaymentMonth {
+  report_month: string
+  amount_cents: number
+  paid: boolean
+  covered_by_company: boolean
+}
+
+async function paymentsCall<T>(
+  method: 'GET' | 'PATCH',
+  query: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`/api/admin/payments${query}`, {
+    method,
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+  if (!res.ok) {
+    let message = 'Serverfehler'
+    try {
+      const data = await res.json()
+      if (data?.error) message = data.error
+    } catch { /* keep generic */ }
+    throw new Error(message)
+  }
+  return res.json() as Promise<T>
 }
 
 export interface BillingDocument {

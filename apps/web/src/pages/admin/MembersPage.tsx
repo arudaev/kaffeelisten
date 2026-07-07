@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { adminApi } from '../../lib/adminApi'
+import { adminApi, type MemberPaymentMonth } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column } from '../../components/admin/DataTable'
 import Modal from '../../components/admin/Modal'
@@ -46,6 +46,15 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
 }
 
+function euro(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',') + ' €'
+}
+
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+}
+
 interface Props {
   onToast: (msg: string) => void
   onMenuClick: () => void
@@ -71,6 +80,11 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     active: true,
   })
   const [saving, setSaving] = useState(false)
+
+  // Per-member payment tracking (migration 027)
+  const [payMember, setPayMember] = useState<MemberRow | null>(null)
+  const [payMonths, setPayMonths] = useState<MemberPaymentMonth[]>([])
+  const [payLoading, setPayLoading] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -172,6 +186,31 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     }
   }
 
+  const openPayments = async (member: MemberRow) => {
+    setPayMember(member)
+    setPayLoading(true)
+    setPayMonths([])
+    try {
+      setPayMonths(await adminApi.getMemberPayments(member.id))
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Zahlungen konnten nicht geladen werden.')
+    } finally {
+      setPayLoading(false)
+    }
+  }
+
+  const togglePaid = async (month: MemberPaymentMonth) => {
+    if (!payMember) return
+    const next = !month.paid
+    setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: next } : m)))
+    try {
+      await adminApi.setMemberPaid(payMember.id, month.report_month, next)
+    } catch {
+      setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: month.paid } : m)))
+      onToast('Status konnte nicht gespeichert werden.')
+    }
+  }
+
   const toggleActive = async (member: MemberRow) => {
     try {
       await adminApi.updateMember(member.id, { active: !member.active })
@@ -228,6 +267,14 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       align: 'right',
       render: r => (
         <div className="inline-flex gap-1">
+          <button
+            type="button"
+            onClick={() => openPayments(r)}
+            title="Zahlungen"
+            className="text-fg-muted hover:text-accent p-1 rounded transition-colors"
+          >
+            <AdminIcon name="report" size={16} />
+          </button>
           <button
             type="button"
             onClick={() => sendConfirmation(r)}
@@ -424,6 +471,52 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
               checked={form.active}
               onChange={active => setForm(f => ({ ...f, active }))}
             />
+          )}
+        </div>
+      </Modal>
+
+      {/* Per-member payment tracking (migration 027) */}
+      <Modal
+        open={!!payMember}
+        onClose={() => setPayMember(null)}
+        title={payMember ? `Zahlungen — ${payMember.name}` : 'Zahlungen'}
+        actions={
+          <AdminButton variant="secondary" onClick={() => setPayMember(null)}>
+            Schließen
+          </AdminButton>
+        }
+      >
+        <div className="flex flex-col mt-1">
+          {payLoading ? (
+            <div className="h-24 bg-surface-2 rounded-lg animate-pulse" />
+          ) : payMonths.length === 0 ? (
+            <p className="text-sm text-fg-muted py-2">Noch keine erfassten Monate für diese Person.</p>
+          ) : payMonths[0].covered_by_company ? (
+            <>
+              <div className="bg-accent-subtle border border-accent rounded-lg px-4 py-3 mb-2">
+                <p className="text-sm font-medium text-accent leading-relaxed">
+                  Die Firma übernimmt den Kaffee dieser Person — es gibt keine persönliche Zahlung.
+                </p>
+              </div>
+              {payMonths.map(m => (
+                <div key={m.report_month} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-fg">{monthLabel(m.report_month)}</p>
+                    <p className="text-xs text-fg-muted">{euro(m.amount_cents)} · von Firma übernommen</p>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            payMonths.map(m => (
+              <div key={m.report_month} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-fg">{monthLabel(m.report_month)}</p>
+                  <p className="text-xs text-fg-muted">{euro(m.amount_cents)}</p>
+                </div>
+                <Toggle checked={m.paid} onChange={() => togglePaid(m)} label={m.paid ? 'Bezahlt' : 'Offen'} />
+              </div>
+            ))
           )}
         </div>
       </Modal>

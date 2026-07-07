@@ -29,6 +29,9 @@ const REQUIRED: Record<string, Priv[]> = {
   // (void/mark-paid) these through the service-role client.
   billing_runs: ['select', 'insert', 'update'],
   billing_documents: ['select', 'insert', 'update'],
+  // Per-member payment ledger (migration 027) — the admin Employees tab reads,
+  // inserts and updates (paid toggle) these through the service-role client.
+  member_payments: ['select', 'insert', 'update'],
 }
 
 /**
