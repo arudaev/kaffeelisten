@@ -58,8 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const memberIdParam = Array.isArray(req.query.member_id) ? req.query.member_id[0] : req.query.member_id
 
     // Bulk mode (no member_id): the last-3-months paid grid for ALL members, for
-    // the inline checkboxes in the Mitarbeitende table. Chronological order
-    // (oldest → newest) so the UI can emphasise the current (last) month.
+    // the inline checkboxes + the "X von Y bezahlt" summary in the Mitarbeitende
+    // table. Chronological order (oldest → newest) so the UI can emphasise the
+    // current (last) month. Each cell carries the derived amount so the summary
+    // can count only the people who actually owe something that month.
     if (!memberIdParam) {
       const now = new Date()
       const months: string[] = []
@@ -67,26 +69,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
         months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
       }
-      // The grid is opt-in (migration 028). When off, the column is hidden — skip
-      // the read and tell the client so it doesn't render the column.
+      // The grid can be hidden (migration 028/029). When off, skip the read and
+      // tell the client so it doesn't render the column/summary.
       const { data: cfg } = await supabase
         .from('app_settings')
         .select('member_paid_grid_enabled')
         .eq('id', 1)
         .maybeSingle()
       const enabled = cfg?.member_paid_grid_enabled ?? false
-      if (!enabled) return res.status(200).json({ enabled, months, paid: {} })
+      if (!enabled) return res.status(200).json({ enabled, months, rows: {} })
 
-      const { data, error } = await supabase
-        .from('member_payments')
-        .select('member_id, report_month, paid')
-        .in('report_month', months)
-      if (error) throw new Error(error.message)
-      const paid: Record<string, Record<string, boolean>> = {}
-      for (const r of data ?? []) {
-        ;(paid[r.member_id] ??= {})[r.report_month] = r.paid
+      const monthSet = new Set(months)
+      const [oy, om] = months[0].split('-').map(Number)
+      const monthStart = new Date(oy, om - 1, 1).toISOString()
+
+      const { data: items } = await supabase.from('items').select('id, price_cents')
+      const priceMap = new Map((items ?? []).map(i => [i.id, i.price_cents]))
+
+      const [{ data: live, error: liveErr }, { data: archived, error: archErr }, { data: payments, error: payErr }] =
+        await Promise.all([
+          supabase.from('transactions').select('member_id, item_id, quantity, logged_at').gte('logged_at', monthStart),
+          supabase.from('transactions_archive').select('member_id, item_id, quantity, report_month').in('report_month', months),
+          supabase.from('member_payments').select('member_id, report_month, paid').in('report_month', months),
+        ])
+      if (liveErr) throw new Error(liveErr.message)
+      if (archErr) throw new Error(archErr.message)
+      if (payErr) throw new Error(payErr.message)
+
+      const rows: Record<string, Record<string, { amount_cents: number; paid: boolean }>> = {}
+      const cell = (memberId: string, month: string) => {
+        const mrow = (rows[memberId] ??= {})
+        return (mrow[month] ??= { amount_cents: 0, paid: false })
       }
-      return res.status(200).json({ enabled, months, paid })
+      for (const t of live ?? []) {
+        const month = String(t.logged_at).slice(0, 7)
+        if (monthSet.has(month)) cell(t.member_id, month).amount_cents += (priceMap.get(t.item_id) ?? 0) * t.quantity
+      }
+      for (const t of archived ?? []) {
+        cell(t.member_id, t.report_month).amount_cents += (priceMap.get(t.item_id) ?? 0) * t.quantity
+      }
+      for (const p of payments ?? []) {
+        cell(p.member_id, p.report_month).paid = p.paid
+      }
+
+      return res.status(200).json({ enabled, months, rows })
     }
 
     // GET — one member's months.
