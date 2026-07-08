@@ -92,7 +92,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const [payLoading, setPayLoading] = useState(false)
 
   // Inline last-3-months paid grid + per-company billing mode (for the Firma marker).
-  const [paidGrid, setPaidGrid] = useState<PaidGrid>({ enabled: false, months: [], paid: {} })
+  const [paidGrid, setPaidGrid] = useState<PaidGrid>({ enabled: false, months: [], rows: {} })
   const [companyMode, setCompanyMode] = useState<Record<string, 'individual' | 'company_paid'>>({})
 
   const fetchData = async () => {
@@ -218,24 +218,38 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     const next = !month.paid
     setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: next } : m)))
     // Keep the inline grid in sync if this month is one of its last-3.
-    setPaidGrid(g => ({ ...g, paid: { ...g.paid, [payMember.id]: { ...(g.paid[payMember.id] ?? {}), [month.report_month]: next } } }))
+    setGridPaid(payMember.id, month.report_month, next, month.amount_cents)
     try {
       await adminApi.setMemberPaid(payMember.id, month.report_month, next)
     } catch {
       setPayMonths(ms => ms.map(m => (m.report_month === month.report_month ? { ...m, paid: month.paid } : m)))
-      setPaidGrid(g => ({ ...g, paid: { ...g.paid, [payMember.id]: { ...(g.paid[payMember.id] ?? {}), [month.report_month]: month.paid } } }))
+      setGridPaid(payMember.id, month.report_month, month.paid, month.amount_cents)
       onToast('Status konnte nicht gespeichert werden.')
     }
+  }
+
+  // Set a grid cell's paid flag, preserving the derived amount.
+  function setGridPaid(memberId: string, month: string, paid: boolean, fallbackAmount = 0) {
+    setPaidGrid(g => {
+      const cur = g.rows[memberId]?.[month]
+      return {
+        ...g,
+        rows: {
+          ...g.rows,
+          [memberId]: { ...(g.rows[memberId] ?? {}), [month]: { amount_cents: cur?.amount_cents ?? fallbackAmount, paid } },
+        },
+      }
+    })
   }
 
   // Inline grid toggle (Bezahlt column). Optimistic with rollback.
   const toggleGridPaid = async (memberId: string, month: string, current: boolean) => {
     const next = !current
-    setPaidGrid(g => ({ ...g, paid: { ...g.paid, [memberId]: { ...(g.paid[memberId] ?? {}), [month]: next } } }))
+    setGridPaid(memberId, month, next)
     try {
       await adminApi.setMemberPaid(memberId, month, next)
     } catch {
-      setPaidGrid(g => ({ ...g, paid: { ...g.paid, [memberId]: { ...(g.paid[memberId] ?? {}), [month]: current } } }))
+      setGridPaid(memberId, month, current)
       onToast('Status konnte nicht gespeichert werden.')
     }
   }
@@ -264,6 +278,27 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
     })
   }, [members, filterCompanyId, filterStatus, filterName, sortKey, sortDir])
+
+  // Per-month "X von Y bezahlt" — Y = billable people (not Firma zahlt) who owe
+  // money that month; X = those marked paid; plus the € still outstanding.
+  const paidSummary = useMemo(
+    () =>
+      paidGrid.months.map(month => {
+        let owe = 0
+        let paid = 0
+        let outstanding = 0
+        for (const m of members) {
+          if (companyMode[m.company_id] === 'company_paid') continue
+          const cell = paidGrid.rows[m.id]?.[month]
+          if (!cell || cell.amount_cents <= 0) continue
+          owe++
+          if (cell.paid) paid++
+          else outstanding += cell.amount_cents
+        }
+        return { month, owe, paid, outstanding }
+      }),
+    [members, companyMode, paidGrid],
+  )
 
   const allColumns: Column<MemberRow>[] = [
     {
@@ -312,12 +347,12 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
         if (companyMode[r.company_id] === 'company_paid') {
           return <span className="text-xs text-fg-subtle">Firma</span>
         }
-        const memberPaid = paidGrid.paid[r.id] ?? {}
+        const memberRows = paidGrid.rows[r.id] ?? {}
         return (
           <div className="flex items-center justify-center gap-1.5">
             {paidGrid.months.map((m, i) => {
               const isCurrent = i === paidGrid.months.length - 1
-              const checked = !!memberPaid[m]
+              const checked = !!memberRows[m]?.paid
               return (
                 <button
                   key={m}
@@ -471,6 +506,33 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
             {displayed.length} {displayed.length === 1 ? 'Person' : 'Personen'}
           </span>
         </div>
+
+        {!loading && paidGrid.enabled && paidSummary.some(s => s.owe > 0) && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {paidSummary.map((s, i) => {
+              const isCurrent = i === paidSummary.length - 1
+              const allPaid = s.owe > 0 && s.paid === s.owe
+              return (
+                <div
+                  key={s.month}
+                  className={[
+                    'rounded-xl border p-4 flex flex-col gap-1',
+                    isCurrent ? 'bg-surface border-border-strong' : 'bg-surface-2 border-border',
+                  ].join(' ')}
+                >
+                  <span className="text-xs font-medium text-fg-muted">{monthLabel(s.month)}</span>
+                  <span className="text-lg font-semibold text-fg">
+                    {s.paid}
+                    <span className="text-fg-muted font-normal"> / {s.owe} bezahlt</span>
+                  </span>
+                  <span className={['text-xs', allPaid ? 'text-success' : 'text-fg-muted'].join(' ')}>
+                    {allPaid ? 'Alle bezahlt' : `${euro(s.outstanding)} offen`}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {loading ? (
           <div className="h-48 bg-surface-2 rounded-xl animate-pulse" />

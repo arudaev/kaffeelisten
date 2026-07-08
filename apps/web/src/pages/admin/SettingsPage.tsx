@@ -709,8 +709,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 <div className="flex flex-col gap-2 pt-0.5">
                   <Toggle checked={paidGridEnabled} onChange={setPaidGridEnabled} label="Bezahlt-Spalte in „Mitarbeitende“ anzeigen" />
                   <p className="ml-[54px] text-[13px] text-fg-muted leading-relaxed">
-                    Standardmäßig aus. Die ausführliche Monatsübersicht pro Person bleibt über die
-                    Schaltfläche „Zahlungen“ immer erreichbar.
+                    Standardmäßig an; zeigt oben in der Liste je Monat „X von Y bezahlt“. Die
+                    ausführliche Monatsübersicht pro Person bleibt über die Schaltfläche „Zahlungen“
+                    immer erreichbar.
                   </p>
                 </div>
               </section>

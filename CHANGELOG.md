@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/payments-overview
+
+#### Changed
+- **Paid tracking is now scan-and-tick, not modal-per-person.** The _Bezahlt_ column (last three months of checkboxes per person) in _Mitarbeitende_ is **on by default** (requires migration `029`), and a summary strip above the list shows **„X von Y bezahlt"** per month with the euro amount still outstanding — so the admin sees coverage across everyone at a glance and ticks people off in place. The per-person _Zahlungen_ dialog stays as an optional detail view for full history; it can still be hidden entirely under _Einstellungen → Zahlungsübersicht_. „Firma zahlt" people are excluded from the counts and show a muted marker.
+
+
 ### feat/billing-invoice-mode
 
 #### Added
