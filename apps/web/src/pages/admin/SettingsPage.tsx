@@ -663,7 +663,9 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                 <div className="flex flex-col gap-1.5">
                   <h3 className="text-lg font-semibold text-fg">Geschäftsführung (CEO)</h3>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Die Geschäftsführung wird bei jedem Versand automatisch in Kopie gesetzt.
+                    Die Geschäftsführung wird bei jedem Versand automatisch in Kopie gesetzt. Im
+                    Rechnungsmodus erhält sie zusätzlich das komplette Rechnungsarchiv als ZIP
+                    (Rechnungsübersicht plus alle Einzelrechnungen als PDF).
                   </p>
                 </div>
                 <AdminField
@@ -908,8 +910,11 @@ export default function SettingsPage({ onToast, onMenuClick }: Props) {
                       <p className="text-[13px] text-error">Pflichtangaben fehlen: {invoiceMissing.join(', ')}.</p>
                     )}
                     <p className="text-[13px] text-fg-muted leading-relaxed border-t border-border pt-3">
-                      Hinweis: Kaffeelisten erstellt die Rechnung im Auftrag von ITC1 (Rechnungssteller).
-                      Wortlaut, USt und Aufbewahrung mit ITC1s Steuerberatung abstimmen.
+                      Jede E-Mail (Mitglied bzw. Firma) erhält ihre Rechnung zusätzlich als PDF im
+                      Anhang; zahlt eine Firma selbst nicht, sondern jede Person, bekommt der
+                      Firmenkontakt ein ZIP mit allen Einzelrechnungen. Hinweis: Kaffeelisten erstellt
+                      die Rechnung im Auftrag von ITC1 (Rechnungssteller). Wortlaut, USt und
+                      Aufbewahrung mit ITC1s Steuerberatung abstimmen.
                     </p>
                   </div>
                 )}
