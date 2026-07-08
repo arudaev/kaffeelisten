@@ -2,7 +2,9 @@
 
 import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
+import JSZip from 'jszip'
 import { Resend } from 'resend'
+import { launchBrowser, pageToPdf, type Browser } from './pdf'
 import {
   buildReportHtml,
   buildCompanyEmailHtml,
@@ -249,59 +251,19 @@ export function computeSummary(transactions: EnrichedTransaction[]): CompanySumm
 
 // ─── PDF (HTML → puppeteer) ───────────────────────────────────────────────────
 
+// Standalone aggregate-report PDF (launches and closes its own browser). The
+// monthly run instead shares a single browser via launchBrowser/pageToPdf so it
+// doesn't pay Chromium cold-start per recipient; this remains for any caller that
+// just wants the one summary PDF.
 export async function generatePdf(
   summaries: CompanySummary[],
   transactions: EnrichedTransaction[],
   monthLabel: string,
   reportMonth: string,
 ): Promise<Buffer> {
-  // Dynamic import so the module doesn't load chromium on cold start unless needed
-  const chromium = (await import('@sparticuz/chromium-min')).default
-  const puppeteer = (await import('puppeteer-core')).default
-
-  // The pack version MUST match the installed @sparticuz/chromium-min major
-  // (package.json → ^147). A mismatch ships a chromium binary the bundled
-  // puppeteer-core can't drive. Bump this URL whenever chromium-min is upgraded.
-  const executablePath = process.env.CHROMIUM_PATH
-    ?? await chromium.executablePath(
-        'https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.tar'
-      )
-
-  // Drop --disable-web-security: the report HTML is fully self-contained (inline
-  // styles + inline SVG), so relaxing the same-origin policy only widens the
-  // attack surface if any markup slips through. (--no-sandbox stays; it's
-  // required in the serverless runtime and is not what defends against injection.)
-  const safeArgs = chromium.args.filter(a => !a.startsWith('--disable-web-security'))
-
-  const browser = await puppeteer.launch({
-    args: safeArgs,
-    executablePath,
-    headless: true,
-  })
-
+  const browser = await launchBrowser()
   try {
-    const page = await browser.newPage()
-
-    // The report contains no scripts and loads no external resources. Disabling
-    // JS and aborting every non-inline request means that even if a crafted
-    // member/company/item name embedded a <script> or an external URL, it can
-    // neither execute nor exfiltrate/SSRF. Defense-in-depth alongside escaping.
-    await page.setJavaScriptEnabled(false)
-    await page.setRequestInterception(true)
-    page.on('request', req => {
-      const url = req.url()
-      if (url.startsWith('data:') || url.startsWith('about:')) req.continue()
-      else req.abort()
-    })
-
-    const html = buildReportHtml(summaries, transactions, monthLabel, reportMonth)
-    await page.setContent(html, { waitUntil: 'load' })
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    })
-    return Buffer.from(pdfBuffer)
+    return await pageToPdf(browser, buildReportHtml(summaries, transactions, monthLabel, reportMonth))
   } finally {
     await browser.close()
   }
@@ -493,6 +455,102 @@ export async function generateExcel(
   return Buffer.from(buf)
 }
 
+// ─── Per-recipient PDFs + archive zips (invoice attachments) ──────────────────
+
+// A generated per-recipient invoice, collected for the members-pay company
+// archive and the CEO/Management global zip. Only invoice-mode documents (which
+// have a document number and a VAT split) are collected.
+interface InvoiceDoc {
+  companyId: string
+  memberId: string | null   // null → a company-level invoice
+  documentNumber: string
+  recipientName: string
+  recipientEmail: string
+  netCents: number
+  taxCents: number
+  grossCents: number
+  pdf: Buffer
+}
+
+// Per-run PDF budget. Attaching a PDF to every email spins Chromium once per page;
+// on the 60s serverless ceiling that must stay bounded. Generation stops after a
+// wall-clock deadline (leaving time for archive/prune) and a hard count cap — the
+// email still sends, just without that attachment.
+interface PdfBudget {
+  browser: Browser | null
+  deadline: number   // epoch ms
+  remaining: number
+}
+
+function makePdfBudget(browser: Browser | null): PdfBudget {
+  return { browser, deadline: Date.now() + 45_000, remaining: 120 }
+}
+
+async function renderDocPdf(budget: PdfBudget, html: string): Promise<Buffer | null> {
+  if (!budget.browser || budget.remaining <= 0 || Date.now() > budget.deadline) return null
+  budget.remaining--
+  try {
+    return await pageToPdf(budget.browser, html)
+  } catch (err) {
+    console.error('[pdf] per-recipient render failed:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+// Filesystem-safe attachment name (document numbers / company names are used in
+// zip entry names). Keeps word chars, dot and dash.
+function sanitizeFile(s: string): string {
+  return s.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 80) || 'dokument'
+}
+
+async function makeZip(files: { name: string; content: Buffer }[]): Promise<Buffer> {
+  const zip = new JSZip()
+  for (const f of files) zip.file(f.name, f.content)
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
+
+// Compact invoice ledger sheet (Nr., recipient, net/VAT/gross) bundled into the
+// archive zips. Reuses the report Excel styling helpers.
+async function generateLedgerExcel(docs: InvoiceDoc[]): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Kaffeelisten'
+  wb.created = new Date()
+  const ws = addReportWorksheet(wb, 'Rechnungen')
+  ws.columns = [
+    { key: 'nr', width: 16 },
+    { key: 'name', width: 28 },
+    { key: 'email', width: 32 },
+    { key: 'net', width: 16 },
+    { key: 'vat', width: 14 },
+    { key: 'gross', width: 16 },
+  ]
+  const hdr = ws.addRow(['Rechnungsnr.', 'Empfänger', 'E-Mail', 'Netto', 'USt', 'Brutto'])
+  styleHeaderRow(hdr, 6)
+  ;[4, 5, 6].forEach(i => { hdr.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
+  docs.forEach((d, i) => {
+    const row = ws.addRow([
+      d.documentNumber, d.recipientName, d.recipientEmail,
+      Number((d.netCents / 100).toFixed(2)),
+      Number((d.taxCents / 100).toFixed(2)),
+      Number((d.grossCents / 100).toFixed(2)),
+    ])
+    if (i % 2 === 1) for (let j = 1; j <= 6; j++) row.getCell(j).fill = altFill
+    ;[4, 5, 6].forEach(j => { row.getCell(j).numFmt = '#,##0.00 "€"'; row.getCell(j).alignment = { horizontal: 'right' } })
+    for (let j = 1; j <= 6; j++) row.getCell(j).border = rowBorder
+    row.height = 18
+  })
+  const tot = ws.addRow([
+    'Gesamt', '', '',
+    Number((docs.reduce((s, d) => s + d.netCents, 0) / 100).toFixed(2)),
+    Number((docs.reduce((s, d) => s + d.taxCents, 0) / 100).toFixed(2)),
+    Number((docs.reduce((s, d) => s + d.grossCents, 0) / 100).toFixed(2)),
+  ])
+  styleTotalRow(tot, 6)
+  ;[4, 5, 6].forEach(j => { tot.getCell(j).numFmt = '#,##0.00 "€"'; tot.getCell(j).alignment = { horizontal: 'right' } })
+  const buf = await wb.xlsx.writeBuffer()
+  return Buffer.from(buf)
+}
+
 // ─── Email ────────────────────────────────────────────────────────────────────
 
 // Resolve the company report subject line from the configured template (or the
@@ -516,6 +574,10 @@ export async function sendEmail(
   ccEmails: string[],
   format: ReportFormat,
   idempotencyKey: string,
+  // Invoice mode: the CEO/Management archive. When present it bundles the ledger
+  // Excel + every invoice PDF + the summary PDF, and REPLACES the PDF/Excel
+  // attachments (they're inside the zip).
+  zip: Buffer | null = null,
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -536,11 +598,16 @@ export async function sendEmail(
   const attachments: Array<{ filename: string; content: string; contentType?: string; contentId?: string }> = [
     { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
   ]
-  if (format.includePdf && pdfBuffer) {
-    attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
-  }
-  if (format.includeExcel && xlsxBuffer) {
-    attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
+  if (zip) {
+    // The archive already contains the ledger + invoice PDFs + summary PDF.
+    attachments.push({ filename: `${filename}-rechnungen.zip`, content: zip.toString('base64') })
+  } else {
+    if (format.includePdf && pdfBuffer) {
+      attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
+    }
+    if (format.includeExcel && xlsxBuffer) {
+      attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
+    }
   }
 
   const { error } = await resend.emails.send(
@@ -591,6 +658,11 @@ export async function sendMemberStatements(
   // When present, render each member email as an ITC1 invoice (document number +
   // payment details) and record it in the ledger; otherwise a plain statement.
   issuer?: IssuerConfig,
+  // Shared Chromium budget: when set, attach a per-recipient PDF to each email.
+  budget?: PdfBudget,
+  // Invoice-mode collector: generated member invoices, for the members-pay
+  // company archives and the CEO/Management global zip.
+  collect?: InvoiceDoc[],
 ): Promise<MemberStatementResult> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -637,6 +709,16 @@ export async function sendMemberStatements(
     const intro = format.memberIntro
       ? renderTemplate(format.memberIntro, vars)
       : undefined
+    const html = buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro, invoice: invoiceRender })
+    const pdf = budget ? await renderDocPdf(budget, html) : null
+    const attachments = pdf
+      ? [{
+          filename: invoiceRender
+            ? `Rechnung-${sanitizeFile(invoiceRender.documentNumber)}.pdf`
+            : `Kaffeeliste-${reportMonth}.pdf`,
+          content: pdf.toString('base64'),
+        }]
+      : undefined
     try {
       const { data, error } = await resend.emails.send(
         {
@@ -644,12 +726,21 @@ export async function sendMemberStatements(
           to: [email],
           ...(replyTo() ? { replyTo: replyTo()! } : {}),
           subject,
-          html: buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro, invoice: invoiceRender }),
+          html,
+          ...(attachments ? { attachments } : {}),
         },
         { idempotencyKey: `member-${idempotencyKey}-${memberId}` },
       )
       if (error) throw new Error(error.message ?? JSON.stringify(error))
       if (supabase && ledgerId) await markBillingDocumentSent(supabase, ledgerId, data?.id ?? null)
+      if (collect && invoiceRender && pdf) {
+        collect.push({
+          companyId, memberId, documentNumber: invoiceRender.documentNumber,
+          recipientName: name, recipientEmail: email,
+          netCents: invoiceRender.netCents, taxCents: invoiceRender.taxCents, grossCents: invoiceRender.grossCents,
+          pdf,
+        })
+      }
       sent++
       // Light throttle — Resend free tier limits requests/second.
       await new Promise(r => setTimeout(r, 120))
@@ -675,6 +766,12 @@ export async function sendCompanyDocuments(
   idempotencyKey: string,
   companyBilling: Map<string, CompanyBilling>,
   issuer?: IssuerConfig,
+  // Shared Chromium budget: when set, attach a per-recipient PDF to each email.
+  budget?: PdfBudget,
+  // Member invoices generated this run — bundled into the members-pay archives.
+  memberDocs?: InvoiceDoc[],
+  // Invoice-mode collector for company-level invoices (CEO/Management global zip).
+  collect?: InvoiceDoc[],
 ): Promise<MemberStatementResult> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -727,6 +824,32 @@ export async function sendCompanyDocuments(
     const subject = asInvoice
       ? `Kaffeelisten – Rechnung ${cb.name} ${monthLabel}`
       : `Kaffeelisten – Aufstellung ${cb.name} ${monthLabel}`
+    const html = buildCompanyDocumentHtml(cb.name, cb.billing_contact_name, members, monthLabel, { accent: format.accent, intro, invoice })
+    const pdf = budget ? await renderDocPdf(budget, html) : null
+    const attachments: Array<{ filename: string; content: string }> = []
+    if (pdf) {
+      attachments.push({
+        filename: invoice
+          ? `Rechnung-${sanitizeFile(invoice.documentNumber)}.pdf`
+          : `Aufstellung-${sanitizeFile(cb.name)}-${reportMonth}.pdf`,
+        content: pdf.toString('base64'),
+      })
+    }
+    // Members-pay + invoice mode: bundle this company's member invoices + a ledger
+    // sheet as an archive zip (the company itself is not charged).
+    if (!asInvoice && issuer) {
+      const own = (memberDocs ?? []).filter(d => d.companyId === companyId && d.memberId)
+      if (own.length > 0) {
+        try {
+          const files = own.map(d => ({ name: `Rechnung-${sanitizeFile(d.documentNumber)}.pdf`, content: d.pdf }))
+          files.push({ name: `Rechnungsübersicht-${sanitizeFile(cb.name)}-${reportMonth}.xlsx`, content: await generateLedgerExcel(own) })
+          const archive = await makeZip(files)
+          attachments.push({ filename: `Rechnungen-${sanitizeFile(cb.name)}-${reportMonth}.zip`, content: archive.toString('base64') })
+        } catch (zErr) {
+          console.error('[company-archive] zip failed:', zErr instanceof Error ? zErr.message : zErr)
+        }
+      }
+    }
     try {
       const { data, error } = await resend.emails.send(
         {
@@ -734,12 +857,21 @@ export async function sendCompanyDocuments(
           to: [cb.billing_contact_email!],
           ...(replyTo() ? { replyTo: replyTo()! } : {}),
           subject,
-          html: buildCompanyDocumentHtml(cb.name, cb.billing_contact_name, members, monthLabel, { accent: format.accent, intro, invoice }),
+          html,
+          ...(attachments.length ? { attachments } : {}),
         },
         { idempotencyKey: `companydoc-${idempotencyKey}-${companyId}` },
       )
       if (error) throw new Error(error.message ?? JSON.stringify(error))
       if (ledgerId) await markBillingDocumentSent(supabase, ledgerId, data?.id ?? null)
+      if (collect && invoice && pdf) {
+        collect.push({
+          companyId, memberId: null, documentNumber: invoice.documentNumber,
+          recipientName: cb.billing_contact_name || cb.name, recipientEmail: cb.billing_contact_email!,
+          netCents: invoice.netCents, taxCents: invoice.taxCents, grossCents: invoice.grossCents,
+          pdf,
+        })
+      }
       sent++
       await new Promise(r => setTimeout(r, 120))
     } catch (err) {
@@ -954,71 +1086,111 @@ export async function runMonthlyReport(
     const summaries = computeSummary(transactions)
     const settings = await fetchReportSettings()
     const { format } = settings
-
-    // Build attachments. A PDF failure must NOT sink the whole report — fall back
-    // to sending the Excel/email only, so the report still goes out.
-    let pdfBuffer: Buffer | null = null
-    if (format.includePdf) {
-      try {
-        pdfBuffer = await generatePdf(summaries, transactions, monthLabel, reportMonth)
-      } catch (err) {
-        console.error('[report] PDF generation failed — sending without PDF:', err instanceof Error ? err.message : err)
-      }
-    }
-    const xlsxBuffer = format.includeExcel ? await generateExcel(summaries, transactions) : null
-
-    await sendEmail(
-      pdfBuffer,
-      xlsxBuffer,
-      summaries,
-      transactions,
-      monthLabel,
-      reportMonth,
-      settings.recipients,
-      settings.ccEmails,
-      format,
-      idempotencyKey,
-    )
-
-    // The admin/CEO aggregate report (sendEmail above) is one of three separate
-    // streams. The other two go out per recipient:
-    //   • per-company document → each company's contact (report, or invoice when
-    //     company_paid + issuer configured);
-    //   • per-member document  → each member (statement, or invoice when issuer
-    //     configured); company_paid members are covered by the company document.
-    // Invoices allocate ledger numbers, so wrap those streams in a billing run.
     const issuer = settings.issuer ?? undefined
-    let memberStatements: MemberStatementResult | undefined
-    if (transactions.length > 0 && (settings.companyDocumentsEnabled || settings.memberStatementsEnabled)) {
-      const companyBilling = await fetchCompanyBilling()
-      const useLedger = !!issuer
-      if (useLedger) await beginBillingRun(reportMonth)
+    const needDocs = transactions.length > 0 && (settings.companyDocumentsEnabled || settings.memberStatementsEnabled)
+
+    // One Chromium for the whole run: the aggregate summary PDF plus every
+    // per-recipient PDF. A launch failure must NOT sink the report — we fall back
+    // to sending without PDFs.
+    let browser: Browser | null = null
+    if (format.includePdf || needDocs) {
       try {
-        let sent = 0
-        let failed = 0
-        if (settings.companyDocumentsEnabled) {
-          const r = await sendCompanyDocuments(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer)
-          sent += r.sent; failed += r.failed
-        }
-        if (settings.memberStatementsEnabled) {
-          const r = await sendMemberStatements(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer)
-          sent += r.sent; failed += r.failed
-        }
-        memberStatements = { sent, failed }
-        if (useLedger) await completeBillingRun(reportMonth)
-      } catch (billErr) {
-        if (useLedger) await failBillingRun(reportMonth, billErr instanceof Error ? billErr.message : String(billErr))
-        throw billErr
+        browser = await launchBrowser()
+      } catch (err) {
+        console.error('[report] Chromium launch failed — sending without PDFs:', err instanceof Error ? err.message : err)
+        browser = null
       }
     }
 
-    // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
-    await archiveTransactions(transactions, reportMonth)
-    await pruneOldTransactions()
-    await deactivateInactiveMembers()
+    try {
+      // Aggregate report PDF (summary across all companies).
+      let pdfBuffer: Buffer | null = null
+      if (format.includePdf && browser) {
+        try {
+          pdfBuffer = await pageToPdf(browser, buildReportHtml(summaries, transactions, monthLabel, reportMonth))
+        } catch (err) {
+          console.error('[report] aggregate PDF failed — sending without it:', err instanceof Error ? err.message : err)
+        }
+      }
+      const xlsxBuffer = format.includeExcel ? await generateExcel(summaries, transactions) : null
 
-    await completeReportRun(reportMonth)
-    return { status: 'sent', memberStatements }
+      // Three streams. The admin/CEO aggregate email goes out LAST because, in
+      // invoice mode, it carries the Management archive zip built from the
+      // per-recipient invoices generated below. Members run before companies so
+      // their invoice PDFs feed the members-pay company archives.
+      const budget = makePdfBudget(browser)
+      const memberDocs: InvoiceDoc[] = []
+      const companyDocsCollected: InvoiceDoc[] = []
+      let memberStatements: MemberStatementResult | undefined
+      let globalZip: Buffer | null = null
+
+      if (needDocs) {
+        const companyBilling = await fetchCompanyBilling()
+        const useLedger = !!issuer
+        if (useLedger) await beginBillingRun(reportMonth)
+        try {
+          let sent = 0
+          let failed = 0
+          if (settings.memberStatementsEnabled) {
+            const r = await sendMemberStatements(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer, budget, memberDocs)
+            sent += r.sent; failed += r.failed
+          }
+          if (settings.companyDocumentsEnabled) {
+            const r = await sendCompanyDocuments(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer, budget, memberDocs, companyDocsCollected)
+            sent += r.sent; failed += r.failed
+          }
+          memberStatements = { sent, failed }
+          if (useLedger) await completeBillingRun(reportMonth)
+        } catch (billErr) {
+          if (useLedger) await failBillingRun(reportMonth, billErr instanceof Error ? billErr.message : String(billErr))
+          throw billErr
+        }
+
+        // CEO/Management global archive (invoice mode only): every invoice PDF +
+        // the ledger Excel + the summary PDF, bundled into one zip.
+        if (issuer) {
+          const allDocs = [...memberDocs, ...companyDocsCollected]
+          if (allDocs.length > 0) {
+            try {
+              const files = allDocs.map(d => ({ name: `Rechnung-${sanitizeFile(d.documentNumber)}.pdf`, content: d.pdf }))
+              files.push({ name: `Rechnungsübersicht-${reportMonth}.xlsx`, content: await generateLedgerExcel(allDocs) })
+              if (pdfBuffer) files.push({ name: `Monatsbericht-${reportMonth}.pdf`, content: pdfBuffer })
+              globalZip = await makeZip(files)
+            } catch (zErr) {
+              console.error('[report] global archive zip failed:', zErr instanceof Error ? zErr.message : zErr)
+            }
+          }
+        }
+      }
+
+      // Admin/CEO aggregate email. Invoice mode → attach the Management archive
+      // zip (ledger + all invoice PDFs); report mode → PDF + Excel.
+      await sendEmail(
+        pdfBuffer,
+        xlsxBuffer,
+        summaries,
+        transactions,
+        monthLabel,
+        reportMonth,
+        settings.recipients,
+        settings.ccEmails,
+        format,
+        idempotencyKey,
+        globalZip,
+      )
+
+      // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
+      await archiveTransactions(transactions, reportMonth)
+      await pruneOldTransactions()
+      await deactivateInactiveMembers()
+
+      await completeReportRun(reportMonth)
+      return { status: 'sent', memberStatements }
+    } finally {
+      if (browser) {
+        try { await browser.close() } catch { /* best-effort */ }
+      }
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await failReportRun(reportMonth, message)
