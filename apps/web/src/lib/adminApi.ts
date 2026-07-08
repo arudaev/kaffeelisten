@@ -136,7 +136,8 @@ export const adminApi = {
 export interface PaidGrid {
   enabled: boolean
   months: string[]
-  paid: Record<string, Record<string, boolean>>
+  // member_id → report_month → { amount owed that month, paid flag }
+  rows: Record<string, Record<string, { amount_cents: number; paid: boolean }>>
 }
 
 export interface MemberPaymentMonth {
