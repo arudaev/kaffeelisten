@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/linkedin-og-preview
+
+#### Fixed
+- **LinkedIn and other social previews now show a branded cover image.** The public pitch deck exposes a 1200×630 Open Graph image, complete image metadata, and a canonical URL so link crawlers can build a reliable preview.
+
 ### feat/payments-overview
 
 #### Changed
