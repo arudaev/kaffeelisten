@@ -2,7 +2,7 @@
 
 **Document type:** stakeholder proposal and technical design<br>
 **Status:** Kaffeelisten-side discovery draft - partner confirmation required<br>
-**Version:** 0.1<br>
+**Version:** 0.2<br>
 **Date:** 2026-08-30<br>
 **Prepared for:** ITC1 management, Kaffeelisten maintainers, and the prospective
 payment partner<br>
@@ -26,6 +26,13 @@ and the safeguards required at the integration boundary. It cannot define or
 promise the partner's API, licence position, wallet mechanics, settlement model,
 service level, or legal responsibilities. Those inputs have not yet been
 provided.
+
+Kaffeelisten is currently an open-source student project, not a registered
+company. The maintainers report that they are international students holding
+German residence permits for study, and that no operating, licence, support,
+data-processing, or other partnership agreement has been signed between the
+Kaffeelisten team and ITC1. Those facts are legal and operational constraints,
+not administrative details.
 
 This draft therefore answers two different questions separately:
 
@@ -164,6 +171,87 @@ If ZAHLN proposes to become merchant of record or invoice issuer, that is a
 different commercial and legal model. It requires a separate written proposal,
 not a UI toggle.
 
+### 5A. Legal and contractual position before any pilot
+
+This section records blocking constraints, not final legal conclusions.
+
+#### No authority from ITC1 has been documented
+
+Without a signed agreement, the maintainers must not be represented as ITC1's
+contractor, payment operator, authorised invoice agent, production support
+provider, or GDPR processor. They currently have no documented authority to:
+
+- bind ITC1 or accept terms in ITC1's name;
+- contract with a payment provider on ITC1's behalf;
+- receive, safeguard, route, or reconcile ITC1/customer funds;
+- perform KYC/KYB or decide payment, refund, or dispute outcomes;
+- issue invoices in ITC1's name and for its account;
+- promise production availability, maintenance, incident response, or delivery
+  dates; or
+- process live ITC1 member data under an assumed controller/processor role.
+
+Section 14 UStG permits a third party to create an invoice in the supplier's
+name and for its account, but that does not create authority by itself. Invoice
+mode must remain disabled until ITC1 gives written authorisation and its tax
+adviser approves the issuer data, numbering, VAT treatment, delivery, correction,
+and retention process.
+
+#### Student residence permits
+
+Section 16b(3) AufenthG permits limited **employment** during studies. It does
+not by itself authorise self-employed or freelance activity. Under section
+21(6), self-employed activity under a residence permit issued for another
+purpose may be permitted, and the Federal Government's official guidance says
+international students need approval from the competent Ausländerbehörde.
+
+Accordingly, each maintainer must obtain advice based on their own residence
+permit and written confirmation from the competent authority before accepting
+paid implementation, a licence/handover fee, recurring maintenance, commercial
+support, revenue share, or another role that may amount to self-employment. A
+one-off payment, a low amount, an open-source licence, or the label "handover"
+does not automatically make the activity permissible; the actual arrangement
+and work performed matter.
+
+#### Informal team status and personal liability
+
+The absence of a registered company or written partnership agreement does not
+prove that no partnership exists. Under section 705 BGB, an agreement to pursue
+a common purpose can establish a civil-law partnership (GbR), and operating a
+business under a common name creates a statutory presumption of participation
+in legal transactions. If a GbR exists, section 721 BGB provides for personal,
+joint-and-several liability of its partners for partnership obligations.
+
+A German lawyer/tax adviser should therefore confirm whether the maintainers'
+past and proposed conduct creates a GbR or another status, who owns and may
+license the code and brand, who may sign, and whether either maintainer can bind
+the other. Until then, neither maintainer should sign or promise obligations for
+"the Kaffeelisten team" without the other's express written approval.
+
+#### Required contract topology
+
+The preferred allocation is:
+
+| Relationship | Minimum written instrument | Purpose |
+|---|---|---|
+| ITC1 ↔ ZAHLN or its regulated institution | Merchant/payment-services and pilot agreement | KYC/KYB, payment authorisation, funds, settlement, refunds/disputes, support, SLA, exit |
+| ITC1 ↔ each maintainer or an adviser-approved Kaffeelisten entity | Pilot/licence/handover and, if applicable, support agreement | Authority, scope, IP/licence, acceptance, liability, costs, production ownership, termination |
+| ITC1 ↔ actual processor(s) | Article 28 AVV/DPA, or another documented GDPR allocation if the roles differ | Instructions, security, subprocessors, incidents, audit, return/deletion, data-subject requests |
+| Maintainer ↔ maintainer | Internal written clarification reviewed by an adviser | IP ownership, decision/signing authority, expenses, compensation, liability, exit |
+
+The Kaffeelisten agreement must not be signed and no paid work should start until
+the residence-permit and tax questions have been cleared for each maintainer.
+ITC1 should own or directly control the production domain and service accounts.
+
+#### KYC/KYB boundary
+
+ZAHLN or the named regulated institution must be solely accountable and
+operationally responsible for payment-user/merchant KYC or KYB, sanctions and
+fraud screening, payment credentials, strong customer authentication, and
+regulatory records. Kaffeelisten may receive only an opaque provider subject,
+link state, and signed payment/status references. It must not collect or retain
+identity documents, selfies, bank credentials, proof-of-funds records, or KYC
+case files.
+
 ### 6. Go/no-go gates
 
 No production payment pilot should begin until all gates have written evidence:
@@ -173,8 +261,12 @@ No production payment pilot should begin until all gates have written evidence:
 | Legal identity | Contracting entity, legal notice, authorised signatory | ZAHLN |
 | Regulatory model | BaFin authorisation/registration or named regulated partner, service scope, money-flow diagram | ZAHLN / regulated institution |
 | Technical contract | Versioned API/OpenAPI, sandbox, auth, deep links, webhooks, status and reconciliation | ZAHLN |
-| Responsibility | Signed matrix for seller, payee, invoice issuer, KYC, support, refunds, disputes, retention, incidents | ITC1 + ZAHLN |
-| Data protection | Controller/processor analysis, AVV/DPA where applicable, subprocessors, hosting, retention, incident terms | ITC1 + ZAHLN |
+| ITC1 authority | Signed ITC1-Kaffeelisten instrument defining the pilot, authority, IP/licence, production ownership, liability, support, and exit | ITC1 + maintainers/adviser-approved entity |
+| Student status | Individual written immigration/tax advice and any required Ausländerbehörde permission before paid or potentially self-employed work | Each maintainer |
+| Team legal status | Adviser-confirmed legal form/GbR analysis, IP ownership, and signing authority | Maintainers |
+| Responsibility | Signed matrix for seller, payee, invoice issuer, KYC/KYB, support, refunds, disputes, retention, incidents | ITC1 + ZAHLN |
+| Invoice authority | ITC1 written authorisation and tax-adviser approval before Kaffeelisten emits an ITC1 invoice | ITC1 |
+| Data protection | Role-by-role controller/processor analysis; Article 28 AVV or Article 26 arrangement where applicable; subprocessors, hosting, retention, incident terms | ITC1 + all processing parties |
 | Pilot decision | Per-order or monthly mode; individual/company coverage; cohort; success/exit criteria | ITC1 |
 | Operational readiness | SLA, support contacts, outage/failure handling, export and exit plan | ZAHLN + ITC1 |
 | Kaffeelisten readiness | Price snapshots, order identity, payment ledger, webhook verification, reconciliation, tests | Maintainers |
@@ -189,8 +281,9 @@ following boundary:
 - Kaffeelisten prepares the current-system architecture and adapter design;
 - ZAHLN supplies its actual process and evidence;
 - the parties select one limited pilot model after reviewing both;
-- no production funds or member payment data enter the integration before the
-  gates in section 6 are closed.
+- discovery uses no live member/payment data and creates no operational duties;
+- no production funds, payment data, ITC1 invoices, or paid maintainer work enter
+  the integration before the gates in section 6 are closed.
 
 No cost or delivery date should be committed before the partner inputs are
 received and the pilot mode is selected.
@@ -222,6 +315,9 @@ received and the pilot mode is selected.
   reporting, or admin controls with the partner's platform.
 - Supporting multiple campuses in this proposal.
 - Promising a partner feature that has not been supplied in a written contract.
+- Assuming that the Kaffeelisten team is a registered company, an authorised
+  ITC1 contractor, or free of possible GbR obligations merely because no formal
+  partnership agreement has been signed.
 
 ### 9. Current Kaffeelisten architecture
 
@@ -538,6 +634,10 @@ Kaffeelisten currently supports statements, ITC1-issued invoices, billing
 documents, management archives, and manual paid status. The integration should
 extend these rather than create a second contradictory ledger.
 
+"Supports" describes software capability only. In the reported absence of a
+signed ITC1 authorisation and GDPR agreement, invoice mode and production use of
+ITC1 personal data are not approved and must remain disabled.
+
 #### 16.1 Default responsibility
 
 - Consumption and prices: Kaffeelisten/ITC1.
@@ -585,6 +685,10 @@ default model. The final contract must replace this draft.
 | Tax/accounting approval and retention | A/R | C | C |
 | Integration exit and data export | A | R | R |
 
+This matrix becomes operative only through signed agreements. Before that, the
+maintainers' `R` entries describe proposed software functions, not accepted
+legal duties or authority to act for ITC1.
+
 The developers are not a substitute for a licensed payment institution, ITC1's
 tax adviser, or ITC1's management approval.
 
@@ -628,6 +732,12 @@ controller, joint controller, or processor. An AVV/DPA is required where Article
 28 applies; an API alone does not define the role. Notices, lawful bases,
 subprocessors, hosting, retention, deletion, data-subject requests, breach
 notification, and international transfers must be documented.
+
+Because no ITC1-Kaffeelisten agreement is currently reported, no production
+processing should be justified by treating the maintainers as ITC1's processor.
+Use synthetic data for discovery. Before any live data, document the actual
+controller(s), execute the required Article 28 contract or Article 26
+arrangement, and move production accounts under the agreed accountable party.
 
 #### Operational security
 
@@ -748,6 +858,14 @@ privacy incident, duplicate charge, or data loss.
 - Webhook signatures and replay windows are tested.
 - Key rotation and provider outage are rehearsed.
 - Data protection agreements, notices, retention, and subprocessors are approved.
+- ITC1-Kaffeelisten authority, IP/licence, liability, production ownership, and
+  exit terms are signed.
+- Each maintainer's residence-permit and tax position is cleared in writing for
+  the role and any compensation actually proposed.
+- The maintainers' legal form, possible GbR status, IP ownership, and signing
+  authority are confirmed by a qualified adviser.
+- Invoice mode remains off unless ITC1 has expressly authorised third-party
+  generation in its name and its tax adviser has approved the process.
 - Support and incident escalation contacts are live before the first payment.
 - The existing admin PIN exposed in prior chat is rotated before any pilot.
 
@@ -756,7 +874,7 @@ privacy incident, duplicate charge, or data loss.
 | Decision | Options | Proposed owner | Blocking? |
 |---|---|---|---|
 | Pilot payment timing | Monthly individual, monthly company, per-order | ITC1 + ZAHLN | Yes |
-| Product/legal name | ZAHLN, ZHALN, ZYSYGY; exact entity | ZAHLN | Yes |
+| Product/legal name and canonical domain | ZAHLN, ZHALN, ZYSYGY; exact entity and correctly spelled URL | ZAHLN | Yes |
 | Regulated model | Own authorisation, agent, partner institution, technical provider | ZAHLN | Yes |
 | Seller/payee/invoice issuer | Default ITC1; alternative needs separate proposal | ITC1 + ZAHLN | Yes |
 | Linking assurance | Email invite, partner identity plus verification, admin approval | ITC1 | Yes |
@@ -766,6 +884,9 @@ privacy incident, duplicate charge, or data loss.
 | Retention | Orders, invoices, payment evidence, webhooks, exports | ITC1 advisers | Yes |
 | Infrastructure ownership | ITC1-owned accounts or contracted processor model | ITC1 | Yes |
 | Ongoing maintenance/support | Named funded owner and SLA | All parties | Yes |
+| ITC1-Kaffeelisten legal relationship | Licence/handover/pilot/support scope, authority, liability, exit | ITC1 + maintainers | Yes |
+| Maintainer immigration/tax clearance | Exact role and compensation permitted for each residence title | Each maintainer + advisers/authority | Yes |
+| Kaffeelisten team status | Possible GbR, IP ownership, signing authority | Maintainers + advisers | Yes |
 
 ### 23. Information required from ZAHLN
 
@@ -774,7 +895,8 @@ The complete checklist is maintained in
 replace this draft with a joint proposal is:
 
 - pitch deck and dated product-readiness matrix;
-- exact legal entity, brand, regulated institution/partner, and role;
+- exact legal entity, brand, correctly spelled canonical domain, regulated
+  institution/partner, and role;
 - money-flow and settlement diagram;
 - API/OpenAPI, sandbox, auth/linking, webhook, status, refund, idempotency, and
   reconciliation specifications;
@@ -815,6 +937,13 @@ Until these are supplied, ZAHLN-dependent statements remain proposals, not facts
 - [ZAG section 55 - strong customer authentication](https://www.gesetze-im-internet.de/zag_2018/__55.html)
 - [Regulation (EU) 2024/886 - instant credit transfers](https://eur-lex.europa.eu/eli/reg/2024/886/oj/eng)
 - [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng)
+- [AufenthG section 16b - residence permit for study](https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html)
+- [AufenthG section 21 - self-employed activity](https://www.gesetze-im-internet.de/aufenthg_2004/__21.html)
+- [Federal Government guidance: study and work](https://www.make-it-in-germany.com/en/study-vocational-training/studies-in-germany/work/print)
+- [BGB section 705 - nature of a civil-law partnership](https://www.gesetze-im-internet.de/bgb/__705.html)
+- [BGB section 721 - personal liability of partners](https://www.gesetze-im-internet.de/bgb/__721.html)
+- [UStG section 14 - issuing invoices](https://www.gesetze-im-internet.de/ustg_1980/__14.html)
+- [UStG section 14b - invoice retention](https://www.gesetze-im-internet.de/ustg_1980/__14b.html)
 
 ---
 

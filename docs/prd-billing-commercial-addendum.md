@@ -4,12 +4,14 @@
 **Attachment to:** `docs/prd.md`
 **Status:** Draft for client scope confirmation — legal/tax review pending
 **Date:** 2026-07-06
+**Legal review updated:** 2026-08-30
 **Prepared for:** ITC1 / Kaffeelisten stakeholders
 
 > **Not legal or tax advice.** This document reflects the developers' current understanding and
-> must be confirmed by qualified advisers (a Steuerberater/Lohnsteuerhilfeverein for the
-> developers, ITC1's tax adviser for invoice compliance, and the relevant Ausländerbehörde /
-> university international office for residence-permit questions). See §12.
+> must be confirmed by qualified advisers (a German immigration lawyer and Steuerberater for the
+> maintainers, ITC1's tax adviser for invoice compliance, and the competent Ausländerbehörde for
+> residence-permit permission). A university international office may help route questions but does
+> not replace the competent authority. See §12.
 
 ---
 
@@ -27,33 +29,37 @@ stakeholder meeting (Alex's email + the attached `Kaffeerechnung-Vorlage.pdf`):
 The original PRD treated automated billing and invoice generation as out of scope. This addendum
 proposes a **post-v1 phase**, subject to legal, tax, and acceptance confirmation by ITC1.
 
-### 1.1 The one reframing that governs this whole document
+### 1.1 The legal boundary that governs this whole document
 
-The attached template is **ITC Innovations Technologie Campus GmbH's own invoice** — issuer *ITC
-Innovations Technologie Campus GmbH*, HRB Nr. 2194, **USt-IdNr DE207285819**, charging **19 % USt**,
-payable to **ITC1's own Sparkasse Deggendorf account**, with ITC1's own invoice-number sequence
-(`K-06-01`).
+The attached template identifies **ITC Innovations Technologie Campus GmbH** as the intended issuer,
+uses ITC1's issuer/VAT/bank details, and follows an ITC1 invoice-number sequence. That supports a
+possible model in which ITC1 remains the supplier and invoice issuer while Kaffeelisten is only the
+document-generation tool. It does **not** itself authorise the developers to issue documents in ITC1's
+name.
 
-Therefore the coffee invoices are legally **issued by ITC1**, not by the developers. Kaffeelisten is
-only *tooling that generates ITC1's document* from issuer data ITC1 configures — exactly like ITC1
-using Lexoffice, sevDesk, or DATEV. **The vendor of an invoicing tool is not the invoice issuer.**
+The user reports that there is currently no signed operating, licence, support, payment, or
+data-processing agreement between the Kaffeelisten team and ITC1. Invoice mode therefore remains a
+technical capability only and must stay disabled until ITC1 gives written authority and its tax adviser
+approves the complete process. Section 14 UStG allows a third party to issue a document in the
+supplier's name and for its account, but it does not create that authority without an arrangement.
 
 Two things that must never be conflated:
 
 | | Who acts | Who bears it | Gating requirement |
 |---|---|---|---|
-| **(A) The app generates ITC1's coffee invoices to members/companies** | ITC1 (issuer) | ITC1 | A GDPR processor agreement (**AVV**, Art. 28) between ITC1 and the developers + ITC1's issuer/VAT configuration. **Not** dev business status. |
-| **(B) ITC1 pays the developers for the software** | ITC1 → developers | The developers | Must stay a **one-time, modest** payment with **no ongoing obligation** (see §11) so it does not classify the students as self-employed. |
+| **(A) The app generates ITC1's coffee invoices to members/companies** | ITC1 as intended issuer; Kaffeelisten as proposed tooling | ITC1 for the supply/tax position; technical parties for their contracted duties | Written ITC1 authority, tax approval, controller/processor mapping, and an Art. 28 AVV or other required GDPR arrangement. |
+| **(B) ITC1 pays either maintainer or contracts for work** | Depends on the actual contract and work | Each maintainer and any legally established team/entity | Individual residence-permit clearance, tax/legal advice, and any required Ausländerbehörde permission **before** work or payment. One-time wording is not a safe exemption. |
 
 Consequences that hold everywhere below:
 
-- The developers do **not** need to be a business for (A).
-- The developers / their domain must **never** appear as the invoice issuer. The issuer block, VAT
-  ID, IBAN, and invoice numbers are always ITC1's, taken from the template PDF.
+- This draft does not determine whether the maintainers need a business registration, have formed a
+  GbR by conduct, or may lawfully accept the proposed role. Qualified advisers must determine that.
+- If ITC1 approves the intended model, the developers/their domain must **never** appear as the
+  supplier or invoice issuer. The issuer block, VAT ID, IBAN, and invoice numbers are ITC1's.
 - Member money flows to **ITC1's** IBAN shown on the invoice. The app never touches payments.
-- Hosting the app on a developer-owned domain does **not** make the developer the issuer
-  (hosting ≠ issuing) — but it does make the developer a **data processor**, which is why the AVV
-  in §12 is the real missing legal instrument, more than the "can we issue invoices" question.
+- Hosting alone does not decide who issued the invoice, but hosting/operating live personal data creates
+  GDPR and contractual duties. The actual role may be processor, controller, or joint controller based
+  on the facts; it must not be assumed from the technology.
 
 ---
 
@@ -65,7 +71,7 @@ Consequences that hold everywhere below:
 | Automatic monthly email to every person | Partly covered | The app already sends each consuming member a monthly itemized **statement** (`sendMemberStatements` in `apps/web/api/_lib/report.ts`) when enabled. It is not a legal invoice. |
 | Company pays all coffee costs via one contact | Not covered | `companies` has no billing mode / billing contact fields. |
 | Monthly invoice package for ITC1 | Not covered | Current report sends one PDF + one Excel. No invoice ledger, number sequence, per-recipient PDF set, or ZIP. |
-| Price for "your work and the platform" | See §11 | Reframed as a one-time handover, not a commercial product sale. |
+| Price for "your work and the platform" | See §11 | No quote until residence, tax, legal-form, authority, scope, and liability gates are cleared. |
 
 ---
 
@@ -164,9 +170,11 @@ and `buildMemberStatementHtml` / `buildCompanyEmailHtml` from `apps/web/api/_lib
 - `individual` mode → one email per member (own consumption only); `company_paid` → one email to the
   company billing contact covering all members.
 - **Per-user PDF generation and a PDF ZIP are explicitly out of scope** (they were the cost/scale risk;
-  see §8). A German invoice is format-neutral (§ 14 UStG) — the email body suffices, and small monthly
-  totals typically qualify as a *Kleinbetragsrechnung* (§ 33 UStDV). PDF/ZIP can be revisited later only
-  if ITC1's tax adviser requires it.
+  see §8). An HTML email can carry a statement, but this draft does not conclude that it is a compliant
+  invoice for every recipient. Since 1 January 2025, German B2B e-invoices generally require a structured
+  electronic format, subject to recipient type, the small-invoice exception, and the transitional rules
+  through 2026/2027. ITC1's tax adviser must classify the individual/company cases and approve the
+  format, consent, required fields, and transmission method before invoice mode is enabled.
 
 **Monthly email sending** *(reuse `sendEmail`/Resend + idempotency keys)*
 - Cron covers the previous, fully closed month. Individual emails → member work emails; company emails →
@@ -185,8 +193,10 @@ and `buildMemberStatementHtml` / `buildCompanyEmailHtml` from `apps/web/api/_lib
 **Data protection**
 - Member-facing flow must not show work emails or billing contacts.
 - Personal documents include only the recipient's own data (unless the recipient is the company
-  billing contact). Retention rules (§12) confirmed before launch — invoices likely need ~10-year
-  retention (§ 147 AO / § 14b UStG), longer than the rolling transaction archive.
+  billing contact). Retention rules (§12) must be confirmed before launch. Section 14b UStG currently
+  requires invoice copies to be retained for eight years; other tax/accounting records or special cases
+  may have different periods under the AO or other rules. Either way, this exceeds the rolling
+  transaction archive.
 
 ### P1 — After MVP
 - Re-download the monthly Excel archive from a secure admin-only route.
@@ -283,7 +293,7 @@ pipeline already handles.
 | **Resend** (free: 100/day, 3,000/mo) | 50–80 member/company emails in one run stays under the daily cap (the member-statement path already throttles 120 ms between sends) and far under the monthly cap. | Fits free tier; confirm total count if member + company + ITC1 archive send the same evening. |
 | **Supabase** (free: 500 MB DB, 1 GB storage) | No per-user files stored; only `billing_documents` ledger rows + the one monthly Excel. Negligible growth. | Fits free tier. |
 | **PDF generation** | Only the existing single monthly company-report PDF/Excel is generated, as today. | No change. |
-| **Vercel / domain** | Vercel Hobby is non-commercial; a paid production service for ITC1 isn't hobby use. | Ties to the ownership decision (§9) — cleanest if ITC1 owns the paid accounts. |
+| **Vercel / domain** | The selected plan and current terms must permit the agreed production/commercial use. | Ties to the ownership decision (§9); ITC1-controlled paid accounts are the preferred model. |
 
 Net: the invoice feature adds **no meaningful platform cost** over the current report feature. If ITC1's
 tax adviser later insists on per-user PDF invoices, revisit batch generation (a Railway/worker) and this
@@ -295,11 +305,13 @@ cost analysis at that point.
 
 Pivotal, still open — decide with ITC1 + advisers. It drives both the visa posture and the GDPR/issuer story.
 
-1. **Recommended — ITC1 owns the prod accounts** (Supabase, Vercel, Resend, domain). ITC1 becomes the
-   data **controller** *and* the invoice **issuer**; the developers are open-source authors + occasional
-   volunteers. Cleanest for the residence permit, for GDPR, and for the Vercel non-commercial-use problem.
-2. **Alternative — developers keep hosting under a signed AVV.** Workable but weaker: commercial-use ToS
-   and controller/processor duties land on the developers, and their name/domain/infra stay in the path.
+1. **Recommended — ITC1 owns the prod accounts** (Supabase, Vercel, Resend, domain) and directly controls
+   the operational service. This supports, but does not by itself determine, ITC1's intended controller
+   and invoice-issuer role. Any maintainer access and support still need written scope and residence/tax
+   clearance.
+2. **Alternative — developers host under signed agreements.** This requires adviser-confirmed legal
+   capacity, controller/processor allocation, an AVV where Article 28 applies, commercial-use-compliant
+   accounts, liability/support terms, and immigration/tax clearance. It is not currently approved.
 
 ---
 
@@ -321,49 +333,50 @@ New, isolated so the report path stays intact: company billing fields, the issue
 document number added to the existing Excel archive, and paid/unpaid tracking. No new PDF/ZIP machinery.
 
 Because this reuses existing infrastructure and drops per-user PDFs, it is **much lighter** than a
-from-scratch "billing MVP." Effort should be re-estimated against actual reuse once §9's ownership
-decision is settled — not quoted up front as a large bespoke build (see §11 for why that framing matters).
+from-scratch "billing MVP." Effort should be estimated only after the ownership, lawful contracting
+party, permitted maintainer roles, acceptance scope, and support/liability boundaries are settled.
 
 ---
 
-## 11. Compensation & Legal Posture (developer payment)
+## 11. Compensation, Residence Status & Team Legal Form
 
-> This is the **(B)** side of §1.1 — the part that carries residence-permit risk. It is deliberately
-> kept separate from the invoicing feature and from any notion of selling a commercial product.
+> This section identifies gates only. It does not classify a proposed payment or activity.
 
-Both developers are international students on a German **§ 16b** student residence permit. That permit
-covers **employment** (140 full / 280 half days per year); **self-employed / freelance activity is not
-covered** and needs separate Ausländerbehörde permission (§ 21 AufenthG). Markers of self-employment /
-*Gewerbe* — **recurring income, an ongoing paid-maintenance obligation, invoicing for one's own
-services, and marketing a product for sale** — must therefore be avoided. Unauthorised self-employment
-is unlawful (fine up to EUR 5,000) and can jeopardise the permit; a resulting tax problem is itself a
-permit risk.
+The maintainers report that they are international students on German residence permits for study.
+Section 16b(3) AufenthG permits limited **employment** during studies; it does not by itself authorise
+self-employed or freelance work. Section 21(6) allows the competent authority to permit self-employed
+activity while retaining another residence purpose, and Federal Government guidance says international
+students require approval from the competent Ausländerbehörde for self-employment during studies.
 
-### 11.1 Recommended structure
+### 11.1 Mandatory sequence before work or payment
 
-- **A single one-time handover payment** for the *existing* project — the developers' recommendation is
-  **~EUR 3,000–5,000 total for both** (~EUR 1,500–2,500 each), pending the tax adviser's confirmation of
-  amount and treatment.
-- **No** 50/30/20 milestones (staggered payments look recurring).
-- **No** promised maintenance term. Any later help is genuine occasional goodwill, not a contracted service.
-- Prefer shipping the invoice feature as an **unpaid open-source improvement**. If ITC1 ever wants to pay
-  for substantial new bespoke build work, resolve the Ausländerbehörde/§ 21 question **first** — that
-  paid build, not the handover, is the risky act.
+1. Define the actual proposed role, deliverables, control/instructions, term, support duty, IP transfer or
+   licence, payment recipient, payment schedule, and amount.
+2. Have a German immigration lawyer or qualified adviser assess employment versus self-employment for
+   **each** maintainer and inspect the wording/ancillary provisions on each residence title.
+3. Obtain written confirmation or permission from the competent Ausländerbehörde where required.
+4. Have a Steuerberater confirm tax classification, registration, invoicing, VAT, and declaration duties.
+5. Resolve whether the maintainers' cooperation constitutes a GbR or another legal status, who owns the
+   project IP, who can sign, and who bears liability.
+6. Only then sign the ITC1 agreement, perform paid work, or accept compensation.
 
-### 11.2 Why this amount
+### 11.2 No safe shortcut by labelling
 
-- The figure is intentionally **well below** the hypothetical from-scratch rebuild cost. Pricing under
-  market reinforces the truthful character needed for the permit: handing over a hackathon/hobby project,
-  not running a software business.
-- The product is a real, deployed, iterated tool (hackathon weekend 8–9 May 2026 + ~2 months of part-time
-  productization), but modest in elapsed effort — so this is a handover fee, not a professional-services quote.
+- A single payment, low price, "handover fee," open-source licence, volunteer history, or absence of
+  milestones does not automatically prevent self-employment or other commercial classification. The
+  substance of the arrangement controls.
+- Unpaid/open-source work can still create GDPR, IP, negligence, support, and partnership issues when a
+  production system is operated for an organisation. It is not a substitute for written authority.
+- No price recommendation is made in this addendum. A quote is premature until the lawful contracting
+  party, permitted role, scope, liability, tax treatment, and support boundary are known.
 
-### 11.3 Tax
+### 11.3 Possible GbR and personal liability
 
-- Even a one-time payment is taxable and **must be declared**. The €256/yr *Freigrenze* (§ 22 Nr. 3 EStG,
-  per person) is far below any realistic amount here, so this income is reportable.
-- How it is **classified** (one-off private sale vs. self-employment income) is the real question for a
-  Steuerberater / Lohnsteuerhilfeverein. Do **not** treat "don't declare it" as an option.
+No registered company is reported, but that does not prove that the team has no legal form. Under section
+705 BGB, an agreement to pursue a common purpose can establish a GbR; operating a business jointly under
+a common name creates a statutory presumption of participation in legal transactions. If a GbR exists,
+section 721 BGB provides for personal joint-and-several liability. A German lawyer/tax adviser must assess
+the actual facts before either maintainer signs for "Kaffeelisten" or receives team compensation.
 
 ---
 
@@ -379,24 +392,33 @@ permit risk.
 - The ownership decision (§9).
 
 ### From the developers
-- Qualified advice replacing the earlier (life-coach) input: a **Steuerberater Erstberatung** (fee capped
-  ~EUR 190) or **Lohnsteuerhilfeverein** (~EUR 50–150/yr) on classifying/declaring the one-time payment.
-- A written query to the **Ausländerbehörde** and/or **university international office** (free) on
-  compatibility of the one-time handover with the § 16b permit, and what a paid build would require.
+- Individual advice from a qualified immigration professional and inspection of each residence title.
+- A written query to the competent **Ausländerbehörde** on whether the exact proposed work/compensation
+  is permitted and what approval is required. The university international office may help route the
+  question but does not replace the competent authority's decision.
+- A **Steuerberater** assessment of tax classification, registration, VAT/invoicing, and declaration
+  duties for each maintainer and any possible GbR.
+- A German lawyer/tax adviser assessment of possible GbR status, personal liability, IP ownership, and
+  signing authority.
 
-### The missing legal instrument
-- A **GDPR Auftragsverarbeitungsvertrag (AVV, Art. 28)** between ITC1 (controller) and the developers
-  (processor) — currently there is no contract at all, and adding invoice/financial data raises the stakes.
-- A minimal **handover / licence agreement** covering the one-time payment and the absence of ongoing
-  obligation.
+### Missing legal instruments
+- An **ITC1-Kaffeelisten pilot/licence/handover agreement** defining authority, IP/licence, accepted scope,
+  production ownership, liability, costs, support, termination, and exit. Currently no official agreement
+  is reported.
+- A documented GDPR role analysis. If the maintainers or their infrastructure process data on ITC1's
+  documented instructions, an **Auftragsverarbeitungsvertrag (AVV, Art. 28)** is required; if the facts
+  create another role, the corresponding controller or joint-controller obligations must be documented.
+- An internal maintainer agreement, if advisers recommend one, covering IP, authority, expenses,
+  compensation, liability, and exit.
 
 | Question / risk | Owner | Blocking? |
 |---|---|---|
 | Are documents labelled invoices or statements? Wording? VAT text? Number format? | ITC1 / tax adviser | Yes |
 | Is an email-body invoice acceptable (no PDF), and how long must the monthly Excel archive be retained? | ITC1 / tax adviser | Yes |
 | Who owns the production Vercel/Supabase/Resend accounts? | ITC1 / developers | Yes, before deployment |
-| Is the one-time handover compatible with the § 16b permit? How is it declared? | Ausländerbehörde / Steuerberater | Yes, before payment |
+| Is the exact proposed role/compensation permitted under each residence title, and how is it classified/declared? | Each maintainer / Ausländerbehörde / immigration adviser / Steuerberater | Yes, before work or payment |
 | Is an AVV signed before the app processes ITC1 member data commercially? | ITC1 / developers | Yes |
+| Has the possible GbR, IP ownership, authority, and personal liability been reviewed? | Developers / lawyer / Steuerberater | Yes, before signing |
 
 ---
 
@@ -416,6 +438,10 @@ The billing MVP is accepted when:
 - every generated document has a unique number; re-running the job creates no duplicate numbers;
 - failed emails are visible and re-sendable;
 - the email content matches ITC1's approved wording and invoice/statement format;
+- ITC1 has signed the required authority/licence/data-processing instruments and owns or directly controls
+  the agreed production accounts;
+- each maintainer's residence/tax position and the team's possible GbR/IP/signing position are cleared for
+  the actual role before any paid work or compensation;
 - the existing member logging flow remains unchanged and fast.
 
 ---
@@ -430,5 +456,12 @@ Platform pricing/terms to re-verify before any binding quote:
 
 Legal references (developers to confirm with advisers; not legal advice):
 - § 16b AufenthG (student residence permit): https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html
-- Self-employment for third-country nationals (BAMF): https://www.bamf.de/DE/Themen/MigrationAufenthalt/ZuwandererDrittstaaten/Arbeit/SelbstaendigeTaetigkeit/selbstaendigetaetigkeit-node.html
-- § 22 Nr. 3 EStG €256 Freigrenze: https://www.finanztip.de/sonstige-einkuenfte/
+- § 21 AufenthG (self-employed activity): https://www.gesetze-im-internet.de/aufenthg_2004/__21.html
+- Federal Government guidance on study and self-employment: https://www.make-it-in-germany.com/en/study-vocational-training/studies-in-germany/work/print
+- § 705 BGB (nature of a GbR): https://www.gesetze-im-internet.de/bgb/__705.html
+- § 721 BGB (personal liability of GbR partners): https://www.gesetze-im-internet.de/bgb/__721.html
+- § 14 UStG (invoicing): https://www.gesetze-im-internet.de/ustg_1980/__14.html
+- § 14b UStG (eight-year invoice retention): https://www.gesetze-im-internet.de/ustg_1980/__14b.html
+- § 27(38) UStG (B2B e-invoice transition): https://www.gesetze-im-internet.de/ustg_1980/__27.html
+- BMF e-invoice FAQ (status March 2026): https://www.bundesfinanzministerium.de/Content/DE/FAQ/e-rechnung.html
+- GDPR: https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng

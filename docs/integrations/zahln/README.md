@@ -19,6 +19,14 @@ therefore separate:
 - the user's meeting recollection; and
 - assumptions and decisions that still require written confirmation.
 
+Kaffeelisten is currently an open-source student project, not a registered
+company. The maintainers report that they are international students on German
+study residence permits and that no official operating, licence, support,
+payment, or data-processing agreement exists between the team and ITC1. Until
+qualified advisers and the competent authorities resolve those points, the
+maintainers must not be assigned paid or potentially self-employed work, KYC/KYB,
+funds, invoice authority, production processing, or ongoing support obligations.
+
 ## Documents
 
 - [`integration-proposal.md`](integration-proposal.md) - executive-first concept
@@ -34,8 +42,11 @@ therefore separate:
 
 The prospective partner is called **ZAHLN** in these drafts only as a shorthand.
 The final product name, legal entity, licensed institution or regulated partner,
-and contracting party must be confirmed before the draft is sent as a joint
-proposal.
+correctly spelled canonical domain, and contracting party must be confirmed
+before the draft is sent as a joint proposal. The user reported that a previously
+shared domain was misspelled but has not supplied the corrected URL, so the
+documents preserve the observed public URLs as evidence and do not guess the
+correction.
 
 Do not add credentials, private API keys, wallet identifiers, customer data, or
 WhatsApp exports to this directory. The admin credential previously shared in a

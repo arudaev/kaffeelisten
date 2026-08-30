@@ -11,13 +11,23 @@
 > only have our meeting notes and the public website. We do not want to invent
 > ZAHLN capabilities, responsibilities, or timelines on your behalf.
 >
+> For context, Kaffeelisten is currently an open-source student project, not a
+> registered company or an ITC1 contractual counterparty, and there is no signed
+> operating, support, payment, or data-processing agreement between us and ITC1.
+> We therefore cannot take responsibility for KYC/KYB, customer funds, payment
+> authorisation, merchant/invoice duties, or ongoing commercial support. Our
+> preferred structure is that ITC1 contracts directly with you and/or your
+> regulated payment institution; any separate paid or ongoing role for us must
+> first be documented with ITC1 and legally cleared.
+>
 > Could you please send us the following material, even if some items are still
 > drafts:
 >
 > 1. your current pitch deck and a dated capability list (live, pilot, prototype,
 > or planned);
-> 2. the exact company/product name, contracting entity, and the licensed payment
-> institution or regulated partner behind the wallet and SEPA flow;
+> 2. the exact company/product name, correctly spelled canonical domain,
+> contracting entity, and the licensed payment institution or regulated partner
+> behind the wallet and SEPA flow;
 > 3. API/OpenAPI documentation, sandbox access, authentication/deep-link flow,
 > webhook events, payment statuses, refunds, idempotency, and reconciliation;
 > 4. your preferred Kaffeelisten model: payment per purchase, monthly settlement,
@@ -32,8 +42,9 @@
 > design for Mr. Schwarz. Until then, we can only provide a Kaffeelisten-side
 > draft with every ZAHLN-dependent point marked as unconfirmed.
 >
-> Please also confirm which name we should use in the document: ZAHLN, ZHALN, or
-> ZYSYGY.
+> Please also confirm which name and exact URL we should use in the document. We
+> have seen ZAHLN, ZHALN, and ZYSYGY, and understand that a previously shared
+> domain spelling may have been incorrect.
 >
 > Best,<br>
 > Alex & Fares
@@ -54,6 +65,28 @@ input needed before implementation can be designed, costed, or promised.
   confirmation and register entry.
 - Contracting party for ITC1 and the party that receives or safeguards funds.
 - Named owner for compliance and named owner for the technical integration.
+
+### A1. Contracting structure and Kaffeelisten legal boundary
+
+- Confirm that ITC1 can contract directly with the legal entity/regulated
+  institution responsible for the merchant and payment service.
+- Provide the proposed ITC1 merchant-onboarding/KYB process and state which party
+  is accountable and performs each check.
+- Confirm that Kaffeelisten and its maintainers will not receive or safeguard
+  funds, access payment credentials, collect KYC/KYB documents, approve users,
+  perform sanctions/fraud screening, or determine regulatory outcomes.
+- Identify any proposed contract or direct operational duty for the Kaffeelisten
+  maintainers. Do not assume that they are an ITC1 contractor or registered
+  business.
+- Confirm whether ITC1 or the payment partner will own the production merchant
+  account, API credentials, domain configuration, audit exports, and support
+  relationship.
+- State whether ZAHLN requires Kaffeelisten to issue invoices, act as merchant,
+  provide first-line payment support, accept liability, or maintain a service
+  level. The default Kaffeelisten answer is no unless ITC1 and qualified advisers
+  approve a separate written arrangement.
+- Provide draft merchant/payment terms, DPA/AVV, pilot agreement, SLA, and exit
+  terms for ITC1 review.
 
 ### B. Product readiness and THA pilot
 
@@ -79,6 +112,9 @@ input needed before implementation can be designed, costed, or promised.
 - Whether a user can complete linking without installing the app.
 - KYC/KYB owner, required user fields, onboarding states, rejection states, and
   support process.
+- Written confirmation that KYC/KYB identity documents and bank credentials stay
+  exclusively with the responsible regulated provider and are never transmitted
+  to or retained by Kaffeelisten.
 - Rules for connecting an existing Kaffeelisten member without allowing one
   person to claim another person's list entry.
 - Business-account employee invitations, approval, spending limits, revocation,
