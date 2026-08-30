@@ -2,57 +2,24 @@
 
 ## Ready-to-send WhatsApp message
 
-> Hey Nils, hey Shabbir - thanks again for the exchange, and good luck with the
-> THA pilot.
->
-> Mr. Schwarz's email asks for a concept showing how your payment process would
-> integrate with Kaffeelisten so he can present it internally as an alternative.
-> We can prepare the Kaffeelisten architecture and user flows, but we currently
-> only have our meeting notes and the public website. We do not want to invent
-> ZAHLN capabilities, responsibilities, or timelines on your behalf.
->
-> For context, Kaffeelisten is currently an open-source student project, not a
-> registered company or an ITC1 contractual counterparty, and there is no signed
-> operating, support, payment, or data-processing agreement between us and ITC1.
-> We therefore cannot take responsibility for KYC/KYB, customer funds, payment
-> authorisation, merchant/invoice duties, or ongoing commercial support. Our
-> preferred structure is that ITC1 contracts directly with you and/or your
-> regulated payment institution; any separate paid or ongoing role for us must
-> first be documented with ITC1 and legally cleared.
->
-> Could you please send us the following material, even if some items are still
-> drafts:
->
-> 1. your current pitch deck and a dated capability list (live, pilot, prototype,
-> or planned);
-> 2. the exact company/product name, correctly spelled canonical domain,
-> contracting entity, and the licensed payment institution or regulated partner
-> behind the wallet and SEPA flow;
-> 3. API/OpenAPI documentation, sandbox access, authentication/deep-link flow,
-> webhook events, payment statuses, refunds, idempotency, and reconciliation;
-> 4. your preferred Kaffeelisten model: payment per purchase, monthly settlement,
-> or both, including individual and company-paid users; and
-> 5. the proposed responsibility split for onboarding/KYC, payment authorisation,
-> invoicing, settlement, failed payments, refunds/disputes, support, GDPR, and
-> record retention.
->
-> If something does not exist yet, a clear "planned" plus an owner and target
-> date is completely fine. Once we have this, we can map it to the existing
-> Kaffeelisten system and prepare a proper management summary plus technical
-> design for Mr. Schwarz. Until then, we can only provide a Kaffeelisten-side
-> draft with every ZAHLN-dependent point marked as unconfirmed.
->
-> Please also confirm which name and exact URL we should use in the document. We
-> have seen ZAHLN, ZHALN, and ZYSYGY, and understand that a previously shared
-> domain spelling may have been incorrect.
->
-> Best,<br>
-> Alex & Fares
+> Hey, I'm back again. I asked our AI to review the current Kaffeelisten
+> architecture, the public material available for your product, and the UI/UX we
+> discussed in our meeting, and it produced the attached checklist of inputs
+> needed for the concept we have to send to Mr. Schwarz. Please send the
+> available documents and return the completed checklist by Friday, 4 September;
+> if something does not exist yet or is confidential, simply mark it as
+> planned/unavailable or NDA-required and add an owner and target date. Once we
+> have that, we can prepare the management proposal and technical design without
+> making assumptions about your product.
 
-## Detailed response checklist
+Attach [`partner-input-checklist.txt`](partner-input-checklist.txt) to the
+message.
 
-The WhatsApp message is intentionally short. The checklist below is the complete
-input needed before implementation can be designed, costed, or promised.
+## Internal detailed reference
+
+The partner-facing `.txt` checklist is deliberately concise. The sections below
+are Kaffeelisten's internal reference for evaluating the response before an
+implementation is designed, costed, or promised.
 
 ### A. Identity and authority
 
