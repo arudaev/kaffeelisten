@@ -10,10 +10,10 @@ to any party.
 When sources conflict, use this order:
 
 1. A signed contract, regulator entry, or written technical specification.
-2. A written decision from ITC1 or the prospective payment partner.
+2. A written decision from ITC1 or ZAHLN.
 3. The current Kaffeelisten repository and database migrations.
 4. The stakeholder email chains.
-5. The partner's public website or incubator profile, treated as marketing claims.
+5. ZAHLN's public website or incubator profile, treated as marketing claims.
 6. Meeting recollections and WhatsApp summaries, treated as context rather than
    a commitment by another party.
 7. Design assumptions, which must be labelled and validated before implementation.
@@ -28,8 +28,8 @@ Source: `docs/emails/kaffeelisten-email-chain-4-schwarz.pdf`, email dated
 
 - ITC1 has an internal payment plan, but management had not yet participated in
   the discussion recorded in that email.
-- Mr. Schwarz asked Nils to present a concept showing how the prospective
-  partner would implement digital payment with its process.
+- Mr. Schwarz asked Nils to present a concept showing how ZAHLN would implement
+  digital payment with its process.
 - Mr. Schwarz wanted to present the result internally as an alternative digital
   solution.
 - ITC1 planned a separate Kaffeelisten meeting for mid-September.
@@ -90,7 +90,7 @@ for a German lawyer/tax adviser. The actual residence titles, any proposed work,
 and compensation must likewise be reviewed individually before a commitment or
 payment.
 
-## 4. Public partner claims - not yet contractual or technically verified
+## 4. Public ZAHLN claims - not yet contractual or technically verified
 
 ### Product website
 
@@ -112,7 +112,7 @@ The public site states that the product offers or plans:
 
 No public OpenAPI specification, authentication guide, sandbox guide, webhook
 contract, service-level terms, data-processing agreement, legal notice naming
-the contracting entity, or regulated partner was located in the reviewed public
+the contracting entity, or regulated institution was located in the reviewed public
 materials. Absence from this review is not proof that those materials or
 authorisations do not exist; they must be supplied directly.
 
@@ -142,7 +142,7 @@ The user also reports this chronology:
 - project links and access information were sent on 2026-08-18;
 - a reminder was sent on 2026-08-25;
 - another reminder was sent on 2026-08-30; and
-- the partner replied that it was focused on a THA pilot and would return after
+- the ZAHLN team replied that it was focused on a THA pilot and would return after
   that success story.
 
 These points explain the desired exploration but do not establish that a feature
@@ -156,13 +156,13 @@ obligations, and responsibility does not transfer merely because an API is used.
 
 | Topic | Evidence observed | Required resolution |
 |---|---|---|
-| Product name/domain | `@zahln.de` email, LinkedIn name `Zahln`, THA name `ZHALN`, public site reviewed at `zysygy.de`; the user later stated that a previously supplied domain was misspelled but did not provide the correction | Confirm the correctly spelled canonical URL, product brand, legal entity, and contracting party directly with the partner. Do not infer the correction. |
+| Product name/domain | `@zahln.de` email, LinkedIn name `Zahln`, THA name `ZHALN`, public site reviewed at `zysygy.de`; the user later stated that a previously supplied domain was misspelled but did not provide the correction | Confirm the correctly spelled canonical URL, product brand, legal entity, and contracting party directly with ZAHLN. Do not infer the correction. |
 | Product maturity | Public pages contain broad present-tense claims; WhatsApp says the team is building and piloting | Supply a dated capability matrix: live, sandbox-only, prototype, planned. |
 | API availability | Enterprise pricing claims API access; no public contract was found | Supply OpenAPI, auth, webhook, sandbox, and versioning details. |
-| Wallet and settlement | Site claims a wallet and direct SEPA movement | Identify the licensed institution/partner, safeguarding model, payee, and settlement accounts. |
-| Invoice responsibility | Kaffeelisten currently models ITC1 as issuer; user hoped the partner could assume billing responsibility | Contractually identify merchant/seller, invoice issuer, payment provider, data roles, and records owner. |
+| Wallet and settlement | Site claims a wallet and direct SEPA movement | Identify the licensed institution/service provider, safeguarding model, payee, and settlement accounts. |
+| Invoice responsibility | Kaffeelisten currently models ITC1 as issuer; the possibility of ZAHLN assuming billing responsibility was discussed | Contractually identify merchant/seller, invoice issuer, payment provider, data roles, and records owner. |
 | Payment timing | Per-order and monthly modes were both discussed | ITC1 and ZAHLN must select one pilot mode and define consent/mandate handling. |
-| Company coverage | Desired, but partner capability is unknown | Confirm business accounts, employee authorisation, limits, revocation, and reconciliation APIs. |
+| Company coverage | Desired, but ZAHLN capability is unknown | Confirm business accounts, employee authorisation, limits, revocation, and reconciliation APIs. |
 | ITC1-Kaffeelisten relationship | User reports no signed agreement | Define authority, licence/IP, production ownership, liability, data roles, support, termination, and whether either maintainer has any direct duty. |
 | Maintainer status | International students on study residence permits; exact permits and proposed compensation not reviewed | Obtain individual immigration/tax advice and any required written Ausländerbehörde permission before paid or potentially self-employed work. |
 | Team legal form | No registered company reported; two people pursue a shared project | Obtain advice on possible GbR status, personal liability, IP ownership, and signing authority. |
