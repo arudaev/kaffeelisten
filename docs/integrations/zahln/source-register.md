@@ -67,6 +67,29 @@ Sources: repository at commit `1ff75b8` and the files linked below.
   insufficient for an external-payment integration.
   Source: `apps/web/api/admin/payments.ts`.
 
+### 3A. User-confirmed legal and organisational status
+
+Source: user's written clarification on 2026-08-30. This records the reported
+status; it is not independent legal verification.
+
+- The two Kaffeelisten maintainers are international students holding German
+  residence permits for study. The exact wording and ancillary provisions on
+  each residence title have not been reviewed.
+- Kaffeelisten is presented as an open-source student project, not a registered
+  company.
+- No operating, licence, support, payment, data-processing, or other official
+  partnership agreement has been signed between the Kaffeelisten team and ITC1.
+- No written authority from ITC1 to issue invoices in its name, bind it to a
+  payment provider, process live data as its processor, or accept production
+  duties has been supplied for review.
+
+These facts do **not** establish that the maintainers have no legal relationship
+between themselves. Whether their common project and conduct formed a GbR under
+section 705 BGB, who owns/licences the IP, and who can bind whom remain questions
+for a German lawyer/tax adviser. The actual residence titles, any proposed work,
+and compensation must likewise be reviewed individually before a commitment or
+payment.
+
 ## 4. Public partner claims - not yet contractual or technically verified
 
 ### Product website
@@ -133,13 +156,16 @@ obligations, and responsibility does not transfer merely because an API is used.
 
 | Topic | Evidence observed | Required resolution |
 |---|---|---|
-| Product name | `@zahln.de` email, LinkedIn name `Zahln`, THA name `ZHALN`, public site `ZYSYGY` | Confirm product brand, legal entity, contracting party, and domain. |
+| Product name/domain | `@zahln.de` email, LinkedIn name `Zahln`, THA name `ZHALN`, public site reviewed at `zysygy.de`; the user later stated that a previously supplied domain was misspelled but did not provide the correction | Confirm the correctly spelled canonical URL, product brand, legal entity, and contracting party directly with the partner. Do not infer the correction. |
 | Product maturity | Public pages contain broad present-tense claims; WhatsApp says the team is building and piloting | Supply a dated capability matrix: live, sandbox-only, prototype, planned. |
 | API availability | Enterprise pricing claims API access; no public contract was found | Supply OpenAPI, auth, webhook, sandbox, and versioning details. |
 | Wallet and settlement | Site claims a wallet and direct SEPA movement | Identify the licensed institution/partner, safeguarding model, payee, and settlement accounts. |
 | Invoice responsibility | Kaffeelisten currently models ITC1 as issuer; user hoped the partner could assume billing responsibility | Contractually identify merchant/seller, invoice issuer, payment provider, data roles, and records owner. |
 | Payment timing | Per-order and monthly modes were both discussed | ITC1 and ZAHLN must select one pilot mode and define consent/mandate handling. |
 | Company coverage | Desired, but partner capability is unknown | Confirm business accounts, employee authorisation, limits, revocation, and reconciliation APIs. |
+| ITC1-Kaffeelisten relationship | User reports no signed agreement | Define authority, licence/IP, production ownership, liability, data roles, support, termination, and whether either maintainer has any direct duty. |
+| Maintainer status | International students on study residence permits; exact permits and proposed compensation not reviewed | Obtain individual immigration/tax advice and any required written Ausländerbehörde permission before paid or potentially self-employed work. |
+| Team legal form | No registered company reported; two people pursue a shared project | Obtain advice on possible GbR status, personal liability, IP ownership, and signing authority. |
 
 ## 7. Official constraints used in the proposal
 
@@ -149,6 +175,13 @@ These sources establish design gates, not a legal conclusion about ZAHLN:
 - [German Payment Services Supervision Act (ZAG), especially sections 1, 10, 11, 17, and 55](https://www.gesetze-im-internet.de/zag_2018/)
 - [ZAG section 55: strong customer authentication](https://www.gesetze-im-internet.de/zag_2018/__55.html)
 - [Regulation (EU) 2024/886 on instant credit transfers](https://eur-lex.europa.eu/eli/reg/2024/886/oj/eng)
-- [GDPR Article 28 and Article 32](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng)
+- [GDPR Articles 26, 28, and 32](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng)
+- [AufenthG section 16b: residence permit for study](https://www.gesetze-im-internet.de/aufenthg_2004/__16b.html)
+- [AufenthG section 21(6): permission for self-employed activity under a residence permit issued for another purpose](https://www.gesetze-im-internet.de/aufenthg_2004/__21.html)
+- [Federal Government guidance: self-employment during studies requires approval from the competent Ausländerbehörde](https://www.make-it-in-germany.com/en/study-vocational-training/studies-in-germany/work/print)
+- [BGB section 705: nature of a civil-law partnership](https://www.gesetze-im-internet.de/bgb/__705.html)
+- [BGB section 721: personal liability of partners](https://www.gesetze-im-internet.de/bgb/__721.html)
+- [UStG section 14: third-party issuance of invoices in the supplier's name and for its account](https://www.gesetze-im-internet.de/ustg_1980/__14.html)
+- [UStG section 14b: invoice retention](https://www.gesetze-im-internet.de/ustg_1980/__14b.html)
 
 Only qualified legal, tax, and regulatory advisers can determine the final model.
