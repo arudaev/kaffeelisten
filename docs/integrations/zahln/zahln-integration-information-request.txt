@@ -1,23 +1,125 @@
-- [ ] Return this checklist with every item marked available, planned, unavailable, or NDA-required; for anything not available now, add an owner and target date.
-- [ ] Confirm the exact product name, correctly spelled canonical domain, legal entity, legal form, registered address, registration number, authorised signatory, and technical/compliance contacts.
-- [ ] Provide the current pitch deck and a dated capability matrix that marks every feature as production, pilot, sandbox, prototype, or planned.
-- [ ] Provide a short current-system architecture and data-flow diagram showing the frontend, backend, database, hosting, payment components, and external providers. Interface-level information is sufficient; source code is not requested.
-- [ ] Provide the user flows/screens for individual onboarding, company onboarding, QR/deep-link connection, payment, failure, cancellation, refund, unlinking, and account deletion.
-- [ ] Identify the licensed payment/e-money institution behind every wallet, SEPA, payment-initiation, safeguarding, settlement, and payout function, including its authorisation/register reference and your contractual role.
-- [ ] Provide a money-flow diagram naming the customer, merchant/seller, payee, merchant of record if any, safeguarded/settlement accounts, regulated institution, fees, and final payout recipient.
-- [ ] Confirm whether ITC1 can contract directly with your legal entity and/or regulated institution and who owns the production merchant account and API relationship.
-- [ ] Provide the proposed responsibility matrix for merchant onboarding/KYB, user KYC, sanctions/fraud screening, payment authorisation/SCA, funds, invoicing, tax records, settlement, refunds, disputes, support, incidents, GDPR, retention, and exit.
-- [ ] Confirm that Kaffeelisten will not receive funds, payment credentials, bank-login data, KYC/KYB documents, selfies, proof-of-funds records, or regulatory case files.
-- [ ] Provide the controller/processor/joint-controller analysis, draft AVV/DPA, subprocessor list, hosting/data regions, data categories, lawful bases, retention/deletion periods, data-subject process, and incident-notification terms.
-- [ ] Provide the versioned API/OpenAPI specification, changelog/versioning policy, sandbox base URL, test-account process, and production-readiness status. Do not send real secrets or production credentials.
-- [ ] Provide the authentication and account-linking specification: OAuth/OIDC or equivalent flow, opaque subject IDs, PKCE/state handling, scopes, token lifetime, callbacks, QR/deep links, app-install fallback, revocation, and unlinking.
-- [ ] Provide the individual and company onboarding specifications, including KYC/KYB states, approval/rejection, employee invitations, company coverage, limits, revocation, and support ownership.
-- [ ] Confirm which Kaffeelisten payment models you support now: per-purchase individual, monthly individual, per-purchase company, and monthly company settlement.
-- [ ] Provide the payment-request, recurring mandate/batch, status-query, cancellation, full/partial refund, reversal, dispute, and failed-payment API contracts, including consent/SCA behaviour.
-- [ ] Provide the complete payment state model and identify which system/state is authoritative for pending, authorised, paid, failed, expired, cancelled, refunded, reversed, and disputed payments.
-- [ ] Provide webhook documentation covering event schemas, signatures, timestamps/replay protection, key rotation, retries, duplicate/out-of-order delivery, event retention, and reconciliation after missed delivery.
-- [ ] Provide idempotency rules, timeout/retry guidance, rate limits, maintenance windows, service-level commitments, and canonical reconciliation/settlement exports tied to external references.
-- [ ] Provide the proposed invoice/receipt model, naming the legal issuer, VAT treatment, numbering, correction, delivery, structured e-invoice support where applicable, retention, and accounting/DATEV export ownership.
-- [ ] Provide the pilot proposal: supported institution/campus, scope, dates, user/transaction limits, live versus simulated funds, success criteria, support contacts, incident process, rollback, and evidence available from the THA pilot.
-- [ ] Provide pricing, implementation/API fees, transaction/settlement fees, minimum term, limits, SLA/support hours, insurance if applicable, termination, data export/return, deletion, and outstanding-payment handling.
-- [ ] For confidential or IP-sensitive material, provide a redacted interface/compliance version or state the NDA required; proprietary source code, algorithms, production secrets, and real customer data are not requested.
+ZAHLN integration information request
+
+Please return this checklist with every item marked as available, planned,
+unavailable, or NDA-required. For anything that is not available now, add the
+responsible person and a realistic target date.
+
+Drafts and redacted documents are acceptable. We need enough information to map
+your process to Kaffeelisten without making assumptions about your product,
+technical interfaces, regulatory model, or responsibilities.
+
+Organisation and current product
+
+- [ ] Confirm the exact product name, correctly spelled canonical domain, legal
+      entity, legal form, registered address, registration number, authorised
+      signatory, and technical and compliance contacts.
+
+- [ ] Provide the current pitch deck and a dated capability matrix. Mark every
+      capability as production, pilot, sandbox, prototype, or planned.
+
+- [ ] Provide a short current-system architecture and data-flow diagram showing
+      the frontend, backend, database, hosting, payment components, and external
+      providers. Interface-level information is sufficient; source code is not
+      requested.
+
+- [ ] Provide the current user flows or screens for individual onboarding,
+      company onboarding, QR or deep-link connection, payment, failure,
+      cancellation, refund, unlinking, and account deletion.
+
+Regulatory and commercial structure
+
+- [ ] Identify the licensed payment or e-money institution behind every wallet,
+      SEPA, payment-initiation, safeguarding, settlement, and payout function.
+      Include its authorisation or register reference and describe ZAHLN's
+      contractual role.
+
+- [ ] Provide a money-flow diagram naming the customer, merchant or seller,
+      payee, merchant of record if applicable, safeguarded and settlement
+      accounts, regulated institution, fees, and final payout recipient.
+
+- [ ] Confirm whether ITC1 can contract directly with your legal entity and/or
+      regulated institution. State who would own the production merchant account
+      and API relationship.
+
+- [ ] Provide the proposed responsibility split for merchant onboarding and KYB,
+      user KYC, sanctions and fraud screening, payment authorisation and SCA,
+      funds, invoicing, tax records, settlement, refunds, disputes, support,
+      incidents, GDPR, retention, and exit.
+
+- [ ] Confirm that Kaffeelisten would not receive funds, payment credentials,
+      bank-login data, KYC or KYB documents, selfies, proof-of-funds records, or
+      regulatory case files.
+
+Data protection and security
+
+- [ ] Provide the controller, processor, or joint-controller analysis; draft AVV
+      or DPA; subprocessor list; hosting and data regions; data categories;
+      lawful bases; retention and deletion periods; data-subject process; and
+      incident-notification terms.
+
+- [ ] Summarise the relevant security controls: encryption, access control,
+      secrets management, audit logs, backup and recovery, vulnerability
+      management, penetration testing, incident response, and available audits,
+      certifications, or insurance.
+
+Technical integration
+
+- [ ] Provide the versioned API or OpenAPI specification, changelog and versioning
+      policy, sandbox base URL, test-account process, and current production-
+      readiness status. Do not send real secrets or production credentials.
+
+- [ ] Provide the authentication and account-linking specification, including
+      OAuth, OIDC, or the equivalent flow; opaque subject IDs; PKCE and state
+      handling; scopes; token lifetime; callbacks; QR and deep links; app-install
+      fallback; revocation; and unlinking.
+
+- [ ] Provide the individual and company onboarding specifications, including
+      KYC and KYB states, approval and rejection, employee invitations, company
+      coverage, limits, revocation, and support ownership.
+
+- [ ] Confirm which Kaffeelisten payment models are supported now: per-purchase
+      individual, monthly individual, per-purchase company, and monthly company
+      settlement.
+
+- [ ] Provide the API contracts for payment requests, recurring mandates or
+      batches, status queries, cancellation, full and partial refunds, reversals,
+      disputes, and failed payments. Include the consent and SCA behaviour.
+
+- [ ] Provide the complete payment state model and identify which system and
+      state is authoritative for pending, authorised, paid, failed, expired,
+      cancelled, refunded, reversed, and disputed payments.
+
+- [ ] Provide the webhook documentation, including event schemas, signatures,
+      timestamps and replay protection, key rotation, retries, duplicate or
+      out-of-order delivery, event retention, and reconciliation after a missed
+      delivery.
+
+- [ ] Provide the idempotency rules, timeout and retry guidance, rate limits,
+      maintenance windows, service-level commitments, and canonical
+      reconciliation and settlement exports tied to external references.
+
+Invoicing and accounting
+
+- [ ] Provide the proposed invoice and receipt model. Name the legal issuer and
+      define VAT treatment, numbering, corrections, delivery, structured
+      e-invoice support where applicable, retention, and accounting or DATEV
+      export ownership.
+
+Pilot and operating terms
+
+- [ ] Provide the proposed pilot scope: institution or campus, dates, user and
+      transaction limits, live versus simulated funds, success criteria, support
+      contacts, incident process, rollback, and evidence available from the THA
+      pilot.
+
+- [ ] Provide pricing, implementation and API fees, transaction and settlement
+      fees, minimum term, limits, SLA and support hours, insurance if applicable,
+      termination, data export or return, deletion, and outstanding-payment
+      handling.
+
+Confidential and IP-sensitive material
+
+- [ ] For confidential or IP-sensitive information, provide a redacted interface
+      or compliance version, or state which material requires an NDA. Proprietary
+      source code, algorithms, production secrets, and real customer data are not
+      requested.
