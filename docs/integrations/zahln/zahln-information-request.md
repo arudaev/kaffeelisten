@@ -1,25 +1,25 @@
-# Partner input request
+# ZAHLN information request
 
 ## Ready-to-send WhatsApp message
 
 > Hey, I'm back again. I asked our AI to review the current Kaffeelisten
 > architecture, the public material available for your product, and the UI/UX we
-> discussed in our meeting, and it produced the attached checklist of inputs
-> needed for the concept we have to send to Mr. Schwarz. Please send the
-> available documents and return the completed checklist by Friday, 4 September;
-> if something does not exist yet or is confidential, simply mark it as
-> planned/unavailable or NDA-required and add an owner and target date. Once we
-> have that, we can prepare the management proposal and technical design without
-> making assumptions about your product.
+> discussed in our meeting, and it prepared the attached information request for
+> the integration concept Mr. Schwarz requested from your team. Please return the
+> completed checklist and available documents by Friday, 4 September so we can
+> map your process to Kaffeelisten and assemble the document for him. If an item
+> is unavailable or confidential, mark it as planned/unavailable or NDA-required
+> and add an owner and target date.
 
-Attach [`partner-input-checklist.txt`](partner-input-checklist.txt) to the
-message.
+Attach
+[`zahln-integration-information-request.txt`](zahln-integration-information-request.txt)
+to the message.
 
 ## Internal detailed reference
 
-The partner-facing `.txt` checklist is deliberately concise. The sections below
-are Kaffeelisten's internal reference for evaluating the response before an
-implementation is designed, costed, or promised.
+The recipient-facing `.txt` checklist is deliberately concise. The sections
+below are Kaffeelisten's internal reference for evaluating the response before
+an implementation is designed, costed, or promised.
 
 ### A. Identity and authority
 
@@ -27,7 +27,7 @@ implementation is designed, costed, or promised.
   authorised signatory.
 - Product brand and primary domain.
 - BaFin authorisation/registration number and authorised services, or the exact
-  regulated bank/payment/e-money partner and ZAHLN's role under that partner.
+  regulated bank/payment/e-money institution and ZAHLN's contractual role.
 - If operating as an agent or technical service provider, the relevant written
   confirmation and register entry.
 - Contracting party for ITC1 and the party that receives or safeguards funds.
@@ -45,9 +45,9 @@ implementation is designed, costed, or promised.
 - Identify any proposed contract or direct operational duty for the Kaffeelisten
   maintainers. Do not assume that they are an ITC1 contractor or registered
   business.
-- Confirm whether ITC1 or the payment partner will own the production merchant
-  account, API credentials, domain configuration, audit exports, and support
-  relationship.
+- Confirm whether ITC1, ZAHLN, or the regulated institution will own the
+  production merchant account, API credentials, domain configuration, audit
+  exports, and support relationship.
 - State whether ZAHLN requires Kaffeelisten to issue invoices, act as merchant,
   provide first-line payment support, accept liability, or maintain a service
   level. The default Kaffeelisten answer is no unless ITC1 and qualified advisers

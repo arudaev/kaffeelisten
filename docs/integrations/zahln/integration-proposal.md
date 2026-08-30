@@ -1,29 +1,28 @@
 # Kaffeelisten x ZAHLN digital-payment integration
 
 **Document type:** stakeholder proposal and technical design<br>
-**Status:** Kaffeelisten-side discovery draft - partner confirmation required<br>
+**Status:** Kaffeelisten-side discovery draft - ZAHLN confirmation required<br>
 **Version:** 0.2<br>
 **Date:** 2026-08-30<br>
-**Prepared for:** ITC1 management, Kaffeelisten maintainers, and the prospective
-payment partner<br>
+**Prepared for:** ITC1 management, Kaffeelisten maintainers, and the ZAHLN team<br>
 **Decision represented:** none; this document does not authorise implementation
 
 > This is not legal, tax, accounting, or regulatory advice. The document defines
 > a safe technical and operational envelope. The final model must be confirmed by
-> ITC1, the payment partner, the regulated institution behind the money flow, and
+> ITC1, ZAHLN, the regulated institution behind the money flow, and
 > qualified advisers.
 
 ## Part I - Management summary
 
 ### 1. Why this document exists
 
-On 18 August 2026, Mr. Schwarz asked Nils to present how the prospective payment
-partner would implement digital payment together with Kaffeelisten, so that ITC1
+On 18 August 2026, Mr. Schwarz asked Nils to present how ZAHLN would implement
+digital payment together with Kaffeelisten, so that ITC1
 could assess it as an alternative to its existing payment plan.
 
 Kaffeelisten can define its current process, the user experience it can support,
 and the safeguards required at the integration boundary. It cannot define or
-promise the partner's API, licence position, wallet mechanics, settlement model,
+promise ZAHLN's API, licence position, wallet mechanics, settlement model,
 service level, or legal responsibilities. Those inputs have not yet been
 provided.
 
@@ -38,7 +37,7 @@ This draft therefore answers two different questions separately:
 
 1. **How could the products fit together safely?** This is technically feasible
    in principle through an optional server-side payment adapter.
-2. **Is a joint ITC1 pilot ready to approve?** Not yet. The partner-specific
+2. **Is an ITC1 pilot using both systems ready to approve?** Not yet. The ZAHLN-specific
    technical, contractual, and regulatory evidence listed in section 6 is still
    required.
 
@@ -114,12 +113,12 @@ After `Ich bin noch nicht dabei`, the member can choose:
 - `Ohne ZAHLN hinzufügen`.
 
 The ZAHLN option displays a short-lived QR code and deep link. The member
-continues on their own phone, installs or opens the partner app if required,
-completes the partner's onboarding, and returns through a signed callback. Only
-an opaque partner identifier is stored by Kaffeelisten. The existing manual
+continues on their own phone, installs or opens the ZAHLN app if required,
+completes ZAHLN's onboarding, and returns through a signed callback. Only an
+opaque ZAHLN identifier is stored by Kaffeelisten. The existing manual
 registration path remains available.
 
-The exact deep-link and app-install experience is **partner confirmation
+The exact deep-link and app-install experience is **ZAHLN confirmation
 required**.
 
 #### Linked member
@@ -139,7 +138,7 @@ If an ITC1 administrator has linked and authorised the company's business
 account, member consumption can be routed to the company settlement without
 requiring each employee to hold a ZAHLN account. The public kiosk must not allow
 a user to activate company coverage. Company authorisation, limits, revocation,
-and employee eligibility are **partner confirmation required**.
+and employee eligibility are **ZAHLN confirmation required**.
 
 #### ITC1 administrator
 
@@ -259,7 +258,7 @@ No production payment pilot should begin until all gates have written evidence:
 | Gate | Evidence required | Owner |
 |---|---|---|
 | Legal identity | Contracting entity, legal notice, authorised signatory | ZAHLN |
-| Regulatory model | BaFin authorisation/registration or named regulated partner, service scope, money-flow diagram | ZAHLN / regulated institution |
+| Regulatory model | BaFin authorisation/registration or named regulated institution/service provider, service scope, money-flow diagram | ZAHLN / regulated institution |
 | Technical contract | Versioned API/OpenAPI, sandbox, auth, deep links, webhooks, status and reconciliation | ZAHLN |
 | ITC1 authority | Signed ITC1-Kaffeelisten instrument defining the pilot, authority, IP/licence, production ownership, liability, support, and exit | ITC1 + maintainers/adviser-approved entity |
 | Student status | Individual written immigration/tax advice and any required Ausländerbehörde permission before paid or potentially self-employed work | Each maintainer |
@@ -285,7 +284,7 @@ following boundary:
 - no production funds, payment data, ITC1 invoices, or paid maintainer work enter
   the integration before the gates in section 6 are closed.
 
-No cost or delivery date should be committed before the partner inputs are
+No cost or delivery date should be committed before the ZAHLN inputs are
 received and the pilot mode is selected.
 
 ## Part II - Product and technical design
@@ -312,9 +311,10 @@ received and the pilot mode is selected.
   credentials, or full provider payloads in the browser.
 - Assuming that a wallet changes tax or invoice obligations.
 - Replacing Kaffeelisten's companies, members, catalogue, consumption history,
-  reporting, or admin controls with the partner's platform.
+  reporting, or admin controls with ZAHLN's platform.
 - Supporting multiple campuses in this proposal.
-- Promising a partner feature that has not been supplied in a written contract.
+- Promising a ZAHLN feature that has not been supplied in a written specification
+  or contract.
 - Assuming that the Kaffeelisten team is a registered company, an authorised
   ITC1 contractor, or free of possible GbR obligations merely because no formal
   partnership agreement has been signed.
@@ -346,7 +346,7 @@ An external payment must always reference one immutable order and amount.
 
 | Model | User experience | Advantages | Risks/requirements | Pilot position |
 |---|---|---|---|---|
-| Per-purchase | `Bestätigen` creates one payment for the order; member authorises or wallet is charged | Immediate settlement and exact order matching | SCA/consent, kiosk delay, provider outage at checkout, refunds for order corrections | Phase 2 unless partner proves a fast compliant flow |
+| Per-purchase | `Bestätigen` creates one payment for the order; member authorises or wallet is charged | Immediate settlement and exact order matching | SCA/consent, kiosk delay, provider outage at checkout, refunds for order corrections | Phase 2 unless ZAHLN demonstrates a fast compliant flow |
 | Monthly individual | Consumption remains instant; one month-end amount per linked member | Matches current process, low kiosk risk, simple reconciliation | Mandate/consent, insufficient funds, month-end retry and notices | Recommended first pilot |
 | Monthly company | One month-end amount for all covered company members | Lowest employee friction, matches current company-paid mode | Business authorisation, member eligibility, limits, cost allocation | Recommended where company explicitly opts in |
 | Hybrid | Company chooses monthly; individuals choose per-order or monthly | Flexible | Highest support, reporting, and state complexity | Do not pilot first |
@@ -360,7 +360,7 @@ existing user with outstanding consumption.
 
 - Kaffeelisten identifies its own member and company records.
 - ZAHLN identifies and onboards its payment user/business.
-- Linking stores a stable opaque partner subject, never a wallet password or
+- Linking stores a stable opaque ZAHLN subject, never a wallet password or
   bank credential.
 - Email is display/contact data, not a cross-system primary key.
 - The callback is accepted only for a short-lived, single-use, server-created
@@ -373,7 +373,7 @@ existing user with outstanding consumption.
 3. User chooses ZAHLN or manual registration.
 4. Kaffeelisten server creates a single-use linking session containing a random
    nonce, selected company ID, expiry, and return context.
-5. Kaffeelisten renders the partner authorisation URL as QR and deep link.
+5. Kaffeelisten renders the ZAHLN authorisation URL as QR and deep link.
 6. User completes ZAHLN onboarding/authentication on their own device.
 7. ZAHLN returns an authorisation code plus the original state value.
 8. Kaffeelisten server validates state, expiry, issuer, audience, and callback,
@@ -383,7 +383,7 @@ existing user with outstanding consumption.
 11. Kaffeelisten creates the member and payment link atomically.
 12. A verification email can continue to be sent under the existing process.
 
-Partner inputs required: authorisation protocol, claims, PKCE, app links, store
+ZAHLN inputs required: authorisation protocol, claims, PKCE, app links, store
 fallback, KYC states, error states, and revocation.
 
 #### 11.3 Existing-member linking
@@ -395,7 +395,7 @@ Acceptable pilot methods are:
 - member selects their tile, scans a short-lived QR, authenticates with ZAHLN,
   and completes an additional Kaffeelisten verification step.
 
-The final method depends on the partner identity assurance and ITC1's tolerance
+The final method depends on ZAHLN's identity assurance and ITC1's tolerance
 for admin work.
 
 #### 11.4 Company linking
@@ -432,7 +432,7 @@ must never be trusted to supply the amount charged.
 3. Order is marked `unsettled` under the applicable individual/company coverage.
 4. User sees the normal success screen.
 5. At month close, Kaffeelisten freezes a settlement batch from eligible orders.
-6. Kaffeelisten creates exactly one partner payment request per payer using the
+6. Kaffeelisten creates exactly one ZAHLN payment request per payer using the
    settlement batch ID as idempotency key/reference.
 7. ZAHLN performs the agreed consent/mandate and collection process.
 8. Signed webhook updates the payment attempt.
@@ -450,7 +450,7 @@ reproduce the settlement.
 2. Kaffeelisten creates a `pending_payment` order with price snapshots.
 3. Kaffeelisten server creates a ZAHLN payment request using the order ID as the
    idempotency key and external reference.
-4. The user authorises in the partner app/web experience if required.
+4. The user authorises in the ZAHLN app/web experience if required.
 5. Kaffeelisten receives a signed event or queries canonical status.
 6. `paid` displays success. `requires_action` displays the QR/deep link. `failed`
    or timeout displays a truthful fallback and leaves the order auditable.
@@ -469,7 +469,7 @@ payment integration:
 - after monthly batch freeze: issue an adjustment or credit in the next
   settlement unless the provider supports safe batch amendment.
 
-Partner cancellation/refund semantics are required before immediate payment can
+ZAHLN cancellation/refund semantics are required before immediate payment can
 ship.
 
 ### 13. Proposed data model
@@ -621,11 +621,11 @@ Implementation rules:
 - webhook route verifies signature over the exact raw body before parsing;
 - callback and webhook routes have strict allow-lists, rate limits, replay
   protection, and structured audit logs;
-- provider errors are normalised so internal code is not coupled to partner text;
+- provider errors are normalised so internal code is not coupled to ZAHLN text;
 - requests use deterministic idempotency keys;
 - timeouts are short and retries use bounded exponential backoff;
 - a scheduled reconciliation job repairs missed/delayed webhook delivery;
-- no partner secret is prefixed `VITE_` or shipped to the browser;
+- no ZAHLN secret is prefixed `VITE_` or shipped to the browser;
 - no current admin PIN is reused as integration authentication.
 
 ### 16. Reporting, invoicing, and reconciliation
@@ -703,7 +703,7 @@ authorised institution and scope. Kaffeelisten should remain a technical service
 that never possesses transferred funds.
 
 Electronic payment initiation may require strong customer authentication and
-dynamic linking to amount and payee. The partner must specify how its proposed
+dynamic linking to amount and payee. ZAHLN must specify how its proposed
 per-order or recurring flow satisfies the applicable requirements and what the
 user sees.
 
@@ -772,9 +772,9 @@ arrangement, and move production accounts under the agreed accountable party.
 
 ### 20. Rollout plan
 
-#### Phase 0 - partner evidence and joint design
+#### Phase 0 - ZAHLN evidence and integration design
 
-- Receive the material in `partner-input-request.md`.
+- Receive the material in `zahln-information-request.md`.
 - Resolve product/legal name and regulated institution.
 - Select payment mode and responsibility model.
 - Complete money-flow and data-flow diagrams.
@@ -875,9 +875,9 @@ privacy incident, duplicate charge, or data loss.
 |---|---|---|---|
 | Pilot payment timing | Monthly individual, monthly company, per-order | ITC1 + ZAHLN | Yes |
 | Product/legal name and canonical domain | ZAHLN, ZHALN, ZYSYGY; exact entity and correctly spelled URL | ZAHLN | Yes |
-| Regulated model | Own authorisation, agent, partner institution, technical provider | ZAHLN | Yes |
+| Regulated model | Own authorisation, agent, regulated-institution relationship, technical provider | ZAHLN | Yes |
 | Seller/payee/invoice issuer | Default ITC1; alternative needs separate proposal | ITC1 + ZAHLN | Yes |
-| Linking assurance | Email invite, partner identity plus verification, admin approval | ITC1 | Yes |
+| Linking assurance | Email invite, ZAHLN identity plus verification, admin approval | ITC1 | Yes |
 | Company coverage policy | All employees, approved list, limits, effective date | ITC1 + company | Yes |
 | Payment consent/SCA | Per transaction, recurring mandate, wallet rule | ZAHLN / institution | Yes |
 | Failure fallback | Pending, manual monthly, retry schedule | ITC1 | Yes |
@@ -890,16 +890,16 @@ privacy incident, duplicate charge, or data loss.
 
 ### 23. Information required from ZAHLN
 
-The complete checklist is maintained in
-[`partner-input-request.md`](partner-input-request.md). The minimum set needed to
-replace this draft with a joint proposal is:
+The complete internal reference is maintained in
+[`zahln-information-request.md`](zahln-information-request.md). The minimum set needed to
+replace this draft with a combined proposal is:
 
-The concise partner-facing attachment is
-[`partner-input-checklist.txt`](partner-input-checklist.txt).
+The concise ZAHLN-facing attachment is
+[`zahln-integration-information-request.txt`](zahln-integration-information-request.txt).
 
 - pitch deck and dated product-readiness matrix;
 - exact legal entity, brand, correctly spelled canonical domain, regulated
-  institution/partner, and role;
+  institution/service provider, and role;
 - money-flow and settlement diagram;
 - API/OpenAPI, sandbox, auth/linking, webhook, status, refund, idempotency, and
   reconciliation specifications;
@@ -926,7 +926,7 @@ Until these are supplied, ZAHLN-dependent statements remain proposals, not facts
 - `supabase/migrations/023_company_billing_fields.sql` through
   `029_paid_grid_default_on.sql`
 
-#### Partner public material
+#### ZAHLN public material
 
 - [ZYSYGY public product page](https://zysygy.de/)
 - [ZYSYGY public plans page](https://zysygy.de/plans)
@@ -951,5 +951,5 @@ Until these are supplied, ZAHLN-dependent statements remain proposals, not facts
 ---
 
 **Document boundary:** This version is suitable for discovery discussion. It is
-not yet suitable as a joint ZAHLN commitment, implementation specification,
+not yet suitable as a commitment by ZAHLN or all parties, implementation specification,
 binding proposal, or production approval.
