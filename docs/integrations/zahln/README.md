@@ -36,7 +36,7 @@ funds, invoice authority, production processing, or ongoing support obligations.
   WhatsApp message to send, followed by Kaffeelisten's internal detailed
   reference.
 - [`zahln-integration-information-request.txt`](zahln-integration-information-request.txt)
-  - the concise, header-free checkbox document to attach to the WhatsApp message.
+  - the plain-text, sectioned checkbox document to attach to the WhatsApp message.
 - [`source-register.md`](source-register.md) - evidence hierarchy, confirmed
   facts, public claims, meeting recollections, and unresolved contradictions.
 
