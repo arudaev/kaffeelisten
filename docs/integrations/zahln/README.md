@@ -33,8 +33,9 @@ funds, invoice authority, production processing, or ongoing support obligations.
   for ITC1 management followed by the technical design, responsibility model,
   risks, rollout plan, and acceptance criteria.
 - [`partner-input-request.md`](partner-input-request.md) - the exact WhatsApp
-  message to send, followed by the detailed information checklist needed to
-  turn the concept into a joint proposal.
+  message to send, followed by Kaffeelisten's internal detailed reference.
+- [`partner-input-checklist.txt`](partner-input-checklist.txt) - the concise,
+  header-free checkbox document to attach to the WhatsApp message.
 - [`source-register.md`](source-register.md) - evidence hierarchy, confirmed
   facts, public claims, meeting recollections, and unresolved contradictions.
 
@@ -54,7 +55,8 @@ chat must be rotated and must not be copied into any project document.
 
 ## Next step
 
-Send the message in `partner-input-request.md`. When the requested material is
-received, update the source register, replace every `Partner confirmation
-required` item in the proposal, select the payment mode with ITC1, and only then
-produce a final stakeholder PDF and implementation estimate.
+Send the message in `partner-input-request.md` with
+`partner-input-checklist.txt` attached. When the requested material is received,
+update the source register, replace every `Partner confirmation required` item
+in the proposal, select the payment mode with ITC1, and only then produce a final
+stakeholder PDF and implementation estimate.

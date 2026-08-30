@@ -894,6 +894,9 @@ The complete checklist is maintained in
 [`partner-input-request.md`](partner-input-request.md). The minimum set needed to
 replace this draft with a joint proposal is:
 
+The concise partner-facing attachment is
+[`partner-input-checklist.txt`](partner-input-checklist.txt).
+
 - pitch deck and dated product-readiness matrix;
 - exact legal entity, brand, correctly spelled canonical domain, regulated
   institution/partner, and role;
