@@ -1,125 +1,41 @@
 ZAHLN integration information request
 
-Please return this checklist with every item marked as available, planned,
-unavailable, or NDA-required. For anything that is not available now, add the
-responsible person and a realistic target date.
+Please send anything you already have that covers the points below. Drafts,
+screenshots, rough diagrams, prototypes, notes, and redacted documents are all
+fine. You do not need to create formal documents specifically for us.
 
-Drafts and redacted documents are acceptable. We need enough information to map
-your process to Kaffeelisten without making assumptions about your product,
-technical interfaces, regulatory model, or responsibilities.
+If something is not documented, a short written answer is enough. Please tell us
+what works now, what is still a prototype or plan, who owns the topic, and any
+expected date you already have.
 
-Organisation and current product
+- [ ] Any current product material: pitch deck, product overview, demo or
+      screenshots, feature list, roadmap, and information about the THA pilot.
 
-- [ ] Confirm the exact product name, correctly spelled canonical domain, legal
-      entity, legal form, registered address, registration number, authorised
-      signatory, and technical and compliance contacts.
+- [ ] Any description of what currently works: user and company onboarding, QR
+      or deep-link connection, wallet or payment flow, refunds, and whether you
+      support per-purchase or monthly payment for individuals or companies.
 
-- [ ] Provide the current pitch deck and a dated capability matrix. Mark every
-      capability as production, pilot, sandbox, prototype, or planned.
+- [ ] Any technical material: architecture or data-flow overview, API or OpenAPI
+      documentation, sandbox information, authentication, webhooks, payment
+      statuses, reconciliation, or example request and response formats.
 
-- [ ] Provide a short current-system architecture and data-flow diagram showing
-      the frontend, backend, database, hosting, payment components, and external
-      providers. Interface-level information is sufficient; source code is not
-      requested.
+- [ ] Any legal or payment-compliance information: exact product and company
+      name, correct domain, contracting entity, regulated bank or payment
+      institution, your role in the payment flow, and a simple money-flow
+      explanation.
 
-- [ ] Provide the current user flows or screens for individual onboarding,
-      company onboarding, QR or deep-link connection, payment, failure,
-      cancellation, refund, unlinking, and account deletion.
+- [ ] Any privacy or security material: data handled, hosting location,
+      subprocessors, AVV or DPA, retention approach, security overview, or the
+      person responsible for these topics.
 
-Regulatory and commercial structure
+- [ ] Your preferred way to connect ZAHLN with Kaffeelisten and ITC1, including
+      who would handle user or company verification, payments, invoices, failed
+      payments, refunds, support, and production operation.
 
-- [ ] Identify the licensed payment or e-money institution behind every wallet,
-      SEPA, payment-initiation, safeguarding, settlement, and payout function.
-      Include its authorisation or register reference and describe ZAHLN's
-      contractual role.
+- [ ] Any practical pilot or commercial information already available: proposed
+      scope, readiness, timeline, limits, pricing or fees, support contact, and
+      what you would need from ITC1 or Kaffeelisten.
 
-- [ ] Provide a money-flow diagram naming the customer, merchant or seller,
-      payee, merchant of record if applicable, safeguarded and settlement
-      accounts, regulated institution, fees, and final payout recipient.
-
-- [ ] Confirm whether ITC1 can contract directly with your legal entity and/or
-      regulated institution. State who would own the production merchant account
-      and API relationship.
-
-- [ ] Provide the proposed responsibility split for merchant onboarding and KYB,
-      user KYC, sanctions and fraud screening, payment authorisation and SCA,
-      funds, invoicing, tax records, settlement, refunds, disputes, support,
-      incidents, GDPR, retention, and exit.
-
-- [ ] Confirm that Kaffeelisten would not receive funds, payment credentials,
-      bank-login data, KYC or KYB documents, selfies, proof-of-funds records, or
-      regulatory case files.
-
-Data protection and security
-
-- [ ] Provide the controller, processor, or joint-controller analysis; draft AVV
-      or DPA; subprocessor list; hosting and data regions; data categories;
-      lawful bases; retention and deletion periods; data-subject process; and
-      incident-notification terms.
-
-- [ ] Summarise the relevant security controls: encryption, access control,
-      secrets management, audit logs, backup and recovery, vulnerability
-      management, penetration testing, incident response, and available audits,
-      certifications, or insurance.
-
-Technical integration
-
-- [ ] Provide the versioned API or OpenAPI specification, changelog and versioning
-      policy, sandbox base URL, test-account process, and current production-
-      readiness status. Do not send real secrets or production credentials.
-
-- [ ] Provide the authentication and account-linking specification, including
-      OAuth, OIDC, or the equivalent flow; opaque subject IDs; PKCE and state
-      handling; scopes; token lifetime; callbacks; QR and deep links; app-install
-      fallback; revocation; and unlinking.
-
-- [ ] Provide the individual and company onboarding specifications, including
-      KYC and KYB states, approval and rejection, employee invitations, company
-      coverage, limits, revocation, and support ownership.
-
-- [ ] Confirm which Kaffeelisten payment models are supported now: per-purchase
-      individual, monthly individual, per-purchase company, and monthly company
-      settlement.
-
-- [ ] Provide the API contracts for payment requests, recurring mandates or
-      batches, status queries, cancellation, full and partial refunds, reversals,
-      disputes, and failed payments. Include the consent and SCA behaviour.
-
-- [ ] Provide the complete payment state model and identify which system and
-      state is authoritative for pending, authorised, paid, failed, expired,
-      cancelled, refunded, reversed, and disputed payments.
-
-- [ ] Provide the webhook documentation, including event schemas, signatures,
-      timestamps and replay protection, key rotation, retries, duplicate or
-      out-of-order delivery, event retention, and reconciliation after a missed
-      delivery.
-
-- [ ] Provide the idempotency rules, timeout and retry guidance, rate limits,
-      maintenance windows, service-level commitments, and canonical
-      reconciliation and settlement exports tied to external references.
-
-Invoicing and accounting
-
-- [ ] Provide the proposed invoice and receipt model. Name the legal issuer and
-      define VAT treatment, numbering, corrections, delivery, structured
-      e-invoice support where applicable, retention, and accounting or DATEV
-      export ownership.
-
-Pilot and operating terms
-
-- [ ] Provide the proposed pilot scope: institution or campus, dates, user and
-      transaction limits, live versus simulated funds, success criteria, support
-      contacts, incident process, rollback, and evidence available from the THA
-      pilot.
-
-- [ ] Provide pricing, implementation and API fees, transaction and settlement
-      fees, minimum term, limits, SLA and support hours, insurance if applicable,
-      termination, data export or return, deletion, and outstanding-payment
-      handling.
-
-Confidential and IP-sensitive material
-
-- [ ] For confidential or IP-sensitive information, provide a redacted interface
-      or compliance version, or state which material requires an NDA. Proprietary
-      source code, algorithms, production secrets, and real customer data are not
-      requested.
+If any material is confidential or IP-sensitive, a redacted version or a note
+that an NDA is required is sufficient. Please do not send production secrets,
+real credentials, or customer data.
