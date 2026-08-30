@@ -4,12 +4,13 @@
 
 > Hey, I'm back again. I asked our AI to review the current Kaffeelisten
 > architecture, the public material available for your product, and the UI/UX we
-> discussed in our meeting, and it prepared the attached information request for
-> the integration concept Mr. Schwarz requested from your team. Please return the
-> completed checklist and available documents by Friday, 4 September so we can
-> map your process to Kaffeelisten and assemble the document for him. If an item
-> is unavailable or confidential, mark it as planned/unavailable or NDA-required
-> and add an owner and target date.
+> discussed in our meeting, and it prepared the attached short information
+> request for the integration concept Mr. Schwarz requested from your team.
+> Please send whatever material you already have by Friday, 4 September so we can
+> map your process to Kaffeelisten and assemble the document for him. You do not
+> need to create missing documents for us; where something is not documented, a
+> few lines on what exists now, what is planned, and who owns it are enough.
+> Confidential material can be redacted or marked as NDA-required.
 
 Attach
 [`zahln-integration-information-request.txt`](zahln-integration-information-request.txt)
