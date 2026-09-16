@@ -9,6 +9,7 @@ import {
   buildCompanyEmailHtml,
   buildMemberStatementHtml,
   buildCompanyDocumentHtml,
+  buildCeoArchiveEmailHtml,
   renderTemplate,
   formatEuro,
   type EnrichedTransaction,
@@ -34,6 +35,7 @@ import { mergeLiveAndArchive, unitPriceOf } from './pricing'
 import {
   computeCampusRollup,
   generateCampusRollupExcel,
+  type CampusRollup,
   generateCompanyExcel,
   generateExcel,
   generateManifestExcel,
@@ -49,6 +51,7 @@ import {
   type SkippedDelivery,
 } from './documentMatrix'
 import { previousMonth } from './schedule'
+import { computeAdminInsights, type AdminInsights } from './adminInsights'
 import { mapWithConcurrency } from './concurrency'
 
 // Kept exported from here so existing callers and tests need not change imports.
@@ -90,6 +93,8 @@ export interface ReportSchedule {
 export interface ReportSettings {
   recipients: string[]
   ccEmails: string[]
+  // Receives the archive ZIP (copies of every document sent). Nobody else does.
+  ceoEmail: string | null
   memberStatementsEnabled: boolean
   companyDocumentsEnabled: boolean
   // Members of a company_paid company receive an information copy (migration 036).
@@ -149,6 +154,7 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
   return {
     recipients,
     ccEmails,
+    ceoEmail: data?.ceo_email?.trim() || null,
     memberStatementsEnabled: data?.member_statements_enabled ?? true,
     companyDocumentsEnabled: data?.company_documents_enabled ?? true,
     companyPaidMemberReportsEnabled: data?.company_paid_member_reports_enabled ?? true,
@@ -411,10 +417,10 @@ export async function sendEmail(
   ccEmails: string[],
   format: ReportFormat,
   idempotencyKey: string,
-  // The CEO/Management archive: exact copies of every document sent this month,
-  // the manifest, the monthly report and the campus roll-up. When present it
-  // REPLACES the loose PDF/Excel attachments, which are inside it.
-  zip: Buffer | null = null,
+  // Key figures, restocking guide and warnings for ITC1's administration, plus
+  // the campus roll-up workbook. The archive ZIP is NOT attached here: it goes
+  // to the CEO alone (sendCeoArchive).
+  extras: { insights?: AdminInsights; rollupXlsx?: Buffer | null } = {},
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
@@ -429,21 +435,21 @@ export async function sendEmail(
     accent: format.accent,
     intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined,
     logoSrc: `cid:${EMAIL_LOGO_CONTENT_ID}`,
+    insights: extras.insights,
   })
 
   const filename = `kaffeelisten-${reportMonth}`
   const attachments: Array<{ filename: string; content: string; contentType?: string; contentId?: string }> = [
     { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
   ]
-  if (zip) {
-    attachments.push({ filename: `${filename}-archiv.zip`, content: zip.toString('base64') })
-  } else {
-    if (format.includePdf && pdfBuffer) {
-      attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
-    }
-    if (format.includeExcel && xlsxBuffer) {
-      attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
-    }
+  if (format.includePdf && pdfBuffer) {
+    attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
+  }
+  if (format.includeExcel && xlsxBuffer) {
+    attachments.push({ filename: `${filename}.xlsx`, content: xlsxBuffer.toString('base64') })
+  }
+  if (extras.rollupXlsx) {
+    attachments.push({ filename: `Campus-Auswertung-${reportMonth}.xlsx`, content: extras.rollupXlsx.toString('base64') })
   }
 
   const { error } = await resend.emails.send(
@@ -467,6 +473,36 @@ export async function sendEmail(
   if (error) {
     throw new Error(`Resend company report failed: ${error.message ?? JSON.stringify(error)}`)
   }
+}
+
+/**
+ * The management archive goes to the CEO only: it holds a copy of every invoice
+ * and statement issued to every person, which the wider report recipients have
+ * no reason to receive.
+ */
+export async function sendCeoArchive(
+  ceoEmail: string,
+  zip: Buffer,
+  documentCount: number,
+  monthLabel: string,
+  reportMonth: string,
+  format: ReportFormat,
+  idempotencyKey: string,
+): Promise<void> {
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
+  const { error } = await makeMailer(resendKey).emails.send(
+    {
+      from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+      to: [ceoEmail],
+      ...(replyTo() ? { replyTo: replyTo()! } : {}),
+      subject: `Kaffeelisten – Dokumentenarchiv ${monthLabel}`,
+      html: buildCeoArchiveEmailHtml(monthLabel, documentCount, { accent: format.accent }),
+      attachments: [{ filename: `Kaffeelisten-Archiv-${reportMonth}.zip`, content: zip.toString('base64') }],
+    },
+    { idempotencyKey: `ceo-archive-${idempotencyKey}` },
+  )
+  if (error) throw new Error(`Resend CEO archive failed: ${error.message ?? JSON.stringify(error)}`)
 }
 
 // ─── Per-person and per-company documents ─────────────────────────────────────
@@ -1017,6 +1053,8 @@ export async function runMonthlyReport(
       // Three streams. People first, so their documents can be copied into the
       // opted-in company documents; companies second; the admin/CEO email LAST,
       // because its archive contains copies of everything the first two sent.
+      const rollup = transactions.length > 0 ? await loadCampusRollup(reportMonth, transactions) : null
+      const rollupXlsx = rollup ? await safeExcel('campus roll-up', () => generateCampusRollupExcel(rollup)) : null
       const budget = makePdfBudget(browser)
       const issuedDocs: IssuedDoc[] = []
       let memberStatements: MemberStatementResult | undefined
@@ -1067,6 +1105,7 @@ export async function runMonthlyReport(
           throw billErr
         }
 
+        // Roll-up (with the previous month) feeds both the admin email and the archive.
         // CEO/Management archive, in BOTH invoice and statement mode: exact copies
         // of every document sent, a manifest listing all of them (flagging any
         // whose file could not be produced), the monthly report and the campus
@@ -1077,8 +1116,7 @@ export async function runMonthlyReport(
             files.push({ name: `Übersicht-versandte-Dokumente-${reportMonth}.xlsx`, content: await generateManifestExcel(manifest) })
             if (pdfBuffer) files.push({ name: `Monatsbericht-${reportMonth}.pdf`, content: pdfBuffer })
             if (xlsxBuffer) files.push({ name: `Monatsbericht-${reportMonth}.xlsx`, content: xlsxBuffer })
-            const rollup = await buildCampusRollup(reportMonth, transactions)
-            if (rollup) files.push({ name: `Campus-Auswertung-${reportMonth}.xlsx`, content: rollup })
+            if (rollupXlsx) files.push({ name: `Campus-Auswertung-${reportMonth}.xlsx`, content: rollupXlsx })
             archiveZip = await makeZip(files)
           } catch (zErr) {
             console.error('[report] management archive failed:', zErr instanceof Error ? zErr.message : zErr)
@@ -1086,6 +1124,14 @@ export async function runMonthlyReport(
         }
       }
 
+      const archiveTarget = archiveZip ? settings.ceoEmail : null
+      const insights = computeAdminInsights({
+        rollup,
+        skipped: skipped.filter(s => s.reason !== 'disabled'),
+        failedDeliveries: memberStatements?.failed ?? 0,
+        missingFiles: (m => m.pdf + m.xlsx)(countMissingFiles(issuedDocs)),
+        archiveNotSent: !!archiveZip && !archiveTarget,
+      })
       await sendEmail(
         pdfBuffer,
         xlsxBuffer,
@@ -1097,8 +1143,16 @@ export async function runMonthlyReport(
         settings.ccEmails,
         format,
         idempotencyKey,
-        archiveZip,
+        { insights, rollupXlsx },
       )
+      if (archiveZip && archiveTarget) {
+        try {
+          await sendCeoArchive(archiveTarget, archiveZip, issuedDocs.length, monthLabel, reportMonth, format, idempotencyKey)
+        } catch (err) {
+          // The report itself went out; copies stay re-downloadable from Dokumente.
+          console.error('[report] CEO archive not sent:', err instanceof Error ? err.message : err)
+        }
+      }
 
       // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
       await archiveTransactions(transactions, reportMonth)
@@ -1141,17 +1195,17 @@ function consumersOf(transactions: readonly EnrichedTransaction[]): MatrixMember
   return [...byId.values()]
 }
 
-// The administrative roll-up workbook, comparing against the previous month.
-// Failure is non-fatal: the archive goes out without it.
-async function buildCampusRollup(
+// The administrative roll-up, comparing against the previous month. Failure is
+// non-fatal: the report goes out without the comparison.
+async function loadCampusRollup(
   reportMonth: string,
   current: EnrichedTransaction[],
-): Promise<Buffer | null> {
+): Promise<CampusRollup | null> {
   try {
     const [y, m] = reportMonth.split('-').map(Number)
     const prev = previousMonth(y, m)
     const { transactions: previous } = await fetchAndEnrich(prev)
-    return await generateCampusRollupExcel(computeCampusRollup(reportMonth, prev, current, previous))
+    return computeCampusRollup(reportMonth, prev, current, previous)
   } catch (err) {
     console.error('[report] campus roll-up failed:', err instanceof Error ? err.message : err)
     return null
