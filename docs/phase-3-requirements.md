@@ -6,6 +6,10 @@ locally against the production Supabase project.
 Status legend: **Built** — works today · **Partial** — exists but not as
 described · **Missing** — not implemented.
 
+> **Update 2026-09-16:** the gaps below were addressed in PR #41. What was built, and
+> the decisions taken, are in `docs/phase-3-billing.md`. This file is kept as the
+> original request.
+
 ---
 
 ## 1. Document delivery
