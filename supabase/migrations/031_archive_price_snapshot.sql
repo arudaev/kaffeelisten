@@ -1,6 +1,6 @@
 -- Migration 031: carry the price snapshot, and the item's identity, into the archive.
 --
--- transactions_archive is now permanent (migration 032), so it must be able to
+-- transactions_archive is now permanent (the code no longer prunes it; the revoke follows in migration 039), so it must be able to
 -- stand on its own: a reported month has to be reproducible years later even if
 -- the item was since renamed, repriced or deactivated. The archive therefore
 -- stores the price the member paid plus the item's name, unit and category as
@@ -12,8 +12,8 @@
 -- DEPLOY ORDER: apply 030 and 031 BEFORE deploying the report.ts that writes
 -- these columns. Deployed first, that code's archive upsert fails on unknown
 -- columns and aborts the monthly run after the reports were already emailed —
--- the month would be sent but never archived. (Migration 032 is the opposite:
--- it must be applied AFTER its code change.) Full order: 030 → 031 → deploy → 032.
+-- the month would be sent but never archived. (Migration 039, shipped in its own
+-- follow-up PR, is the opposite: it must be applied AFTER this code is live.)
 --
 -- BACKFILL IS APPROXIMATE. Existing archive rows predate any snapshot, so they are
 -- stamped with TODAY's catalogue values. The true historical price of those rows
