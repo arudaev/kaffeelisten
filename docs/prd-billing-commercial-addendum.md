@@ -274,6 +274,15 @@ artifact is the existing monthly Excel/report; its retention is the §12 questio
 
 ## 8. Platform Cost & Free-Tier Feasibility
 
+> **Update 2026-09-16 (Phase 3, `docs/phase-3-billing.md`).** ITC1 asked for PDF and Excel
+> attachments on every document, so per-recipient PDFs are generated after all: one
+> Chromium per run, four in parallel, each PDF rendered once and reused for the email and
+> both archives. Still **no files are stored** — re-downloads re-render from the database.
+> A staging run of 19 documents took ~30 s. **Resend's free tier allows 100 emails per day**;
+> a full ITC1 month (~90 documents + report + CEO archive) is close to that cap, and staging
+> runs share the same key and quota. Use a separate Resend key for staging or move to a paid
+> plan before the first full production run.
+
 Because delivery is the **email body** (no per-user PDF/ZIP), the previous scaling risk — batch-generating
 50–80 Chromium PDFs per run — is **removed**. What remains is ordinary email volume, which the existing
 pipeline already handles.

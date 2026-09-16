@@ -9,6 +9,33 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/phase-3-billing
+
+#### Added
+- **Documents for everyone involved, in both billing modes.** Whoever pays gets the invoice or statement; the other side gets an overview. People whose company pays now receive an information copy without payment details. Company documents cover a company's shared account as *Sammelkonto*. Requires migrations `030`–`039` (no `032`).
+- **Short emails, detailed attachments.** Emails list one line per item (`12× Espresso`) instead of every coffee. Company emails show at most 15 people. The company PDF adds *Anlage – Verzehr je Person*, and the Excel has *Pro Person*, *Pro Person × Artikel* and every single entry.
+- **Monthly report for ITC1's administration** with the change against the previous month, the most-consumed items for restocking, warnings (a paying company without a contact, failed deliveries, missing attachments), and the campus roll-up attached.
+- **Dokumentenarchiv for the CEO only:** exact copies of every document sent that month, with a delivery list.
+- **Dokumente page:** every delivered document with company, amount and attachments, plus preview, download and re-send. Re-sending never allocates a new invoice number.
+- **Shared company accounts at the iPad.** *Nur Firmenkonto* skips the name step (4process). *Personen + Firmenkonto* adds a *Für die Firma buchen* tile above the names (ITC1, PBI, Level51).
+- **Export** from every list as CSV, Excel or PDF, over any date range including archived months.
+- **Company payments:** companies that pay are ticked once per month in *Mitarbeitende*, with their people in bold underneath.
+- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active.
+- **Staging environment.** Pull-request previews and local runs use a separate staging database. Mail outside production goes only to a test inbox, and a preview wired to production data refuses to start.
+
+#### Changed
+- Every entry stores the price paid; later price changes no longer alter past months.
+- Invoice mode needs a second, recorded authorisation (`invoice_mode_authorized` with a note) before any invoice is issued.
+- Copies of employees' documents for their employer are opt-in per company, off by default.
+- Months without consumption show a dash instead of a payable checkbox in *Mitarbeitende*.
+
+#### Fixed
+- **Reported months are no longer deleted from the archive** after two to three months.
+- Two colleagues with the same name no longer share one line on documents.
+- The paid overview no longer double-counts entries present in both the live table and the archive.
+- A database built from the migrations let the public key call server-only functions such as `set_admin_pin`. Migration `038` makes production's locked-down privileges explicit.
+- The admin panel reports a missing migration clearly instead of loading empty tables.
+
 ### fix/linkedin-og-preview
 
 #### Fixed
