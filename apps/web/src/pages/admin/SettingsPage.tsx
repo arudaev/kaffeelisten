@@ -573,7 +573,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
                 <div className="flex flex-col gap-6">
                   <Section
                     title="Wer bekommt was?"
-                    description="Jedes Dokument geht mit PDF und Excel raus. Wer zahlt, bekommt die Rechnung; die andere Seite eine Übersicht; die Geschäftsführung Kopien von allem."
+                    description="Wer zahlt, bekommt die Rechnung, die andere Seite eine Übersicht. Die E-Mail selbst bleibt kurz: Im PDF steht die Abrechnung, in der Excel-Datei jede einzelne Buchung mit Datum und Uhrzeit."
                   >
                     <div className="flex flex-col gap-3">
                       <Toggle checked={form.memberDocs} onChange={v => set('memberDocs', v)} label="Personen erhalten ein eigenes Monatsdokument" />
@@ -596,7 +596,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                         <span className="text-sm font-semibold text-fg self-center">Person</span>
                         {form.memberDocs
-                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Mit Rechnungsnummer und Zahlungsdaten.' : 'Übersicht des eigenen Verzehrs zum Bezahlen.', () => openPreview('member', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Person' : 'Aufstellung an Person'))
+                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Mit Rechnungsnummer und Zahlungsdaten.' : 'Eigener Verzehr, zusammengefasst je Artikel – zum Bezahlen.', () => openPreview('member', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Person' : 'Aufstellung an Person'))
                           : cell('Nichts', 'Personen-Dokumente sind aus.', undefined, true)}
                         {form.memberDocs && form.infoCopies
                           ? cell('Information', 'Eigener Verzehr zur Info – ohne Zahlungsdaten, die Firma zahlt.', () => openPreview('member', 'info', 'Information an Person'))
@@ -604,21 +604,26 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                         <span className="text-sm font-semibold text-fg self-center">Firmenkontakt</span>
                         {form.companyDocs
-                          ? cell('Aufstellung', 'Alle Einträge der Mitarbeitenden. Kopien der Einzeldokumente nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Aufstellung an Firma'))
+                          ? cell('Aufstellung', 'Summe je Person, im PDF mit dem Verzehr jeder Person. Kopien der Einzeldokumente nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Aufstellung an Firma'))
                           : cell('Nichts', 'Firmen-Dokumente sind aus.', undefined, true)}
                         {form.companyDocs
-                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', `${invoicing ? 'Sammelrechnung' : 'Abrechnung'} mit allen Einträgen aller Mitarbeitenden.`, () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma'))
+                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', `${invoicing ? 'Sammelrechnung' : 'Abrechnung'} über den Gesamtbetrag – im PDF aufgeschlüsselt je Person.`, () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma'))
                           : cell('Nichts – Firma wird nicht abgerechnet', 'Zahlende Firmen erhalten so keine Abrechnung.', undefined, false, true)}
+
+                        <span className="text-sm font-semibold text-fg self-center">Verwaltung</span>
+                        <div className="col-span-2">
+                          {cell('Monatsbericht', 'Kennzahlen mit Vormonat, meistverbrauchte Artikel zum Nachbestellen und Hinweise auf Probleme. Anhänge: PDF, Excel und Campus-Auswertung.', () => openPreview('admin', 'report', 'Monatsbericht an die Verwaltung'))}
+                        </div>
 
                         <span className="text-sm font-semibold text-fg self-center">Geschäfts&shy;führung</span>
                         <div className="col-span-2">
-                          {cell('Archiv (ZIP)', 'Kopien aller versendeten Dokumente, eine Versandliste, der Monatsbericht und die Campus-Auswertung mit Vormonatsvergleich.', () => openPreview('admin', 'report', 'Monatsbericht an Geschäftsführung'))}
+                          {cell('Archiv (ZIP)', 'Nur an die Geschäftsführung: unveränderte Kopien aller versendeten Dokumente mit Versandliste – für Rückfragen zu einzelnen Rechnungen.', undefined)}
                         </div>
                       </div>
                     </div>
                   </Section>
 
-                  <Section title="Empfänger des Monatsberichts" description="Erhalten den Monatsbericht und das Archiv. Die Geschäftsführung kann zusätzlich in Kopie gesetzt werden.">
+                  <Section title="Empfänger des Monatsberichts" description="Die Verwaltung erhält den Monatsbericht. Das Archiv mit den Kopien aller Dokumente geht nur an die Adresse der Geschäftsführung.">
                     {form.recipients.length > 0 || lockedBootstrap.length > 0 ? (
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-wrap gap-2">
@@ -665,7 +670,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
                       <AdminField label="Geschäftsführung (E-Mail)" type="email" placeholder="geschaeftsfuehrung@itc1.de"
                         value={form.ceoEmail} onChange={e => set('ceoEmail', e.target.value)} />
                       <div className="pb-2.5">
-                        <Toggle checked={form.ceoCc} onChange={v => set('ceoCc', v)} label="bei jedem Versand in Kopie" />
+                        <Toggle checked={form.ceoCc} onChange={v => set('ceoCc', v)} label="Monatsbericht zusätzlich in Kopie" />
                       </div>
                     </div>
                   </Section>
@@ -718,11 +723,11 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                   <Section title="Texte und Anhänge" description="Betreff und Einleitung der E-Mails. Klicke auf die Platzhalter, um sie einzufügen – das Beispiel zeigt das Ergebnis.">
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Monatsbericht ohne Einzeldokumente</span>
+                      <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">Anhänge des Monatsberichts</span>
                       <Toggle checked={form.includePdf} onChange={v => set('includePdf', v)} label="PDF anhängen" />
                       <Toggle checked={form.includeExcel} onChange={v => set('includeExcel', v)} label="Excel anhängen" />
                       <p className="text-[13px] text-fg-muted leading-relaxed">
-                        Gilt nur, wenn keine Einzeldokumente versendet werden – sonst liegt beides im Archiv. Die Akzentfarbe folgt der Palette unter „System“.
+                        Die Campus-Auswertung mit Vormonatsvergleich hängt immer an. Die Akzentfarbe folgt der Palette unter „System“.
                       </p>
                     </div>
                     <div className="flex flex-col gap-3 border-t border-border pt-4">

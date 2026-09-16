@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { tickState } from '../../lib/paidTicks'
 import { adminApi, type AdminCompany, type AdminItem, type MemberPaymentMonth, type PaidCell, type PaidGrid } from '../../lib/adminApi'
 import { Topbar } from '../../components/admin/Topbar'
 import DataTable, { Column, DataGroup } from '../../components/admin/DataTable'
@@ -71,8 +72,17 @@ function PaidTicks({
       {months.map((m, i) => {
         const isCurrent = i === months.length - 1
         const cell = cells?.[m]
-        const checked = !!cell?.paid
+        const state = tickState(cell)
+        const checked = state === 'paid'
         const owes = (cell?.amount_cents ?? 0) > 0
+        if (state === 'none') {
+          return (
+            <span key={m} className="w-6 h-6 flex items-center justify-center text-fg-subtle" title={`${subject} · ${monthLabel(m)}: kein Verzehr`}>
+              <span aria-hidden="true">–</span>
+              <span className="sr-only">{`${subject}, ${monthLabel(m)}: kein Verzehr`}</span>
+            </span>
+          )
+        }
         return (
           <button
             key={m}
@@ -327,7 +337,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
         return {
           key: c.id,
           label: (
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
               {c.name}
               {pays && <Badge kind="warn">Firma zahlt</Badge>}
               {c.checkout_mode === 'company' && <Badge kind="inactive">Firmen-Checkout</Badge>}

@@ -41,3 +41,18 @@ describe('admin insights', () => {
     ])
   })
 })
+
+describe('campus roll-up people count', () => {
+  it('does not count a shared company account as a person', async () => {
+    const { computeCampusRollup } = await import('../api/_lib/excel')
+    const base = {
+      company_id: 'c', item_id: 'i', quantity: 1, logged_at: '2026-09-02T09:00:00Z', work_email: null,
+      company_name: '4process', item_name: 'Espresso', item_category: 'coffee', unit_label: 'Tasse', price_cents: 50, total_cents: 50,
+    }
+    const r = computeCampusRollup('2026-09', '2026-08', [
+      { ...base, id: '1', member_id: 'house', member_name: '4process', member_kind: 'house' as const },
+      { ...base, id: '2', member_id: 'anna', member_name: 'Anna' },
+    ], [])
+    expect(r.totals.people).toBe(1)
+  })
+})

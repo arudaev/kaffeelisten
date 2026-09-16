@@ -124,7 +124,7 @@ export default function OverviewPage({ rows, loading, month, months, onMonthChan
             <SummaryCard label="Umsatz" metric={euro(now.totalCents)} sub={change(now.totalCents, before.totalCents, against)} />
             <SummaryCard label="Einträge" metric={now.entries} sub={change(now.entries, before.entries, against)} />
             <SummaryCard
-              label="Konsumierende"
+              label="Aktive Personen"
               metric={now.consumers}
               sub={`in ${now.companiesWithEntries} ${now.companiesWithEntries === 1 ? 'Unternehmen' : 'Unternehmen'}`}
               accent="stone"

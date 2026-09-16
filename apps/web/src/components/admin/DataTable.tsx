@@ -171,7 +171,7 @@ export default function DataTable<T>({
                               <AdminIcon name="chevron" size={14} />
                             </span>
                             {group.label}
-                            <span className="text-xs font-normal text-fg-muted">{group.note ?? `(${group.rows.length})`}</span>
+                            <span className="text-xs font-normal text-fg-muted whitespace-nowrap">{group.note ?? `(${group.rows.length})`}</span>
                           </button>
                         ) : (
                           group.cells?.[col.key] ?? null
