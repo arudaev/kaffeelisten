@@ -2,7 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport, fetchReportSettings } from '../_lib/report'
 import { computeDueReport } from '../_lib/schedule'
 
-export const config = { maxDuration: 60 }
+// 300 s: per-recipient PDF + Excel for every person and company does not fit 60 s.
+// Keep in step with REPORT_MAX_DURATION_MS in _lib/report.ts (Vercel needs a literal).
+export const config = { maxDuration: 300 }
 
 // The cron fires nightly (see vercel.json). Each fire asks whether an automatic
 // report is due: the report always covers the PREVIOUS, fully-closed month

@@ -14,6 +14,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { resolveMx, resolve } from 'node:dns/promises'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { sendMemberConfirmation } from '../_lib/confirmationEmail'
+import { companyBillingTouched, companyConfigError, type BillingMode, type CheckoutMode } from '../_lib/documentMatrix'
 
 // Request origin (e.g. https://kaffeelisten.de) for building confirmation links.
 function baseUrl(req: VercelRequest): string {
@@ -49,10 +50,12 @@ function reqStr(v: unknown, field: string, max: number): Ok<string> | Err {
 interface CompanyValues {
   name: string
   active: boolean
-  billing_mode: 'individual' | 'company_paid'
+  billing_mode: BillingMode
   billing_contact_name: string | null
   billing_contact_email: string | null
   billing_notes: string | null
+  member_document_copies_enabled: boolean   // migration 033
+  checkout_mode: CheckoutMode                // migration 034
 }
 async function validateCompany(
   supabase: ReturnType<typeof makeAdminClient>,
@@ -95,26 +98,39 @@ async function validateCompany(
     out.billing_notes = s || null
   }
 
-  // company_paid requires a billing contact email (effective, across a partial
-  // update). Fetch the current row to fill any gap not present in this request.
-  const mightBeCompanyPaid =
-    out.billing_mode === 'company_paid' ||
-    (out.billing_mode === undefined && partial && (body.billing_mode !== undefined || emailProvided))
-  if (mightBeCompanyPaid) {
-    let curMode: string | undefined
-    let curEmail: string | null | undefined
-    if (partial && id) {
-      const { data } = await supabase
-        .from('companies').select('billing_mode, billing_contact_email').eq('id', id).maybeSingle()
-      curMode = data?.billing_mode
-      curEmail = data?.billing_contact_email
-    }
-    const finalMode = out.billing_mode ?? curMode ?? 'individual'
-    const finalEmail = emailProvided ? (out.billing_contact_email ?? null) : (curEmail ?? null)
-    if (finalMode === 'company_paid' && !finalEmail) {
-      return { error: 'Bei „Firma zahlt“ ist eine Rechnungs-E-Mail-Adresse erforderlich.' }
-    }
+  if (!partial || body.member_document_copies_enabled !== undefined) {
+    out.member_document_copies_enabled = Boolean(body.member_document_copies_enabled)
   }
+  if (!partial || body.checkout_mode !== undefined) {
+    const mode = String(body.checkout_mode ?? 'member')
+    if (mode !== 'member' && mode !== 'company') return { error: 'Ungültiger Checkout-Modus.' }
+    out.checkout_mode = mode
+  }
+
+  // Only a save that touches billing or checkout is judged against the billing
+  // rules. Otherwise a company that is ALREADY misconfigured (e.g. paying, with
+  // no contact, from before the rule existed) could not even be renamed or
+  // deactivated — the very actions needed to deal with it.
+  if (!companyBillingTouched(body, partial)) return { value: out }
+
+  // Judge the company as it will be AFTER this save: on a partial update, fill
+  // every field this request does not touch from the stored row. The rules live
+  // in documentMatrix.ts, shared with the tests and mirrored by migration 034.
+  type StoredConfig = { billing_mode: BillingMode; billing_contact_email: string | null; checkout_mode: CheckoutMode }
+  let current: StoredConfig | null = null
+  if (partial && id) {
+    const { data, error } = await supabase
+      .from('companies').select('billing_mode, billing_contact_email, checkout_mode').eq('id', id).maybeSingle()
+    if (error) return { error: error.message }
+    if (!data) return { error: 'Unternehmen nicht gefunden.' }
+    current = data as StoredConfig
+  }
+  const configError = companyConfigError({
+    billing_mode: out.billing_mode ?? current?.billing_mode ?? 'individual',
+    billing_contact_email: emailProvided ? (out.billing_contact_email ?? null) : (current?.billing_contact_email ?? null),
+    checkout_mode: out.checkout_mode ?? current?.checkout_mode ?? 'member',
+  })
+  if (configError) return { error: configError }
   return { value: out }
 }
 
@@ -212,6 +228,18 @@ async function validateMember(
   return { value: out }
 }
 
+// A company-checkout company books every order on its house account; make sure
+// one exists (idempotent — also reactivates an existing one). Switching back to
+// member checkout leaves the account in place, so its history stays attached.
+async function provisionHouseAccount(
+  supabase: ReturnType<typeof makeAdminClient>,
+  company: { id: string; checkout_mode: string },
+): Promise<void> {
+  if (company.checkout_mode !== 'company') return
+  const { error } = await supabase.rpc('ensure_house_member', { p_company_id: company.id })
+  if (error) throw new Error(`ensure_house_member failed: ${error.message}`)
+}
+
 function parseResource(req: VercelRequest): Resource | null {
   const raw = req.query.resource
   const r = Array.isArray(raw) ? raw[0] : raw
@@ -235,10 +263,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rawResource = Array.isArray(req.query.resource) ? req.query.resource[0] : req.query.resource
 
       if (rawResource === 'dashboard') {
+        // LIVE TABLE ONLY, by design. Reported months leave this view once the
+        // live table is pruned; they stay retrievable through /api/admin/export,
+        // which reads the archive. Do not union the archive in here.
         const [txRes, membersRes, companiesRes, itemsRes] = await Promise.all([
-          supabase.from('transactions').select('id, member_id, company_id, item_id, quantity, logged_at').order('logged_at', { ascending: false }),
-          supabase.from('members').select('id, name, work_email'),
-          supabase.from('companies').select('id, name, active').eq('active', true).order('name'),
+          supabase.from('transactions').select('id, member_id, company_id, item_id, quantity, unit_price_cents, logged_at').order('logged_at', { ascending: false }),
+          supabase.from('members').select('id, name, work_email, kind'),
+          // All companies, not just active ones: entries logged before a company
+          // was deactivated must still show its name.
+          supabase.from('companies').select('id, name, active').order('name'),
           supabase.from('items').select('id, name, price_cents'),
         ])
         const firstErr = txRes.error || membersRes.error || companiesRes.error || itemsRes.error
@@ -257,7 +290,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (resource === 'companies') {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, active, billing_mode, billing_contact_name, billing_contact_email, billing_notes')
+          .select('id, name, active, billing_mode, billing_contact_name, billing_contact_email, billing_notes, member_document_copies_enabled, checkout_mode')
           .order('name')
         if (error) throw new Error(error.message)
         return res.status(200).json({ companies: data ?? [] })
@@ -268,7 +301,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ items: data ?? [] })
       }
       // members
-      const { data, error } = await supabase.from('members').select('id, name, company_id, work_email, active, email_verified_at').order('name')
+      // House accounts (migration 034) are a company's shared checkout, not people.
+      const { data, error } = await supabase.from('members').select('id, name, company_id, work_email, active, email_verified_at').eq('kind', 'person').order('name')
       if (error) throw new Error(error.message)
       return res.status(200).json({ members: data ?? [] })
     }
@@ -313,6 +347,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sendMemberConfirmation(supabase, data, baseUrl(req))
         return res.status(201).json({ ok: true })
       }
+      if (resource === 'companies') {
+        const { data, error } = await supabase
+          .from('companies').insert(validated.value as never).select('id, checkout_mode').single()
+        if (error) throw new Error(error.message)
+        await provisionHouseAccount(supabase, data)
+        return res.status(201).json({ ok: true })
+      }
       const { error } = await supabase.from(resource).insert(validated.value as never)
       if (error) throw new Error(error.message)
       return res.status(201).json({ ok: true })
@@ -348,6 +389,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { error } = await supabase.from(resource).update(validated.value as never).eq('id', id)
     if (error) throw new Error(error.message)
+    if (resource === 'companies') {
+      const { data } = await supabase.from('companies').select('id, checkout_mode').eq('id', id).maybeSingle()
+      if (data) await provisionHouseAccount(supabase, data)
+    }
     return res.status(200).json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

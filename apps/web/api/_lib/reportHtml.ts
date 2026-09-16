@@ -9,6 +9,9 @@ export interface EnrichedTransaction {
   quantity: number
   logged_at: string
   member_name: string
+  // 'house' = a company-checkout shared account (migration 034). Optional so
+  // hand-built fixtures (previews, tests) default to a real person.
+  member_kind?: 'person' | 'house'
   work_email: string | null
   company_name: string
   item_name: string
@@ -19,6 +22,9 @@ export interface EnrichedTransaction {
 }
 
 export interface MemberSummary {
+  // Grouping key. Display names are not unique: two colleagues called "Max" must
+  // never share a summary, or a per-person document bills one for the other.
+  member_id: string
   member_name: string
   work_email: string | null
   entries: EnrichedTransaction[]
@@ -26,6 +32,7 @@ export interface MemberSummary {
 }
 
 export interface CompanySummary {
+  company_id: string
   company_name: string
   members: MemberSummary[]
   total_cents: number
@@ -36,8 +43,10 @@ export function formatEuro(cents: number): string {
   return '€ ' + (cents / 100).toFixed(2).replace('.', ',')
 }
 
+// Berlin calendar date. The server runs in UTC, so without the zone an entry
+// logged at 00:30 Berlin time printed as the previous day.
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 /** Escape user-provided copy before inlining it into report HTML. */
@@ -79,8 +88,9 @@ export interface InvoiceRender {
   grossCents: number
 }
 
+// The invoice date, as a Berlin calendar day (the server runs in UTC).
 function todayDE(): string {
-  return new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 /** Issuer identity + "Rechnung Nr." block shown at the top of an invoice email. */
@@ -151,24 +161,55 @@ export function buildMemberStatementHtml(
   memberName: string,
   entries: EnrichedTransaction[],
   monthLabel: string,
-  opts: { accent?: string; intro?: string; invoice?: InvoiceRender } = {},
+  opts: {
+    accent?: string
+    intro?: string
+    invoice?: InvoiceRender
+    // A person whose company pays receives an information copy of their own use.
+    // It names the payer and must never look like a demand for payment.
+    infoOnly?: { payerName: string }
+  } = {},
 ): string {
+  if (opts.invoice && opts.infoOnly) {
+    // An information copy that carried an invoice number and IBAN would ask the
+    // person to pay for something their company is already being invoiced for.
+    throw new Error('A member document cannot be both an invoice and an information copy.')
+  }
   const accent = opts.accent || '#D97706'
   const invoice = opts.invoice
+  const infoOnly = opts.infoOnly
   const firstName = memberName.trim().split(/\s+/)[0] || memberName
   const totalCents = entries.reduce((s, e) => s + e.total_cents, 0)
   const introHtml = opts.intro
     ? escapeHtml(opts.intro)
     : invoice
       ? `anbei deine Rechnung f&uuml;r deinen Verzehr im ${escapeHtml(monthLabel)}.`
-      : `hier ist deine pers&ouml;nliche Aufstellung f&uuml;r ${escapeHtml(monthLabel)}.`
+      : infoOnly
+        ? `hier ist die &Uuml;bersicht deines Verzehrs im ${escapeHtml(monthLabel)}.`
+        : `hier ist deine pers&ouml;nliche Aufstellung f&uuml;r ${escapeHtml(monthLabel)}.`
+  const infoNoticeHtml = infoOnly
+    ? `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 0 22px;">
+              <tr>
+                <td style="padding:14px 18px;background:#F5F5F4;border:1px solid #E7E5E4;border-radius:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#44403C;">
+                  Diese Aufstellung dient <strong>nur zur Information</strong>. Die Kosten tr&auml;gt
+                  <strong>${escapeHtml(infoOnly.payerName)}</strong> &ndash; du musst nichts bezahlen.
+                </td>
+              </tr>
+            </table>`
+    : ''
+  const headerLabel = invoice
+    ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber)
+    : infoOnly
+      ? 'Deine &Uuml;bersicht'
+      : 'Deine Kaffeeliste'
 
   const rows = entries
     .map(
       e => `
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatDate(e.logged_at)}</td>
-          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${e.item_name}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(e.item_name)}</td>
           <td align="center" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${e.quantity}</td>
           <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatEuro(e.price_cents)}</td>
           <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${formatEuro(e.total_cents)}</td>
@@ -195,7 +236,7 @@ export function buildMemberStatementHtml(
         <tr>
           <td style="background:${accent};padding:26px 32px;">
             <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
-            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Deine Kaffeeliste'} &ndash; ${escapeHtml(monthLabel)}</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${headerLabel} &ndash; ${escapeHtml(monthLabel)}</p>
           </td>
         </tr>
 
@@ -205,6 +246,7 @@ export function buildMemberStatementHtml(
             ${invoice ? issuerBlockHtml(invoice) : ''}
             <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${escapeHtml(firstName)},</p>
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
+            ${infoNoticeHtml}
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
               <tr>
@@ -675,6 +717,60 @@ export function buildReportHtml(
     <span style="color:#A8A29E;font-size:10.5px;">Erstellt am ${createdAt}</span>
   </div>
 
+</body>
+</html>`
+}
+
+// ── Admin export (PDF) ────────────────────────────────────────────────────────
+// A plain, printable table of exported entries. Every value is escaped: names,
+// items and the filter description are all admin- or member-entered text.
+export function buildExportHtml(rows: EnrichedTransaction[], description: string): string {
+  const totalCents = rows.reduce((s, t) => s + t.total_cents, 0)
+  const totalQty = rows.reduce((s, t) => s + t.quantity, 0)
+  const time = (iso: string) =>
+    new Date(iso).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' })
+  const cell = 'padding:5px 8px;border-bottom:1px solid #E7E5E4;font-size:10px;color:#1C1917;'
+  const num = cell + 'text-align:right;font-variant-numeric:tabular-nums;'
+  const head = 'padding:6px 8px;background:#F5F5F4;border-bottom:1px solid #D6D3D1;font-size:9px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.05em;text-align:left;'
+  const body = rows.map(t => `
+      <tr>
+        <td style="${cell}">${formatDate(t.logged_at)} ${time(t.logged_at)}</td>
+        <td style="${cell}">${escapeHtml(t.member_name)}</td>
+        <td style="${cell}">${escapeHtml(t.company_name)}</td>
+        <td style="${cell}">${escapeHtml(t.item_name)}</td>
+        <td style="${num}">${t.quantity}</td>
+        <td style="${num}">${formatEuro(t.price_cents)}</td>
+        <td style="${num}">${formatEuro(t.total_cents)}</td>
+      </tr>`).join('')
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+  <style>@page { size: A4 landscape; margin: 14mm 12mm; } body { margin: 0; font-family: Arial, Helvetica, sans-serif; }</style>
+</head>
+<body>
+  <p style="margin:0;font-size:16px;font-weight:700;color:#1C1917;">Kaffeelisten – Export</p>
+  <p style="margin:2px 0 14px;font-size:11px;color:#57534E;">${escapeHtml(description)} &middot; ${rows.length} Eintr&auml;ge</p>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="${head}">Zeitpunkt</th><th style="${head}">Person</th><th style="${head}">Unternehmen</th>
+        <th style="${head}">Artikel</th><th style="${head}text-align:right;">Menge</th>
+        <th style="${head}text-align:right;">Einzelpreis</th><th style="${head}text-align:right;">Betrag</th>
+      </tr>
+    </thead>
+    <tbody>${body}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="${cell}font-weight:700;">Gesamt</td>
+        <td style="${num}font-weight:700;">${totalQty}</td>
+        <td style="${num}"></td>
+        <td style="${num}font-weight:700;">${formatEuro(totalCents)}</td>
+      </tr>
+    </tfoot>
+  </table>
 </body>
 </html>`
 }

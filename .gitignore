@@ -52,3 +52,6 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 Kaffeerechnung-Vorlage.pdf
+apps/web/dev-api.mts
+apps/web/vite.config.local.ts
+apps/web/dev-fake/
