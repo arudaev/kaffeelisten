@@ -484,7 +484,8 @@ export function computeCampusRollup(
       quantity: current.reduce((s, t) => s + t.quantity, 0),
       totalCents: current.reduce((s, t) => s + t.total_cents, 0),
       previousTotalCents: previous.reduce((s, t) => s + t.total_cents, 0),
-      people: people.size,
+      // Shared company accounts are not people (migration 034).
+      people: new Set(current.filter(t => t.member_kind !== 'house').map(t => t.member_id)).size,
       companies: companyList.filter(c => c.entries > 0).length,
     },
   }

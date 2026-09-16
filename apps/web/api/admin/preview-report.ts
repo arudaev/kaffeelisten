@@ -35,6 +35,9 @@ import {
   type IssuerConfig,
 } from '../_lib/billing'
 import { classifyServerError } from '../_lib/errors'
+import { computeAdminInsights } from '../_lib/adminInsights'
+import { computeCampusRollup } from '../_lib/excel'
+import { previousMonth } from '../_lib/schedule'
 
 // A tiny stand-in dataset so the preview is meaningful even before any real
 // transactions exist for the current month.
@@ -149,10 +152,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Admin/CEO aggregate report ──
     if (type === 'admin') {
+      // Show the same key figures and restocking list the real email carries.
+      const [y, m] = reportMonth.split('-').map(Number)
+      const prev = previousMonth(y, m)
+      const previous = await fetchAndEnrich(prev).then(r => r.transactions).catch(() => [])
+      const insights = computeAdminInsights({
+        rollup: computeCampusRollup(reportMonth, prev, transactions, previous),
+        skipped: [], failedDeliveries: 0, missingFiles: 0, archiveNotSent: false,
+      })
       const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
         accent: format.accent,
         intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined,
         logoSrc,
+        insights,
       })
       return res.status(200).json({ subject: resolveReportSubject(format, monthLabel, reportMonth), html })
     }
