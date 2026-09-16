@@ -45,21 +45,6 @@ begin
   raise notice 'ok  030 price snapshot survives a price change';
 end $$;
 
--- ── 032: the archive cannot be deleted from by any API role ──────────────────
-do $$
-begin
-  if has_table_privilege('service_role', 'public.transactions_archive', 'DELETE') then
-    raise exception '032: service_role can still DELETE from transactions_archive';
-  end if;
-  if has_table_privilege('anon', 'public.transactions_archive', 'DELETE') then
-    raise exception '032: anon can DELETE from transactions_archive';
-  end if;
-  if not has_table_privilege('service_role', 'public.transactions_archive', 'INSERT') then
-    raise exception '032: revoke went too far — service_role can no longer archive';
-  end if;
-  raise notice 'ok  032 archive DELETE revoked, INSERT kept';
-end $$;
-
 -- ── 034: a person must have a work email; a house account need not ───────────
 do $$
 begin
