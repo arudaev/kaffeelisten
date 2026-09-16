@@ -1,6 +1,8 @@
 // Self-contained HTML report template — inline styles, flows naturally across pages.
 // Rendered to PDF by Puppeteer.
 
+import { aggregateLines, type DocumentLine } from './lines'
+
 export interface EnrichedTransaction {
   id: string
   member_id: string
@@ -153,6 +155,44 @@ function consolidatedItems(entries: EnrichedTransaction[]): string {
   return Object.entries(map).map(([name, qty]) => `${qty}× ${escapeHtml(name)}`).join(' · ')
 }
 
+const CELL = 'font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+const HEAD = 'padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;'
+
+/** Item × price lines with a total row. Used by every member and company document. */
+function linesTableHtml(lines: readonly DocumentLine[], totalLabel: string, compact = false): string {
+  const pad = compact ? '7px 0' : '10px 0'
+  const size = compact ? 'font-size:13px;' : ''
+  const rows = lines
+    .map(l => `
+        <tr>
+          <td style="padding:${pad};border-bottom:1px solid #F5F5F4;${CELL}${size}font-weight:bold;color:#1C1917;">${escapeHtml(l.itemName)}</td>
+          <td align="center" style="padding:${pad};border-bottom:1px solid #F5F5F4;${CELL}${size}color:#57534E;">${l.quantity}</td>
+          <td align="right" style="padding:${pad};border-bottom:1px solid #F5F5F4;${CELL}${size}color:#57534E;">${formatEuro(l.unitPriceCents)}</td>
+          <td align="right" style="padding:${pad};border-bottom:1px solid #F5F5F4;${CELL}${size}font-weight:bold;color:#1C1917;">${formatEuro(l.totalCents)}</td>
+        </tr>`)
+    .join('')
+  const total = lines.reduce((s, l) => s + l.totalCents, 0)
+  return `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <th align="left" style="${HEAD}">Artikel</th>
+                <th align="center" style="${HEAD}">Menge</th>
+                <th align="right" style="${HEAD}">Einzelpreis</th>
+                <th align="right" style="${HEAD}">Betrag</th>
+              </tr>
+              ${rows}
+              <tr>
+                <td colspan="3" align="right" style="padding:14px 0 0;${CELL}font-size:${compact ? 13 : 15}px;font-weight:bold;color:#1C1917;">${totalLabel}</td>
+                <td align="right" style="padding:14px 0 0;${CELL}font-size:${compact ? 14 : 17}px;font-weight:bold;color:#B45309;">${formatEuro(total)}</td>
+              </tr>
+            </table>`
+}
+
+/** Company emails list this many people; the PDF always lists everyone. */
+export const EMAIL_PERSON_LIMIT = 15
+
+const EXCEL_NOTE = `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Alle Einzelbuchungen mit Datum und Uhrzeit finden Sie in der angeh&auml;ngten Excel-Datei.</p>`
+
 // ── Per-member monthly statement (Phase 2 feature E) ──────────────────────────
 // A warm, table-based HTML email sent to each member who consumed that month.
 // Contains only that member's own consumption — never another member's or the
@@ -179,7 +219,6 @@ export function buildMemberStatementHtml(
   const invoice = opts.invoice
   const infoOnly = opts.infoOnly
   const firstName = memberName.trim().split(/\s+/)[0] || memberName
-  const totalCents = entries.reduce((s, e) => s + e.total_cents, 0)
   const introHtml = opts.intro
     ? escapeHtml(opts.intro)
     : invoice
@@ -204,18 +243,8 @@ export function buildMemberStatementHtml(
       ? 'Deine &Uuml;bersicht'
       : 'Deine Kaffeeliste'
 
-  const rows = entries
-    .map(
-      e => `
-        <tr>
-          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatDate(e.logged_at)}</td>
-          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(e.item_name)}</td>
-          <td align="center" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${e.quantity}</td>
-          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${formatEuro(e.price_cents)}</td>
-          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${formatEuro(e.total_cents)}</td>
-        </tr>`,
-    )
-    .join('')
+  // One line per item and price, not per coffee; the Excel keeps every entry.
+  const lines = aggregateLines(entries)
 
   return `<!DOCTYPE html>
 <html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
@@ -248,20 +277,8 @@ export function buildMemberStatementHtml(
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
             ${infoNoticeHtml}
 
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-              <tr>
-                <th align="left"  style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Datum</th>
-                <th align="left"  style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Artikel</th>
-                <th align="center" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Menge</th>
-                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Einzelpreis</th>
-                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Betrag</th>
-              </tr>
-              ${rows}
-              <tr>
-                <td colspan="4" align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;">Gesamt</td>
-                <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
-              </tr>
-            </table>
+            ${linesTableHtml(lines, 'Gesamt')}
+            ${EXCEL_NOTE}
             ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
           </td>
         </tr>
@@ -291,10 +308,19 @@ export function buildCompanyDocumentHtml(
   contactName: string | null,
   members: MemberSummary[],
   monthLabel: string,
-  opts: { accent?: string; intro?: string; invoice?: InvoiceRender },
+  opts: {
+    accent?: string
+    intro?: string
+    invoice?: InvoiceRender
+    // 'email': the message body — totals per person, capped, pointing to the PDF.
+    // 'document': the PDF — per-person totals plus an appendix listing what each
+    // person consumed, which is what a company checks before paying.
+    variant?: 'email' | 'document'
+  },
 ): string {
   const accent = opts.accent || '#D97706'
   const invoice = opts.invoice
+  const variant = opts.variant ?? 'document'
   const greeting = contactName?.trim() ? escapeHtml(contactName.trim().split(/\s+/)[0]) : escapeHtml(companyName)
   const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
   const introHtml = opts.intro
@@ -303,16 +329,35 @@ export function buildCompanyDocumentHtml(
       ? `anbei die Sammelrechnung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
       : `anbei die Aufstellung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
 
-  const rows = members
+  const sorted = [...members].sort((x, y) => y.subtotal_cents - x.subtotal_cents || x.member_name.localeCompare(y.member_name, 'de'))
+  const shown = variant === 'email' ? sorted.slice(0, EMAIL_PERSON_LIMIT) : sorted
+  const hidden = sorted.length - shown.length
+  const personLabel = (m: MemberSummary) => (m.entries[0]?.member_kind === 'house' ? 'Sammelkonto (Firma)' : m.member_name)
+  const rows = shown
     .map(
       m => `
         <tr>
-          <td style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(m.member_name)}</td>
-          <td align="center" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#57534E;">${m.entries.length}</td>
-          <td align="right" style="padding:12px 0;border-bottom:1px solid #F5F5F4;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${formatEuro(m.subtotal_cents)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #F5F5F4;${CELL}font-weight:bold;color:#1C1917;">${escapeHtml(personLabel(m))}</td>
+          <td style="padding:10px 0 10px 12px;border-bottom:1px solid #F5F5F4;${CELL}font-size:12px;color:#78716C;">${consolidatedItems(m.entries)}</td>
+          <td align="right" style="padding:10px 0;border-bottom:1px solid #F5F5F4;${CELL}font-weight:bold;color:#1C1917;">${formatEuro(m.subtotal_cents)}</td>
         </tr>`,
     )
     .join('')
+  const moreRow = hidden > 0
+    ? `<tr><td colspan="3" style="padding:10px 0;${CELL}font-size:13px;color:#78716C;">&hellip; und ${hidden} weitere ${hidden === 1 ? 'Person' : 'Personen'} &ndash; vollst&auml;ndig im PDF-Anhang.</td></tr>`
+    : ''
+  const appendix = variant === 'document'
+    ? `
+            <p style="margin:32px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#57534E;">Anlage &ndash; Verzehr je Person</p>
+            ${sorted.map(m => `
+            <div style="page-break-inside:avoid;margin:18px 0 0;">
+              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(personLabel(m))}</p>
+              ${linesTableHtml(aggregateLines(m.entries), 'Summe', true)}
+            </div>`).join('')}`
+    : ''
+  const footnote = variant === 'email'
+    ? `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Im PDF-Anhang steht f&uuml;r jede Person, was sie verzehrt hat; die Excel-Datei enth&auml;lt jede Einzelbuchung.</p>`
+    : EXCEL_NOTE
 
   return `<!DOCTYPE html>
 <html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
@@ -341,17 +386,20 @@ export function buildCompanyDocumentHtml(
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
               <tr>
-                <th align="left" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Person</th>
-                <th align="center" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Eintr&auml;ge</th>
-                <th align="right" style="padding:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#A8A29E;border-bottom:1px solid #E7E5E4;">Betrag</th>
+                <th align="left" style="${HEAD}">Person</th>
+                <th align="left" style="${HEAD}padding-left:12px;">Verzehr</th>
+                <th align="right" style="${HEAD}">Betrag</th>
               </tr>
               ${rows}
+              ${moreRow}
               <tr>
                 <td colspan="2" align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;">Gesamt</td>
                 <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
               </tr>
             </table>
             ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
+            ${footnote}
+            ${appendix}
           </td>
         </tr>
         <tr>

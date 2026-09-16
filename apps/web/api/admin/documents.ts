@@ -64,14 +64,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const doc = await regenerateDelivery(id)
       res.setHeader('Cache-Control', 'no-store')
       if (as === 'html') {
-        return res.status(200).json({ subject: doc.subject, html: doc.html })
+        return res.status(200).json({ subject: doc.subject, html: doc.html, documentHtml: doc.pdfHtml })
       }
       if (as === 'xlsx') {
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         res.setHeader('Content-Disposition', `attachment; filename="${doc.fileStem}.xlsx"`)
         return res.status(200).send(doc.xlsx)
       }
-      const pdf = await renderPdf(doc.html)
+      const pdf = await renderPdf(doc.pdfHtml)
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="${doc.fileStem}.pdf"`)
       return res.status(200).send(pdf)

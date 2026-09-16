@@ -168,11 +168,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const split = splitVat(company.total_cents, issuer.vatRate)
         invoice = toInvoiceRender(issuer, formatDocumentNumber(issuer.numberPrefix, 1), split)
       }
-      const html = buildCompanyDocumentHtml(company.company_name, 'Anna Bauer', members, monthLabel, { accent: format.accent, intro, invoice })
+      const html = buildCompanyDocumentHtml(company.company_name, 'Anna Bauer', members, monthLabel, { accent: format.accent, intro, invoice, variant: 'email' })
+      const documentHtml = buildCompanyDocumentHtml(company.company_name, 'Anna Bauer', members, monthLabel, { accent: format.accent, intro, invoice, variant: 'document' })
       const subject = asInvoice
         ? `Kaffeelisten – Rechnung ${company.company_name} ${monthLabel}`
         : `Kaffeelisten – Aufstellung ${company.company_name} ${monthLabel}`
-      return res.status(200).json({ subject, html })
+      return res.status(200).json({ subject, html, documentHtml })
     }
 
     // ── Single member document ──
