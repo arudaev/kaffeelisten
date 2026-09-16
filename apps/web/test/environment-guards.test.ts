@@ -91,6 +91,21 @@ describe('makeMailer', () => {
     expect(sent[0].subject).toBe('[STAGING] Bericht')
   })
 
+  it('redirects allowed mail to MAIL_SINK outside production, naming the intended recipients', async () => {
+    const { makeMailer } = await import('../api/_lib/mail')
+    const mailer = makeMailer('key', { VERCEL_ENV: 'preview', MAIL_SINK: 'delivered@resend.dev' })
+    await mailer.emails.send({ from: 'a@kaffeelisten.de', to: ['anna@example.com'], cc: ['ceo@example.com'], subject: 'Rechnung', html: '<p/>' })
+    expect(sent[0]).toMatchObject({ to: ['delivered@resend.dev'], subject: '[STAGING] Rechnung (an: anna@example.com, ceo@example.com)' })
+    expect(sent[0].cc).toBeUndefined()
+  })
+
+  it('ignores MAIL_SINK in production', async () => {
+    const { makeMailer } = await import('../api/_lib/mail')
+    const mailer = makeMailer('key', { VERCEL_ENV: 'production', MAIL_SINK: 'delivered@resend.dev' })
+    await mailer.emails.send({ from: 'a@kaffeelisten.de', to: ['boss@itc1.de'], subject: 'Bericht', html: '<p/>' })
+    expect(sent[0].to).toEqual(['boss@itc1.de'])
+  })
+
   it('is transparent in production', async () => {
     const { makeMailer } = await import('../api/_lib/mail')
     const mailer = makeMailer('key', { VERCEL_ENV: 'production' })
