@@ -1,7 +1,6 @@
 // Shared report orchestrator: fetch → compute → PDF → Excel → email → archive → reset
 
 import { createClient } from '@supabase/supabase-js'
-import ExcelJS from 'exceljs'
 import JSZip from 'jszip'
 import { Resend } from 'resend'
 import { launchBrowser, pageToPdf, type Browser } from './pdf'
@@ -12,7 +11,6 @@ import {
   buildCompanyDocumentHtml,
   renderTemplate,
   formatEuro,
-  formatDate,
   type EnrichedTransaction,
   type MemberSummary,
   type CompanySummary,
@@ -21,6 +19,7 @@ import {
 
 import {
   resolveIssuer,
+  resolveIssuerForReissue,
   splitVat,
   toInvoiceRender,
   ensureBillingDocument,
@@ -30,6 +29,29 @@ import {
 } from './billing'
 import { findPalette } from './palettes'
 import { replyTo } from './mail'
+import { mergeLiveAndArchive, unitPriceOf } from './pricing'
+import {
+  computeCampusRollup,
+  generateCampusRollupExcel,
+  generateCompanyExcel,
+  generateExcel,
+  generateManifestExcel,
+  generateMemberExcel,
+} from './excel'
+import { archiveEntries, countMissingFiles, documentFileStem, sanitizeFile, type IssuedDoc } from './archive'
+import {
+  planDeliveries,
+  type CompanyDelivery,
+  type MatrixCompany,
+  type MatrixMember,
+  type MemberDelivery,
+  type SkippedDelivery,
+} from './documentMatrix'
+import { previousMonth } from './schedule'
+import { mapWithConcurrency } from './concurrency'
+
+// Kept exported from here so existing callers and tests need not change imports.
+export { generateExcel }
 
 export type { EnrichedTransaction, MemberSummary, CompanySummary }
 
@@ -67,21 +89,20 @@ export interface ReportSettings {
   ccEmails: string[]
   memberStatementsEnabled: boolean
   companyDocumentsEnabled: boolean
+  // Members of a company_paid company receive an information copy (migration 036).
+  companyPaidMemberReportsEnabled: boolean
   format: ReportFormat
   schedule: ReportSchedule
-  // Present only when invoice mode is on and the issuer block is complete;
-  // otherwise null and the member/company emails render as statements.
+  // Present only when invoice mode is on, authorised, and the issuer block is
+  // complete; otherwise null and every document renders as a statement.
   issuer: IssuerConfig | null
 }
 
-// Per-company billing routing (migration 023). company_paid companies get one
-// invoice to the billing contact instead of per-member documents.
-export interface CompanyBilling {
-  id: string
-  name: string
-  billing_mode: 'individual' | 'company_paid'
-  billing_contact_name: string | null
-  billing_contact_email: string | null
+// Per-company billing routing: billing_mode (migration 023), the employer-copy
+// opt-in (033) and the checkout mode (034). documentMatrix.ts decides what each
+// company and its members receive.
+export interface CompanyBilling extends MatrixCompany {
+  checkout_mode: 'member' | 'company'
 }
 
 // Reads the singleton app_settings row and resolves the effective recipients:
@@ -91,7 +112,7 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
   const supabase = makeSupabase()
   const { data, error } = await supabase
     .from('app_settings')
-    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate')
+    .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, invoice_mode_authorized, company_paid_member_reports_enabled')
     .eq('id', 1)
     .maybeSingle()
 
@@ -127,6 +148,7 @@ export async function fetchReportSettings(): Promise<ReportSettings> {
     ccEmails,
     memberStatementsEnabled: data?.member_statements_enabled ?? true,
     companyDocumentsEnabled: data?.company_documents_enabled ?? true,
+    companyPaidMemberReportsEnabled: data?.company_paid_member_reports_enabled ?? true,
     format: {
       accent,
       reportSubject: data?.report_subject ?? null,
@@ -149,7 +171,7 @@ export async function fetchCompanyBilling(): Promise<Map<string, CompanyBilling>
   const supabase = makeSupabase()
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, billing_mode, billing_contact_name, billing_contact_email')
+    .select('id, name, billing_mode, billing_contact_name, billing_contact_email, member_document_copies_enabled, checkout_mode')
   if (error) throw new Error(`Failed to read company billing: ${error.message}`)
   return new Map((data ?? []).map(c => [c.id, c as CompanyBilling]))
 }
@@ -173,17 +195,27 @@ export async function fetchAndEnrich(forMonth?: string): Promise<{
   const monthLabel   = new Date(year, month, 1)
     .toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
 
-  const { data: txData, error: txErr } = await supabase
-    .from('transactions')
-    .select('*')
-    .gte('logged_at', monthStart)
-    .lt('logged_at', monthEnd)
-    .order('logged_at', { ascending: true })
+  // A month is read from BOTH the live table and the archive. Once a reported
+  // month's live rows are pruned, reading only the live table returned nothing, so
+  // a forced re-send of an older month quietly produced an empty report. The two
+  // are merged so each transaction counts once (pricing.ts mergeLiveAndArchive).
+  const [liveRes, archiveRes] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select('*')
+      .gte('logged_at', monthStart)
+      .lt('logged_at', monthEnd),
+    supabase
+      .from('transactions_archive')
+      .select('*')
+      .eq('report_month', reportMonth),
+  ])
 
-  if (txErr) throw new Error(`Failed to fetch transactions: ${txErr.message}`)
+  if (liveRes.error) throw new Error(`Failed to fetch transactions: ${liveRes.error.message}`)
+  if (archiveRes.error) throw new Error(`Failed to fetch archived transactions: ${archiveRes.error.message}`)
 
   const [membersRes, companiesRes, itemsRes] = await Promise.all([
-    supabase.from('members').select('id, name, company_id, work_email'),
+    supabase.from('members').select('id, name, company_id, work_email, kind'),
     supabase.from('companies').select('id, name'),
     supabase.from('items').select('id, name, unit_label, price_cents, category'),
   ])
@@ -195,20 +227,33 @@ export async function fetchAndEnrich(forMonth?: string): Promise<{
   const memberMap = new Map((membersRes.data ?? []).map(m => [m.id, m]))
   const companyMap = new Map((companiesRes.data ?? []).map(c => [c.id, c.name as string]))
   const itemMap = new Map((itemsRes.data ?? []).map(i => [i.id, i]))
+  const catalogue = new Map((itemsRes.data ?? []).map(i => [i.id, i.price_cents]))
 
-  const transactions: EnrichedTransaction[] = (txData ?? []).map(t => {
+  const rows = mergeLiveAndArchive(liveRes.data ?? [], archiveRes.data ?? [])
+    .sort((a, b) => String(a.logged_at).localeCompare(String(b.logged_at)))
+
+  const transactions: EnrichedTransaction[] = rows.map(t => {
     const member = memberMap.get(t.member_id)
     const item = itemMap.get(t.item_id)
+    // The checkout snapshot wins over today's catalogue price (pricing.ts), and
+    // an archived row's recorded item identity wins over today's catalogue.
+    const price_cents = unitPriceOf(t, catalogue)
     return {
-      ...t,
+      id: t.id,
+      member_id: t.member_id,
+      company_id: t.company_id,
+      item_id: t.item_id,
+      quantity: t.quantity,
+      logged_at: t.logged_at,
       member_name: member?.name ?? '—',
+      member_kind: member?.kind === 'house' ? 'house' : 'person',
       work_email: member?.work_email ?? null,
       company_name: companyMap.get(t.company_id) ?? '—',
-      item_name: item?.name ?? '—',
-      item_category: item?.category ?? '—',
-      unit_label: item?.unit_label ?? 'Stück',
-      price_cents: item?.price_cents ?? 0,
-      total_cents: (item?.price_cents ?? 0) * t.quantity,
+      item_name: t.item_name ?? item?.name ?? '—',
+      item_category: t.item_category ?? item?.category ?? '—',
+      unit_label: t.unit_label ?? item?.unit_label ?? 'Stück',
+      price_cents,
+      total_cents: price_cents * t.quantity,
     }
   })
 
@@ -217,28 +262,38 @@ export async function fetchAndEnrich(forMonth?: string): Promise<{
 
 // ─── Summary computation ──────────────────────────────────────────────────────
 
+// Groups by company_id then member_id — never by display name. Names are not
+// unique, and per-person documents are built from these summaries, so grouping
+// on names would bill two same-named colleagues for each other's entries.
 export function computeSummary(transactions: EnrichedTransaction[]): CompanySummary[] {
   const companyMap = new Map<string, Map<string, EnrichedTransaction[]>>()
 
   for (const t of transactions) {
-    if (!companyMap.has(t.company_name)) companyMap.set(t.company_name, new Map())
-    const memberMap = companyMap.get(t.company_name)!
-    if (!memberMap.has(t.member_name)) memberMap.set(t.member_name, [])
-    memberMap.get(t.member_name)!.push(t)
+    if (!companyMap.has(t.company_id)) companyMap.set(t.company_id, new Map())
+    const memberMap = companyMap.get(t.company_id)!
+    if (!memberMap.has(t.member_id)) memberMap.set(t.member_id, [])
+    memberMap.get(t.member_id)!.push(t)
   }
 
   const summaries: CompanySummary[] = []
 
-  for (const [company_name, members] of companyMap) {
+  for (const [company_id, members] of companyMap) {
     const memberSummaries: MemberSummary[] = []
-    for (const [member_name, entries] of members) {
+    for (const [member_id, entries] of members) {
       const subtotal_cents = entries.reduce((s, e) => s + e.total_cents, 0)
-      memberSummaries.push({ member_name, work_email: entries[0]?.work_email ?? null, entries, subtotal_cents })
+      memberSummaries.push({
+        member_id,
+        member_name: entries[0].member_name,
+        work_email: entries[0].work_email ?? null,
+        entries,
+        subtotal_cents,
+      })
     }
     memberSummaries.sort((a, b) => b.subtotal_cents - a.subtotal_cents)
 
     summaries.push({
-      company_name,
+      company_id,
+      company_name: [...members.values()][0][0].company_name,
       members: memberSummaries,
       total_cents: memberSummaries.reduce((s, m) => s + m.subtotal_cents, 0),
       total_entries: memberSummaries.reduce((s, m) => s + m.entries.length, 0),
@@ -269,221 +324,37 @@ export async function generatePdf(
   }
 }
 
-// ─── Excel ────────────────────────────────────────────────────────────────────
-
-const AMBER      = 'FFD97706'
-const AMBER_DARK = 'FFB45309'
-const AMBER_50   = 'FFFFFBEB'
-const STONE_200  = 'FFE7E5E4'
-const STONE_50   = 'FFFAFAF9'
-const WHITE      = 'FFFFFFFF'
-
-type Fill = ExcelJS.Fill
-type Font = Partial<ExcelJS.Font>
-
-const headerFill: Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER },     bgColor: { argb: WHITE } }
-const altFill:    Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STONE_50 },  bgColor: { argb: WHITE } }
-const totalFill:  Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER_50 },  bgColor: { argb: WHITE } }
-
-const headerFont: Font = { bold: true, color: { argb: WHITE },     size: 11 }
-const totalFont:  Font = { bold: true, color: { argb: AMBER_DARK }, size: 11 }
-
-const rowBorder: Partial<ExcelJS.Borders> = {
-  bottom: { style: 'thin', color: { argb: STONE_200 } },
-}
-
-function addReportWorksheet(wb: ExcelJS.Workbook, name: string): ExcelJS.Worksheet {
-  // Excel desktop can collapse custom row heights when sheetViews is omitted.
-  return wb.addWorksheet(name, { views: [{ state: 'normal' }] })
-}
-
-function styleHeaderRow(row: ExcelJS.Row, colCount: number): void {
-  for (let i = 1; i <= colCount; i++) {
-    const cell = row.getCell(i)
-    cell.fill      = headerFill
-    cell.font      = headerFont
-    cell.alignment = { vertical: 'middle', wrapText: false }
-    cell.border    = { bottom: { style: 'medium', color: { argb: AMBER_DARK } } }
-  }
-  row.height = 22
-}
-
-function styleTotalRow(row: ExcelJS.Row, colCount: number): void {
-  for (let i = 1; i <= colCount; i++) {
-    const cell = row.getCell(i)
-    cell.fill   = totalFill
-    cell.font   = totalFont
-    cell.border = { top: { style: 'medium', color: { argb: AMBER } } }
-  }
-  row.height = 20
-}
-
-export async function generateExcel(
-  summaries: CompanySummary[],
-  transactions: EnrichedTransaction[],
-): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook()
-  wb.creator = 'Kaffeelisten'
-  wb.created = new Date()
-
-  // ── Sheet 1: Zusammenfassung ──────────────────────────────────────────────
-  const ws1 = addReportWorksheet(wb, 'Zusammenfassung')
-  ws1.columns = [
-    { key: 'company', width: 34 },
-    { key: 'entries', width: 14 },
-    { key: 'total',   width: 20 },
-  ]
-
-  const hdr1 = ws1.addRow(['Unternehmen', 'Einträge', 'Gesamtbetrag'])
-  styleHeaderRow(hdr1, 3)
-  hdr1.getCell(2).alignment = { horizontal: 'center',  vertical: 'middle' }
-  hdr1.getCell(3).alignment = { horizontal: 'right',   vertical: 'middle' }
-
-  summaries.forEach((c, i) => {
-    const row = ws1.addRow([
-      c.company_name,
-      c.total_entries,
-      Number((c.total_cents / 100).toFixed(2)),
-    ])
-    if (i % 2 === 1) { for (let j = 1; j <= 3; j++) row.getCell(j).fill = altFill }
-    row.getCell(2).alignment = { horizontal: 'center' }
-    row.getCell(3).numFmt    = '#,##0.00 "€"'
-    row.getCell(3).alignment = { horizontal: 'right' }
-    for (let j = 1; j <= 3; j++) row.getCell(j).border = rowBorder
-    row.height = 18
-  })
-
-  const grandTotal = summaries.reduce((s, c) => s + c.total_cents, 0)
-  const tot1 = ws1.addRow([
-    'Gesamt',
-    summaries.reduce((s, c) => s + c.total_entries, 0),
-    Number((grandTotal / 100).toFixed(2)),
-  ])
-  styleTotalRow(tot1, 3)
-  tot1.getCell(2).alignment = { horizontal: 'center' }
-  tot1.getCell(3).numFmt    = '#,##0.00 "€"'
-  tot1.getCell(3).alignment = { horizontal: 'right' }
-
-  // ── Sheet 2: Pro Unternehmen ──────────────────────────────────────────────
-  const ws2 = addReportWorksheet(wb, 'Pro Unternehmen')
-  ws2.columns = [
-    { key: 'company', width: 26 },
-    { key: 'person',  width: 26 },
-    { key: 'email',   width: 32 },
-    { key: 'entries', width: 12 },
-    { key: 'total',   width: 18 },
-  ]
-
-  const hdr2 = ws2.addRow(['Unternehmen', 'Person', 'E-Mail', 'Einträge', 'Betrag'])
-  styleHeaderRow(hdr2, 5)
-  hdr2.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }
-  hdr2.getCell(5).alignment = { horizontal: 'right',  vertical: 'middle' }
-
-  let rowIdx = 0
-  summaries.forEach(company => {
-    company.members.forEach(member => {
-      const row = ws2.addRow([
-        company.company_name,
-        member.member_name,
-        member.work_email ?? '',
-        member.entries.length,
-        Number((member.subtotal_cents / 100).toFixed(2)),
-      ])
-      if (rowIdx % 2 === 1) { for (let j = 1; j <= 5; j++) row.getCell(j).fill = altFill }
-      row.getCell(4).alignment = { horizontal: 'center' }
-      row.getCell(5).numFmt    = '#,##0.00 "€"'
-      row.getCell(5).alignment = { horizontal: 'right' }
-      for (let j = 1; j <= 5; j++) row.getCell(j).border = rowBorder
-      row.height = 18
-      rowIdx++
-    })
-    const sub = ws2.addRow([
-      `${company.company_name} — Gesamt`, '', '',
-      company.total_entries,
-      Number((company.total_cents / 100).toFixed(2)),
-    ])
-    styleTotalRow(sub, 5)
-    sub.getCell(4).alignment = { horizontal: 'center' }
-    sub.getCell(5).numFmt    = '#,##0.00 "€"'
-    sub.getCell(5).alignment = { horizontal: 'right' }
-    rowIdx++
-  })
-
-  // ── Sheet 3: Alle Einträge ────────────────────────────────────────────────
-  const ws3 = addReportWorksheet(wb, 'Alle Einträge')
-  ws3.columns = [
-    { key: 'date',       width: 13 },
-    { key: 'time',       width: 9  },
-    { key: 'person',     width: 26 },
-    { key: 'email',      width: 32 },
-    { key: 'company',    width: 26 },
-    { key: 'item',       width: 22 },
-    { key: 'category',   width: 14 },
-    { key: 'quantity',   width: 9  },
-    { key: 'unit_price', width: 16 },
-    { key: 'total',      width: 14 },
-  ]
-
-  const hdr3 = ws3.addRow(['Datum', 'Uhrzeit', 'Person', 'E-Mail', 'Unternehmen', 'Item', 'Kategorie', 'Menge', 'Einzelpreis', 'Betrag'])
-  styleHeaderRow(hdr3, 10)
-  ;[8, 9, 10].forEach(i => { hdr3.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
-
-  transactions.forEach((t, i) => {
-    const row = ws3.addRow([
-      formatDate(t.logged_at),
-      new Date(t.logged_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-      t.member_name,
-      t.work_email ?? '',
-      t.company_name,
-      t.item_name,
-      t.item_category,
-      t.quantity,
-      Number((t.price_cents / 100).toFixed(2)),
-      Number((t.total_cents  / 100).toFixed(2)),
-    ])
-    if (i % 2 === 1) { for (let j = 1; j <= 10; j++) row.getCell(j).fill = altFill }
-    row.getCell(8).alignment = { horizontal: 'right' }
-    row.getCell(9).numFmt    = '#,##0.00 "€"'
-    row.getCell(9).alignment = { horizontal: 'right' }
-    row.getCell(10).numFmt   = '#,##0.00 "€"'
-    row.getCell(10).alignment = { horizontal: 'right' }
-    for (let j = 1; j <= 10; j++) row.getCell(j).border = rowBorder
-    row.height = 18
-  })
-
-  const buf = await wb.xlsx.writeBuffer()
-  return Buffer.from(buf)
-}
-
-// ─── Per-recipient PDFs + archive zips (invoice attachments) ──────────────────
-
-// A generated per-recipient invoice, collected for the members-pay company
-// archive and the CEO/Management global zip. Only invoice-mode documents (which
-// have a document number and a VAT split) are collected.
-interface InvoiceDoc {
-  companyId: string
-  memberId: string | null   // null → a company-level invoice
-  documentNumber: string
-  recipientName: string
-  recipientEmail: string
-  netCents: number
-  taxCents: number
-  grossCents: number
-  pdf: Buffer
-}
+// ─── Per-recipient PDFs ───────────────────────────────────────────────────────
 
 // Per-run PDF budget. Attaching a PDF to every email spins Chromium once per page;
-// on the 60s serverless ceiling that must stay bounded. Generation stops after a
+// on the serverless ceiling that must stay bounded. Generation stops after a
 // wall-clock deadline (leaving time for archive/prune) and a hard count cap — the
-// email still sends, just without that attachment.
+// email still sends, just without that attachment. A document sent without its
+// PDF is still collected and flagged in the archive manifest (archive.ts), never
+// silently dropped.
 interface PdfBudget {
   browser: Browser | null
   deadline: number   // epoch ms
   remaining: number
 }
 
+// Both report endpoints (send-report.ts, cron/monthly-report.ts) declare
+// maxDuration: 300 — Vercel reads that as a literal, so it cannot import this.
+// PDF rendering stops 60 s before the limit, leaving time to send the admin
+// email, archive and prune. The old 45 s / 120-document budget sat inside a
+// 60 s limit and could not render ITC1's ~90 documents, which took ~1 s each
+// serially; with PDF_CONCURRENCY pages at once that is now ~25-30 s.
+export const REPORT_MAX_DURATION_MS = 300_000
+const PDF_RESERVE_MS = 60_000
+const PDF_MAX_DOCUMENTS = 500
+const PDF_CONCURRENCY = 4
+
 function makePdfBudget(browser: Browser | null): PdfBudget {
-  return { browser, deadline: Date.now() + 45_000, remaining: 120 }
+  return {
+    browser,
+    deadline: Date.now() + REPORT_MAX_DURATION_MS - PDF_RESERVE_MS,
+    remaining: PDF_MAX_DOCUMENTS,
+  }
 }
 
 async function renderDocPdf(budget: PdfBudget, html: string): Promise<Buffer | null> {
@@ -497,58 +368,21 @@ async function renderDocPdf(budget: PdfBudget, html: string): Promise<Buffer | n
   }
 }
 
-// Filesystem-safe attachment name (document numbers / company names are used in
-// zip entry names). Keeps word chars, dot and dash.
-function sanitizeFile(s: string): string {
-  return s.replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 80) || 'dokument'
+// An Excel failure must not stop the email: the document goes out without it and
+// the manifest flags the gap.
+async function safeExcel(label: string, build: () => Promise<Buffer>): Promise<Buffer | null> {
+  try {
+    return await build()
+  } catch (err) {
+    console.error(`[excel] ${label} failed:`, err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
 async function makeZip(files: { name: string; content: Buffer }[]): Promise<Buffer> {
   const zip = new JSZip()
   for (const f of files) zip.file(f.name, f.content)
   return zip.generateAsync({ type: 'nodebuffer' })
-}
-
-// Compact invoice ledger sheet (Nr., recipient, net/VAT/gross) bundled into the
-// archive zips. Reuses the report Excel styling helpers.
-async function generateLedgerExcel(docs: InvoiceDoc[]): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook()
-  wb.creator = 'Kaffeelisten'
-  wb.created = new Date()
-  const ws = addReportWorksheet(wb, 'Rechnungen')
-  ws.columns = [
-    { key: 'nr', width: 16 },
-    { key: 'name', width: 28 },
-    { key: 'email', width: 32 },
-    { key: 'net', width: 16 },
-    { key: 'vat', width: 14 },
-    { key: 'gross', width: 16 },
-  ]
-  const hdr = ws.addRow(['Rechnungsnr.', 'Empfänger', 'E-Mail', 'Netto', 'USt', 'Brutto'])
-  styleHeaderRow(hdr, 6)
-  ;[4, 5, 6].forEach(i => { hdr.getCell(i).alignment = { horizontal: 'right', vertical: 'middle' } })
-  docs.forEach((d, i) => {
-    const row = ws.addRow([
-      d.documentNumber, d.recipientName, d.recipientEmail,
-      Number((d.netCents / 100).toFixed(2)),
-      Number((d.taxCents / 100).toFixed(2)),
-      Number((d.grossCents / 100).toFixed(2)),
-    ])
-    if (i % 2 === 1) for (let j = 1; j <= 6; j++) row.getCell(j).fill = altFill
-    ;[4, 5, 6].forEach(j => { row.getCell(j).numFmt = '#,##0.00 "€"'; row.getCell(j).alignment = { horizontal: 'right' } })
-    for (let j = 1; j <= 6; j++) row.getCell(j).border = rowBorder
-    row.height = 18
-  })
-  const tot = ws.addRow([
-    'Gesamt', '', '',
-    Number((docs.reduce((s, d) => s + d.netCents, 0) / 100).toFixed(2)),
-    Number((docs.reduce((s, d) => s + d.taxCents, 0) / 100).toFixed(2)),
-    Number((docs.reduce((s, d) => s + d.grossCents, 0) / 100).toFixed(2)),
-  ])
-  styleTotalRow(tot, 6)
-  ;[4, 5, 6].forEach(j => { tot.getCell(j).numFmt = '#,##0.00 "€"'; tot.getCell(j).alignment = { horizontal: 'right' } })
-  const buf = await wb.xlsx.writeBuffer()
-  return Buffer.from(buf)
 }
 
 // ─── Email ────────────────────────────────────────────────────────────────────
@@ -574,9 +408,9 @@ export async function sendEmail(
   ccEmails: string[],
   format: ReportFormat,
   idempotencyKey: string,
-  // Invoice mode: the CEO/Management archive. When present it bundles the ledger
-  // Excel + every invoice PDF + the summary PDF, and REPLACES the PDF/Excel
-  // attachments (they're inside the zip).
+  // The CEO/Management archive: exact copies of every document sent this month,
+  // the manifest, the monthly report and the campus roll-up. When present it
+  // REPLACES the loose PDF/Excel attachments, which are inside it.
   zip: Buffer | null = null,
 ): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY
@@ -599,8 +433,7 @@ export async function sendEmail(
     { filename: 'kaffeelisten-logo.png', content: EMAIL_LOGO_PNG_BASE64, contentType: 'image/png', contentId: EMAIL_LOGO_CONTENT_ID },
   ]
   if (zip) {
-    // The archive already contains the ledger + invoice PDFs + summary PDF.
-    attachments.push({ filename: `${filename}-rechnungen.zip`, content: zip.toString('base64') })
+    attachments.push({ filename: `${filename}-archiv.zip`, content: zip.toString('base64') })
   } else {
     if (format.includePdf && pdfBuffer) {
       attachments.push({ filename: `${filename}.pdf`, content: pdfBuffer.toString('base64') })
@@ -633,254 +466,289 @@ export async function sendEmail(
   }
 }
 
-// ─── Per-member monthly statements (feature E) ────────────────────────────────
+// ─── Per-person and per-company documents ─────────────────────────────────────
 
 export interface MemberStatementResult {
   sent: number
   failed: number
 }
 
-// Sends each member who logged ≥1 transaction their own itemized statement.
-// Sequential with light throttling to respect Resend rate limits. Individual
-// failures are counted and logged (not thrown) so one bad address never aborts
-// the run — but the count is returned so the caller can surface it rather than
-// silently swallowing delivery failures. `idempotencyKey` scopes the per-member
-// Resend idempotency keys to this run so retries don't double-send.
-export async function sendMemberStatements(
-  transactions: EnrichedTransaction[],
-  monthLabel: string,
-  reportMonth: string,
-  format: ReportFormat,
-  idempotencyKey: string,
-  // company_paid members are always skipped here — their company is billed once
-  // via sendCompanyDocuments.
-  companyBilling: Map<string, CompanyBilling>,
-  // When present, render each member email as an ITC1 invoice (document number +
-  // payment details) and record it in the ledger; otherwise a plain statement.
-  issuer?: IssuerConfig,
-  // Shared Chromium budget: when set, attach a per-recipient PDF to each email.
-  budget?: PdfBudget,
-  // Invoice-mode collector: generated member invoices, for the members-pay
-  // company archives and the CEO/Management global zip.
-  collect?: InvoiceDoc[],
+// Everything a delivery needs that is the same for the whole run.
+interface DeliveryContext {
+  resend: Resend
+  supabase: ReturnType<typeof makeSupabase>
+  monthLabel: string
+  reportMonth: string
+  format: ReportFormat
+  idempotencyKey: string
+  // Present only when invoice mode is on AND authorised (billing.ts resolveIssuer).
+  issuer?: IssuerConfig
+  budget: PdfBudget
+}
+
+const MEMBER_SUBJECT: Record<MemberDelivery['kind'], string> = {
+  member_invoice: 'Rechnung',
+  member_statement: 'Deine Aufstellung',
+  member_info: 'Deine Übersicht',
+}
+
+function attachmentsFor(doc: IssuedDoc): Array<{ filename: string; content: string }> {
+  const stem = documentFileStem(doc)
+  const out: Array<{ filename: string; content: string }> = []
+  if (doc.pdf) out.push({ filename: `${stem}.pdf`, content: doc.pdf.toString('base64') })
+  if (doc.xlsx) out.push({ filename: `${stem}.xlsx`, content: doc.xlsx.toString('base64') })
+  return out
+}
+
+// A document ready to send: numbered (if an invoice), rendered to HTML, with its
+// files attached once rendering finishes.
+interface PreparedDoc {
+  to: string
+  subject: string
+  html: string
+  idempotencyKey: string
+  ledgerId: string | null
+  issued: IssuedDoc
+  // Rendered in the concurrent phase; the Excel builder is deferred until then.
+  buildExcel: () => Promise<Buffer>
+}
+
+// Render every prepared document's PDF and Excel a few at a time on the shared
+// browser. Serial rendering (~1s per PDF) could not fit ITC1's volume in one run.
+async function renderPrepared(ctx: DeliveryContext, prepared: PreparedDoc[]): Promise<void> {
+  await mapWithConcurrency(prepared, PDF_CONCURRENCY, async p => {
+    const [pdf, xlsx] = await Promise.all([
+      renderDocPdf(ctx.budget, p.html),
+      safeExcel(`${p.issued.kind} ${p.issued.memberId ?? p.issued.companyId}`, p.buildExcel),
+    ])
+    p.issued.pdf = pdf
+    p.issued.xlsx = xlsx
+  })
+}
+
+// Append the delivered document to the ledger (migration 037). A ledger failure
+// is logged, not thrown: the email has already gone out, and aborting the loop
+// would leave the remaining recipients unsent.
+async function recordDelivery(ctx: DeliveryContext, p: PreparedDoc, messageId: string | null): Promise<void> {
+  const d = p.issued
+  const { error } = await ctx.supabase.from('document_deliveries').insert({
+    report_month: d.reportMonth,
+    kind: d.kind,
+    company_id: d.companyId,
+    member_id: d.memberId,
+    recipient_name: d.recipientName,
+    recipient_email: d.recipientEmail,
+    document_number: d.documentNumber,
+    billing_document_id: p.ledgerId,
+    gross_cents: d.grossCents,
+    has_pdf: !!d.pdf,
+    has_xlsx: !!d.xlsx,
+    resend_message_id: messageId,
+  })
+  if (error) console.error(`[delivery-ledger] could not record ${d.kind} for ${d.recipientEmail}:`, error.message)
+}
+
+// Send prepared documents one at a time (Resend rate limits), marking ledger rows.
+// Individual failures are counted and logged, not thrown, so one bad address
+// never aborts the run. Every successfully sent document is pushed to `collect`,
+// with or without its files.
+async function sendPrepared(
+  ctx: DeliveryContext,
+  prepared: readonly PreparedDoc[],
+  extraAttachments: (p: PreparedDoc) => Promise<Array<{ filename: string; content: string }>>,
+  collect: IssuedDoc[],
+  logLabel: string,
 ): Promise<MemberStatementResult> {
-  const resendKey = process.env.RESEND_API_KEY
-  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
-  const resend = new Resend(resendKey)
-  const [yearStr] = reportMonth.split('-')
-  const supabase = issuer ? makeSupabase() : null
-
-  // Group by member; keep name, work email and company alongside their entries.
-  const byMember = new Map<string, { name: string; email: string | null; companyId: string; entries: EnrichedTransaction[] }>()
-  for (const t of transactions) {
-    const g = byMember.get(t.member_id) ?? { name: t.member_name, email: t.work_email, companyId: t.company_id, entries: [] }
-    g.entries.push(t)
-    byMember.set(t.member_id, g)
-  }
-
   let sent = 0
   let failed = 0
-  for (const [memberId, { name, email, companyId, entries }] of byMember) {
-    // A company_paid company is billed once to its contact — never its members.
-    if (companyBilling.get(companyId)?.billing_mode === 'company_paid') continue
-    if (!email) continue // no reachable address — skip silently
-    const firstName = name.trim().split(/\s+/)[0] || name
-    const grossCents = entries.reduce((s, e) => s + e.total_cents, 0)
-    const vars = { monat: monthLabel, jahr: yearStr, name: firstName, gesamt: formatEuro(grossCents) }
-
-    // Allocate/reuse the invoice document (idempotent) before sending.
-    let invoiceRender: InvoiceRender | undefined
-    let ledgerId: string | null = null
-    if (issuer && supabase) {
-      const split = splitVat(grossCents, issuer.vatRate)
-      const doc = await ensureBillingDocument(supabase, issuer.numberPrefix, {
-        reportMonth, recipientType: 'member', recipientName: name, recipientEmail: email,
-        companyId, memberId, subtotalCents: split.netCents, taxCents: split.taxCents, totalCents: split.grossCents,
-      })
-      ledgerId = doc.id
-      invoiceRender = toInvoiceRender(issuer, doc.document_number, split)
-    }
-
-    const subject = format.memberSubject
-      ? renderTemplate(format.memberSubject, vars)
-      : invoiceRender
-        ? `Kaffeelisten – Rechnung ${monthLabel}`
-        : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
-    const intro = format.memberIntro
-      ? renderTemplate(format.memberIntro, vars)
-      : undefined
-    const html = buildMemberStatementHtml(name, entries, monthLabel, { accent: format.accent, intro, invoice: invoiceRender })
-    const pdf = budget ? await renderDocPdf(budget, html) : null
-    const attachments = pdf
-      ? [{
-          filename: invoiceRender
-            ? `Rechnung-${sanitizeFile(invoiceRender.documentNumber)}.pdf`
-            : `Kaffeeliste-${reportMonth}.pdf`,
-          content: pdf.toString('base64'),
-        }]
-      : undefined
+  for (const p of prepared) {
+    const attachments = [...attachmentsFor(p.issued), ...(await extraAttachments(p))]
     try {
-      const { data, error } = await resend.emails.send(
+      const { data, error } = await ctx.resend.emails.send(
         {
           from: 'Kaffeelisten <bericht@kaffeelisten.de>',
-          to: [email],
+          to: [p.to],
           ...(replyTo() ? { replyTo: replyTo()! } : {}),
-          subject,
-          html,
-          ...(attachments ? { attachments } : {}),
+          subject: p.subject,
+          html: p.html,
+          ...(attachments.length ? { attachments } : {}),
         },
-        { idempotencyKey: `member-${idempotencyKey}-${memberId}` },
+        { idempotencyKey: p.idempotencyKey },
       )
       if (error) throw new Error(error.message ?? JSON.stringify(error))
-      if (supabase && ledgerId) await markBillingDocumentSent(supabase, ledgerId, data?.id ?? null)
-      if (collect && invoiceRender && pdf) {
-        collect.push({
-          companyId, memberId, documentNumber: invoiceRender.documentNumber,
-          recipientName: name, recipientEmail: email,
-          netCents: invoiceRender.netCents, taxCents: invoiceRender.taxCents, grossCents: invoiceRender.grossCents,
-          pdf,
-        })
-      }
+      if (p.ledgerId) await markBillingDocumentSent(ctx.supabase, p.ledgerId, data?.id ?? null)
+      await recordDelivery(ctx, p, data?.id ?? null)
+      collect.push(p.issued)
       sent++
-      // Light throttle — Resend free tier limits requests/second.
+      // Light throttle — Resend limits requests per second.
       await new Promise(r => setTimeout(r, 120))
     } catch (err) {
       failed++
-      if (supabase && ledgerId) await markBillingDocumentFailed(supabase, ledgerId)
-      console.error(`[member-statement] failed for ${email}:`, err instanceof Error ? err.message : err)
+      if (p.ledgerId) await markBillingDocumentFailed(ctx.supabase, p.ledgerId)
+      console.error(`[${logLabel}] failed for ${p.to}:`, err instanceof Error ? err.message : err)
     }
   }
   return { sent, failed }
 }
 
-// Sends each company its own monthly document to its billing contact: an invoice
-// when billing_mode = company_paid and an issuer is configured, otherwise a
-// report/Aufstellung. Invoices are recorded in the ledger (idempotent); reports
-// are informational and not numbered. Companies without a contact email are
-// skipped. Separate from the admin/CEO aggregate report.
-export async function sendCompanyDocuments(
-  transactions: EnrichedTransaction[],
-  monthLabel: string,
-  reportMonth: string,
-  format: ReportFormat,
-  idempotencyKey: string,
-  companyBilling: Map<string, CompanyBilling>,
-  issuer?: IssuerConfig,
-  // Shared Chromium budget: when set, attach a per-recipient PDF to each email.
-  budget?: PdfBudget,
-  // Member invoices generated this run — bundled into the members-pay archives.
-  memberDocs?: InvoiceDoc[],
-  // Invoice-mode collector for company-level invoices (CEO/Management global zip).
-  collect?: InvoiceDoc[],
+// Sends each planned person their document — an invoice, a statement, or an
+// information copy when their company pays (documentMatrix.ts decides which).
+export async function sendMemberStatements(
+  ctx: DeliveryContext,
+  deliveries: readonly MemberDelivery[],
+  entriesByMember: ReadonlyMap<string, EnrichedTransaction[]>,
+  companyNames: ReadonlyMap<string, string>,
+  collect: IssuedDoc[],
 ): Promise<MemberStatementResult> {
-  const resendKey = process.env.RESEND_API_KEY
-  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
-  const resend = new Resend(resendKey)
-  const supabase = makeSupabase()
-  const [yearStr] = reportMonth.split('-')
+  const [yearStr] = ctx.reportMonth.split('-')
+  const prepared: PreparedDoc[] = []
 
-  // company_id → (member_id → { name, entries }) for every company with a contact.
-  const byCompany = new Map<string, Map<string, { name: string; entries: EnrichedTransaction[] }>>()
-  for (const t of transactions) {
-    const cb = companyBilling.get(t.company_id)
-    if (!cb?.billing_contact_email) continue // no contact → can't deliver a company document
-    const members = byCompany.get(t.company_id) ?? new Map<string, { name: string; entries: EnrichedTransaction[] }>()
-    const g = members.get(t.member_id) ?? { name: t.member_name, entries: [] }
-    g.entries.push(t)
-    members.set(t.member_id, g)
-    byCompany.set(t.company_id, members)
-  }
+  for (const d of deliveries) {
+    const entries = entriesByMember.get(d.memberId) ?? []
+    const firstName = d.name.trim().split(/\s+/)[0] || d.name
+    const grossCents = entries.reduce((s, e) => s + e.total_cents, 0)
+    const vars = { monat: ctx.monthLabel, jahr: yearStr, name: firstName, gesamt: formatEuro(grossCents) }
 
-  let sent = 0
-  let failed = 0
-  for (const [companyId, membersMap] of byCompany) {
-    const cb = companyBilling.get(companyId)!
-    const members: MemberSummary[] = [...membersMap.values()]
-      .map(({ name, entries }) => ({
-        member_name: name,
-        work_email: entries[0]?.work_email ?? null,
-        entries,
-        subtotal_cents: entries.reduce((s, e) => s + e.total_cents, 0),
-      }))
-      .sort((a, b) => b.subtotal_cents - a.subtotal_cents)
-    const grossCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
-    const asInvoice = cb.billing_mode === 'company_paid' && !!issuer
-
-    // Invoice → allocate/reuse a ledger document; report → no number.
-    let invoice: InvoiceRender | undefined
+    // Allocate/reuse the invoice number (idempotent) before rendering, because
+    // the number is printed on the document. Only an invoice is numbered.
+    let invoiceRender: InvoiceRender | undefined
     let ledgerId: string | null = null
-    if (asInvoice && issuer) {
-      const split = splitVat(grossCents, issuer.vatRate)
-      const doc = await ensureBillingDocument(supabase, issuer.numberPrefix, {
-        reportMonth, recipientType: 'company', recipientName: cb.billing_contact_name || cb.name,
-        recipientEmail: cb.billing_contact_email!, companyId, memberId: null,
+    if (d.kind === 'member_invoice') {
+      if (!ctx.issuer) throw new Error('member_invoice planned without an authorised issuer')
+      const split = splitVat(grossCents, ctx.issuer.vatRate)
+      const doc = await ensureBillingDocument(ctx.supabase, ctx.issuer.numberPrefix, {
+        reportMonth: ctx.reportMonth, recipientType: 'member', recipientName: d.name, recipientEmail: d.email,
+        companyId: d.companyId, memberId: d.memberId,
         subtotalCents: split.netCents, taxCents: split.taxCents, totalCents: split.grossCents,
       })
       ledgerId = doc.id
-      invoice = toInvoiceRender(issuer, doc.document_number, split)
+      invoiceRender = toInvoiceRender(ctx.issuer, doc.document_number, split)
     }
 
-    const intro = format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined
-    const subject = asInvoice
-      ? `Kaffeelisten – Rechnung ${cb.name} ${monthLabel}`
-      : `Kaffeelisten – Aufstellung ${cb.name} ${monthLabel}`
-    const html = buildCompanyDocumentHtml(cb.name, cb.billing_contact_name, members, monthLabel, { accent: format.accent, intro, invoice })
-    const pdf = budget ? await renderDocPdf(budget, html) : null
-    const attachments: Array<{ filename: string; content: string }> = []
-    if (pdf) {
-      attachments.push({
-        filename: invoice
-          ? `Rechnung-${sanitizeFile(invoice.documentNumber)}.pdf`
-          : `Aufstellung-${sanitizeFile(cb.name)}-${reportMonth}.pdf`,
-        content: pdf.toString('base64'),
+    prepared.push({
+      to: d.email,
+      subject: ctx.format.memberSubject
+        ? renderTemplate(ctx.format.memberSubject, vars)
+        : `Kaffeelisten – ${MEMBER_SUBJECT[d.kind]} ${ctx.monthLabel}`,
+      html: buildMemberStatementHtml(d.name, entries, ctx.monthLabel, {
+        accent: ctx.format.accent,
+        intro: ctx.format.memberIntro ? renderTemplate(ctx.format.memberIntro, vars) : undefined,
+        invoice: invoiceRender,
+        infoOnly: d.kind === 'member_info' ? { payerName: d.payerName ?? companyNames.get(d.companyId) ?? '' } : undefined,
+      }),
+      idempotencyKey: `member-${ctx.idempotencyKey}-${d.memberId}`,
+      ledgerId,
+      issued: {
+        kind: d.kind,
+        reportMonth: ctx.reportMonth,
+        companyId: d.companyId,
+        companyName: companyNames.get(d.companyId) ?? '—',
+        memberId: d.memberId,
+        documentNumber: invoiceRender?.documentNumber ?? null,
+        recipientName: d.name,
+        recipientEmail: d.email,
+        netCents: invoiceRender?.netCents ?? null,
+        taxCents: invoiceRender?.taxCents ?? null,
+        grossCents,
+        pdf: null,
+        xlsx: null,
+      },
+      buildExcel: () => generateMemberExcel(entries),
+    })
+  }
+
+  await renderPrepared(ctx, prepared)
+  return sendPrepared(ctx, prepared, async () => [], collect, 'member-document')
+}
+
+// Sends each planned company its document: an invoice when it pays and invoice
+// mode is authorised, otherwise a statement. Every company document carries an
+// Excel itemising every member's entries. Where the company opted in, it also
+// carries copies of the documents its own employees received this run, which is
+// why members are sent first.
+export async function sendCompanyDocuments(
+  ctx: DeliveryContext,
+  deliveries: readonly CompanyDelivery[],
+  summariesByCompany: ReadonlyMap<string, CompanySummary>,
+  memberDocs: readonly IssuedDoc[],
+  collect: IssuedDoc[],
+): Promise<MemberStatementResult> {
+  const [yearStr] = ctx.reportMonth.split('-')
+  const prepared: PreparedDoc[] = []
+  const deliveryFor = new Map<PreparedDoc, CompanyDelivery>()
+
+  for (const d of deliveries) {
+    const members: MemberSummary[] = summariesByCompany.get(d.companyId)?.members ?? []
+    const grossCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
+
+    let invoice: InvoiceRender | undefined
+    let ledgerId: string | null = null
+    if (d.kind === 'company_invoice') {
+      if (!ctx.issuer) throw new Error('company_invoice planned without an authorised issuer')
+      const split = splitVat(grossCents, ctx.issuer.vatRate)
+      const doc = await ensureBillingDocument(ctx.supabase, ctx.issuer.numberPrefix, {
+        reportMonth: ctx.reportMonth, recipientType: 'company', recipientName: d.contactName || d.companyName,
+        recipientEmail: d.email, companyId: d.companyId, memberId: null,
+        subtotalCents: split.netCents, taxCents: split.taxCents, totalCents: split.grossCents,
       })
+      ledgerId = doc.id
+      invoice = toInvoiceRender(ctx.issuer, doc.document_number, split)
     }
-    // Members-pay + invoice mode: bundle this company's member invoices + a ledger
-    // sheet as an archive zip (the company itself is not charged).
-    if (!asInvoice && issuer) {
-      const own = (memberDocs ?? []).filter(d => d.companyId === companyId && d.memberId)
-      if (own.length > 0) {
-        try {
-          const files = own.map(d => ({ name: `Rechnung-${sanitizeFile(d.documentNumber)}.pdf`, content: d.pdf }))
-          files.push({ name: `Rechnungsübersicht-${sanitizeFile(cb.name)}-${reportMonth}.xlsx`, content: await generateLedgerExcel(own) })
-          const archive = await makeZip(files)
-          attachments.push({ filename: `Rechnungen-${sanitizeFile(cb.name)}-${reportMonth}.zip`, content: archive.toString('base64') })
-        } catch (zErr) {
-          console.error('[company-archive] zip failed:', zErr instanceof Error ? zErr.message : zErr)
-        }
-      }
+
+    const p: PreparedDoc = {
+      to: d.email,
+      subject: invoice
+        ? `Kaffeelisten – Rechnung ${d.companyName} ${ctx.monthLabel}`
+        : `Kaffeelisten – Aufstellung ${d.companyName} ${ctx.monthLabel}`,
+      html: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, {
+        accent: ctx.format.accent,
+        intro: ctx.format.reportIntro ? renderTemplate(ctx.format.reportIntro, { monat: ctx.monthLabel, jahr: yearStr }) : undefined,
+        invoice,
+      }),
+      idempotencyKey: `companydoc-${ctx.idempotencyKey}-${d.companyId}`,
+      ledgerId,
+      issued: {
+        kind: d.kind,
+        reportMonth: ctx.reportMonth,
+        companyId: d.companyId,
+        companyName: d.companyName,
+        memberId: null,
+        documentNumber: invoice?.documentNumber ?? null,
+        recipientName: d.contactName || d.companyName,
+        recipientEmail: d.email,
+        netCents: invoice?.netCents ?? null,
+        taxCents: invoice?.taxCents ?? null,
+        grossCents,
+        pdf: null,
+        xlsx: null,
+      },
+      buildExcel: () => generateCompanyExcel(members),
     }
+    prepared.push(p)
+    deliveryFor.set(p, d)
+  }
+
+  await renderPrepared(ctx, prepared)
+
+  // Opt-in employer copies (migration 033): the documents this company's own
+  // employees received, with a manifest.
+  const employeeCopies = async (p: PreparedDoc) => {
+    const d = deliveryFor.get(p)!
+    if (!d.includeMemberCopies) return []
+    const own = memberDocs.filter(m => m.companyId === d.companyId)
+    if (own.length === 0) return []
     try {
-      const { data, error } = await resend.emails.send(
-        {
-          from: 'Kaffeelisten <bericht@kaffeelisten.de>',
-          to: [cb.billing_contact_email!],
-          ...(replyTo() ? { replyTo: replyTo()! } : {}),
-          subject,
-          html,
-          ...(attachments.length ? { attachments } : {}),
-        },
-        { idempotencyKey: `companydoc-${idempotencyKey}-${companyId}` },
-      )
-      if (error) throw new Error(error.message ?? JSON.stringify(error))
-      if (ledgerId) await markBillingDocumentSent(supabase, ledgerId, data?.id ?? null)
-      if (collect && invoice && pdf) {
-        collect.push({
-          companyId, memberId: null, documentNumber: invoice.documentNumber,
-          recipientName: cb.billing_contact_name || cb.name, recipientEmail: cb.billing_contact_email!,
-          netCents: invoice.netCents, taxCents: invoice.taxCents, grossCents: invoice.grossCents,
-          pdf,
-        })
-      }
-      sent++
-      await new Promise(r => setTimeout(r, 120))
-    } catch (err) {
-      failed++
-      if (ledgerId) await markBillingDocumentFailed(supabase, ledgerId)
-      console.error(`[company-document] failed for ${cb.billing_contact_email}:`, err instanceof Error ? err.message : err)
+      const { files, manifest } = archiveEntries(own)
+      files.push({ name: `Übersicht-${sanitizeFile(d.companyName)}-${ctx.reportMonth}.xlsx`, content: await generateManifestExcel(manifest) })
+      const zip = await makeZip(files)
+      return [{ filename: `Mitarbeitende-${sanitizeFile(d.companyName)}-${ctx.reportMonth}.zip`, content: zip.toString('base64') }]
+    } catch (zErr) {
+      console.error('[company-copies] zip failed:', zErr instanceof Error ? zErr.message : zErr)
+      return []
     }
   }
-  return { sent, failed }
+
+  return sendPrepared(ctx, prepared, employeeCopies, collect, 'company-document')
 }
 
 // ─── Billing run ledger (invoice mode) ────────────────────────────────────────
@@ -922,6 +790,10 @@ export async function archiveTransactions(
 
   // upsert with ignoreDuplicates so re-sending the same month's report
   // never fails — rows already archived are simply skipped.
+  //
+  // The archive is permanent (migration 032), so each row carries the price paid
+  // and the item's identity as they were at reporting time (migration 031). A
+  // month stays reproducible after an item is renamed, repriced or deactivated.
   const { error: archErr } = await supabase
     .from('transactions_archive')
     .upsert(
@@ -934,6 +806,10 @@ export async function archiveTransactions(
         logged_at: t.logged_at,
         archived_at: now,
         report_month: reportMonth,
+        unit_price_cents: t.price_cents,
+        item_name: t.item_name,
+        unit_label: t.unit_label,
+        item_category: t.item_category,
       })),
       { onConflict: 'id,report_month', ignoreDuplicates: true },
     )
@@ -941,12 +817,18 @@ export async function archiveTransactions(
   if (archErr) throw new Error(`Archive insert failed: ${archErr.message}`)
 }
 
-// ─── Prune old transactions (keep last 3 months) ──────────────────────────────
+// ─── Prune the live table (the archive is permanent) ──────────────────────────
+
+// Earliest logged_at kept in the live `transactions` table: the 1st of the month
+// two months before `now`. Older, already-archived rows leave the admin's entries
+// view but remain in transactions_archive.
+export function computeLivePruneCutoff(now: Date): string {
+  return new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
+}
 
 export async function pruneOldTransactions(): Promise<void> {
   const supabase = makeSupabase()
-  const now = new Date()
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString()
+  const cutoff = computeLivePruneCutoff(new Date())
 
   // Only delete live transactions that have actually been archived. A month that
   // was never reported (and therefore never archived) is retained rather than
@@ -955,13 +837,12 @@ export async function pruneOldTransactions(): Promise<void> {
   const { error: liveErr } = await supabase.rpc('prune_reported_transactions', { p_cutoff: cutoff })
   if (liveErr) throw new Error(`Prune transactions failed: ${liveErr.message}`)
 
-  // Keep transactions_archive within the same 90-day window to stay within
-  // Supabase free-tier storage limits.
-  const { error: archErr } = await supabase
-    .from('transactions_archive')
-    .delete()
-    .lt('logged_at', cutoff)
-  if (archErr) throw new Error(`Prune archive failed: ${archErr.message}`)
+  // transactions_archive is never pruned. It used to be trimmed to the same
+  // window "to stay within Supabase free-tier storage", which destroyed all
+  // history after ~2-3 months — including the audit trail migration 025 relies
+  // on and invoice data §14b UStG requires be kept for 8 years. At ITC1's volume
+  // (~2,400 rows/month, a few MB/year) storage was never the constraint.
+  // Migration 032 revokes DELETE on the archive so this cannot quietly return.
 }
 
 // ─── Deactivate members inactive for 90+ days ────────────────────────────────
@@ -995,11 +876,15 @@ export async function deactivateInactiveMembers(): Promise<void> {
 
   if (toDeactivate.length === 0) return
 
+  // Never a house account: it is a company-checkout company's ONLY booking target
+  // (migration 034). Deactivating it after one quiet month would make every order
+  // for that company fail with no_house_account until an admin noticed.
   const { error: updErr } = await supabase
     .from('members')
     .update({ active: false })
     .in('id', toDeactivate)
     .eq('active', true)
+    .eq('kind', 'person')
 
   if (updErr) throw new Error(`deactivateInactiveMembers update failed: ${updErr.message}`)
 }
@@ -1013,6 +898,11 @@ const RUNNING_STALE_MS = 15 * 60 * 1000
 interface RunResult {
   status: 'sent' | 'skipped'
   memberStatements?: MemberStatementResult
+  // Recipients who could not be sent a document, and why — e.g. a company that
+  // pays but has no billing contact. Intentionally disabled documents are omitted.
+  skipped?: SkippedDelivery[]
+  // Documents delivered without a PDF or Excel (flagged in the archive manifest).
+  missingFiles?: { pdf: number; xlsx: number }
 }
 
 // Acquire the run for a month. Returns false when it should be skipped (already
@@ -1091,7 +981,7 @@ export async function runMonthlyReport(
 
     // One Chromium for the whole run: the aggregate summary PDF plus every
     // per-recipient PDF. A launch failure must NOT sink the report — we fall back
-    // to sending without PDFs.
+    // to sending without PDFs, and the archive manifest flags every missing file.
     let browser: Browser | null = null
     if (format.includePdf || needDocs) {
       try {
@@ -1114,57 +1004,78 @@ export async function runMonthlyReport(
       }
       const xlsxBuffer = format.includeExcel ? await generateExcel(summaries, transactions) : null
 
-      // Three streams. The admin/CEO aggregate email goes out LAST because, in
-      // invoice mode, it carries the Management archive zip built from the
-      // per-recipient invoices generated below. Members run before companies so
-      // their invoice PDFs feed the members-pay company archives.
+      // Three streams. People first, so their documents can be copied into the
+      // opted-in company documents; companies second; the admin/CEO email LAST,
+      // because its archive contains copies of everything the first two sent.
       const budget = makePdfBudget(browser)
-      const memberDocs: InvoiceDoc[] = []
-      const companyDocsCollected: InvoiceDoc[] = []
+      const issuedDocs: IssuedDoc[] = []
       let memberStatements: MemberStatementResult | undefined
-      let globalZip: Buffer | null = null
+      let skipped: SkippedDelivery[] = []
+      let archiveZip: Buffer | null = null
 
       if (needDocs) {
         const companyBilling = await fetchCompanyBilling()
+        const plan = planDeliveries(consumersOf(transactions), companyBilling, {
+          memberStatementsEnabled: settings.memberStatementsEnabled,
+          companyDocumentsEnabled: settings.companyDocumentsEnabled,
+          companyPaidMemberReportsEnabled: settings.companyPaidMemberReportsEnabled,
+          invoiceMode: !!issuer,
+        })
+        skipped = plan.skipped
+        for (const s of skipped) {
+          if (s.reason !== 'disabled') console.warn(`[report] ${s.recipient} ${s.name} not sent: ${s.reason}`)
+        }
+
+        const resendKey = process.env.RESEND_API_KEY
+        if (!resendKey) throw new Error('Missing RESEND_API_KEY')
+        const ctx: DeliveryContext = {
+          resend: new Resend(resendKey),
+          supabase: makeSupabase(),
+          monthLabel, reportMonth, format, idempotencyKey, issuer, budget,
+        }
+
+        const entriesByMember = new Map<string, EnrichedTransaction[]>()
+        for (const t of transactions) {
+          const list = entriesByMember.get(t.member_id) ?? []
+          list.push(t)
+          entriesByMember.set(t.member_id, list)
+        }
+        const companyNames = new Map([...companyBilling.values()].map(c => [c.id, c.name]))
+        const summariesByCompany = new Map(summaries.map(s => [s.company_id, s]))
+
         const useLedger = !!issuer
         if (useLedger) await beginBillingRun(reportMonth)
         try {
-          let sent = 0
-          let failed = 0
-          if (settings.memberStatementsEnabled) {
-            const r = await sendMemberStatements(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer, budget, memberDocs)
-            sent += r.sent; failed += r.failed
-          }
-          if (settings.companyDocumentsEnabled) {
-            const r = await sendCompanyDocuments(transactions, monthLabel, reportMonth, format, idempotencyKey, companyBilling, issuer, budget, memberDocs, companyDocsCollected)
-            sent += r.sent; failed += r.failed
-          }
-          memberStatements = { sent, failed }
+          const memberDocs: IssuedDoc[] = []
+          const m = await sendMemberStatements(ctx, plan.members, entriesByMember, companyNames, memberDocs)
+          const c = await sendCompanyDocuments(ctx, plan.companies, summariesByCompany, memberDocs, issuedDocs)
+          issuedDocs.unshift(...memberDocs)
+          memberStatements = { sent: m.sent + c.sent, failed: m.failed + c.failed }
           if (useLedger) await completeBillingRun(reportMonth)
         } catch (billErr) {
           if (useLedger) await failBillingRun(reportMonth, billErr instanceof Error ? billErr.message : String(billErr))
           throw billErr
         }
 
-        // CEO/Management global archive (invoice mode only): every invoice PDF +
-        // the ledger Excel + the summary PDF, bundled into one zip.
-        if (issuer) {
-          const allDocs = [...memberDocs, ...companyDocsCollected]
-          if (allDocs.length > 0) {
-            try {
-              const files = allDocs.map(d => ({ name: `Rechnung-${sanitizeFile(d.documentNumber)}.pdf`, content: d.pdf }))
-              files.push({ name: `Rechnungsübersicht-${reportMonth}.xlsx`, content: await generateLedgerExcel(allDocs) })
-              if (pdfBuffer) files.push({ name: `Monatsbericht-${reportMonth}.pdf`, content: pdfBuffer })
-              globalZip = await makeZip(files)
-            } catch (zErr) {
-              console.error('[report] global archive zip failed:', zErr instanceof Error ? zErr.message : zErr)
-            }
+        // CEO/Management archive, in BOTH invoice and statement mode: exact copies
+        // of every document sent, a manifest listing all of them (flagging any
+        // whose file could not be produced), the monthly report and the campus
+        // roll-up with the month-over-month comparison.
+        if (issuedDocs.length > 0) {
+          try {
+            const { files, manifest } = archiveEntries(issuedDocs)
+            files.push({ name: `Übersicht-versandte-Dokumente-${reportMonth}.xlsx`, content: await generateManifestExcel(manifest) })
+            if (pdfBuffer) files.push({ name: `Monatsbericht-${reportMonth}.pdf`, content: pdfBuffer })
+            if (xlsxBuffer) files.push({ name: `Monatsbericht-${reportMonth}.xlsx`, content: xlsxBuffer })
+            const rollup = await buildCampusRollup(reportMonth, transactions)
+            if (rollup) files.push({ name: `Campus-Auswertung-${reportMonth}.xlsx`, content: rollup })
+            archiveZip = await makeZip(files)
+          } catch (zErr) {
+            console.error('[report] management archive failed:', zErr instanceof Error ? zErr.message : zErr)
           }
         }
       }
 
-      // Admin/CEO aggregate email. Invoice mode → attach the Management archive
-      // zip (ledger + all invoice PDFs); report mode → PDF + Excel.
       await sendEmail(
         pdfBuffer,
         xlsxBuffer,
@@ -1176,7 +1087,7 @@ export async function runMonthlyReport(
         settings.ccEmails,
         format,
         idempotencyKey,
-        globalZip,
+        archiveZip,
       )
 
       // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
@@ -1185,7 +1096,12 @@ export async function runMonthlyReport(
       await deactivateInactiveMembers()
 
       await completeReportRun(reportMonth)
-      return { status: 'sent', memberStatements }
+      return {
+        status: 'sent',
+        memberStatements,
+        skipped: skipped.filter(s => s.reason !== 'disabled'),
+        missingFiles: countMissingFiles(issuedDocs),
+      }
     } finally {
       if (browser) {
         try { await browser.close() } catch { /* best-effort */ }
@@ -1196,4 +1112,233 @@ export async function runMonthlyReport(
     await failReportRun(reportMonth, message)
     throw err
   }
+}
+
+// The people who consumed something this month, once each, for the delivery plan.
+function consumersOf(transactions: readonly EnrichedTransaction[]): MatrixMember[] {
+  const byId = new Map<string, MatrixMember>()
+  for (const t of transactions) {
+    if (!byId.has(t.member_id)) {
+      byId.set(t.member_id, {
+        id: t.member_id,
+        company_id: t.company_id,
+        name: t.member_name,
+        email: t.work_email,
+        kind: t.member_kind ?? 'person',
+      })
+    }
+  }
+  return [...byId.values()]
+}
+
+// The administrative roll-up workbook, comparing against the previous month.
+// Failure is non-fatal: the archive goes out without it.
+async function buildCampusRollup(
+  reportMonth: string,
+  current: EnrichedTransaction[],
+): Promise<Buffer | null> {
+  try {
+    const [y, m] = reportMonth.split('-').map(Number)
+    const prev = previousMonth(y, m)
+    const { transactions: previous } = await fetchAndEnrich(prev)
+    return await generateCampusRollupExcel(computeCampusRollup(reportMonth, prev, current, previous))
+  } catch (err) {
+    console.error('[report] campus roll-up failed:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+// ─── Re-download and re-send a delivered document ─────────────────────────────
+
+export interface RegeneratedDocument {
+  delivery: {
+    id: string
+    report_month: string
+    kind: IssuedDoc['kind']
+    company_id: string
+    member_id: string | null
+    recipient_name: string
+    recipient_email: string
+    document_number: string | null
+  }
+  subject: string
+  html: string
+  fileStem: string
+  xlsx: Buffer
+}
+
+export class DeliveryNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Delivery ${id} not found`)
+    this.name = 'DeliveryNotFoundError'
+  }
+}
+
+/**
+ * Rebuild a delivered document from the archive (+ live table) for its month.
+ *
+ * An invoice keeps its stored number and its stored net, VAT and gross amounts —
+ * nothing here allocates a document number. Entries are read with their price
+ * snapshots, so a later price change does not alter the copy. Only the issuer
+ * block reflects today's settings (see resolveIssuerForReissue).
+ */
+export async function regenerateDelivery(deliveryId: string): Promise<RegeneratedDocument> {
+  const supabase = makeSupabase()
+  const { data: delivery, error } = await supabase
+    .from('document_deliveries')
+    .select('id, report_month, kind, company_id, member_id, recipient_name, recipient_email, document_number, billing_document_id')
+    .eq('id', deliveryId)
+    .maybeSingle()
+  if (error) throw new Error(`Failed to read delivery: ${error.message}`)
+  if (!delivery) throw new DeliveryNotFoundError(deliveryId)
+
+  const [{ transactions, monthLabel }, settings, { data: company }] = await Promise.all([
+    fetchAndEnrich(delivery.report_month),
+    fetchReportSettings(),
+    supabase.from('companies').select('id, name, billing_contact_name').eq('id', delivery.company_id).maybeSingle(),
+  ])
+  const companyName: string = company?.name ?? '—'
+
+  let invoice: InvoiceRender | undefined
+  if (delivery.document_number) {
+    const { data: doc, error: docErr } = await supabase
+      .from('billing_documents')
+      .select('document_number, subtotal_cents, tax_cents, total_cents')
+      .eq('id', delivery.billing_document_id)
+      .maybeSingle()
+    if (docErr) throw new Error(`Failed to read billing document: ${docErr.message}`)
+    if (!doc) throw new Error(`Billing document for ${delivery.document_number} is missing`)
+    const { data: issuerRow } = await supabase
+      .from('app_settings')
+      .select('issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate')
+      .eq('id', 1)
+      .maybeSingle()
+    const issuer = resolveIssuerForReissue(issuerRow)
+    if (!issuer) throw new Error('Ausstellerdaten sind unvollständig – die Rechnung kann nicht neu erzeugt werden.')
+    invoice = toInvoiceRender(issuer, doc.document_number, {
+      netCents: doc.subtotal_cents,
+      taxCents: doc.tax_cents,
+      grossCents: doc.total_cents,
+    })
+  }
+
+  const accent = settings.format.accent
+  const [yearStr] = delivery.report_month.split('-')
+  let subject: string
+  let html: string
+  let xlsx: Buffer
+
+  if (delivery.member_id) {
+    const entries = transactions.filter(t => t.member_id === delivery.member_id)
+    const firstName = delivery.recipient_name.trim().split(/\s+/)[0] || delivery.recipient_name
+    const kind = delivery.kind as MemberDelivery['kind']
+    const vars = {
+      monat: monthLabel,
+      jahr: yearStr,
+      name: firstName,
+      gesamt: formatEuro(entries.reduce((s, e) => s + e.total_cents, 0)),
+    }
+    subject = settings.format.memberSubject
+      ? renderTemplate(settings.format.memberSubject, vars)
+      : `Kaffeelisten – ${MEMBER_SUBJECT[kind]} ${monthLabel}`
+    html = buildMemberStatementHtml(delivery.recipient_name, entries, monthLabel, {
+      accent,
+      intro: settings.format.memberIntro ? renderTemplate(settings.format.memberIntro, vars) : undefined,
+      invoice,
+      infoOnly: kind === 'member_info' ? { payerName: companyName } : undefined,
+    })
+    xlsx = await generateMemberExcel(entries)
+  } else {
+    const summary = computeSummary(transactions).find(s => s.company_id === delivery.company_id)
+    const members = summary?.members ?? []
+    subject = invoice
+      ? `Kaffeelisten – Rechnung ${companyName} ${monthLabel}`
+      : `Kaffeelisten – Aufstellung ${companyName} ${monthLabel}`
+    html = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, {
+      accent,
+      intro: settings.format.reportIntro
+        ? renderTemplate(settings.format.reportIntro, { monat: monthLabel, jahr: yearStr })
+        : undefined,
+      invoice,
+    })
+    xlsx = await generateCompanyExcel(members)
+  }
+
+  const fileStem = documentFileStem({
+    kind: delivery.kind as IssuedDoc['kind'],
+    reportMonth: delivery.report_month,
+    companyId: delivery.company_id,
+    companyName,
+    memberId: delivery.member_id,
+    documentNumber: delivery.document_number,
+    recipientName: delivery.recipient_name,
+    recipientEmail: delivery.recipient_email,
+    netCents: null, taxCents: null, grossCents: 0, pdf: null, xlsx: null,
+  })
+
+  return { delivery, subject, html, fileStem, xlsx }
+}
+
+/**
+ * Re-send a delivered document to its original recipient and append the send to
+ * the ledger as a new row pointing at the original. The original row is never
+ * modified, so the history of both sends survives.
+ */
+export async function resendDelivery(
+  deliveryId: string,
+  renderPdf: (html: string) => Promise<Buffer | null>,
+): Promise<{ id: string }> {
+  const regen = await regenerateDelivery(deliveryId)
+  const pdf = await renderPdf(regen.html)
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey) throw new Error('Missing RESEND_API_KEY')
+
+  const attachments = [
+    ...(pdf ? [{ filename: `${regen.fileStem}.pdf`, content: pdf.toString('base64') }] : []),
+    { filename: `${regen.fileStem}.xlsx`, content: regen.xlsx.toString('base64') },
+  ]
+  const { data, error } = await new Resend(resendKey).emails.send(
+    {
+      from: 'Kaffeelisten <bericht@kaffeelisten.de>',
+      to: [regen.delivery.recipient_email],
+      ...(replyTo() ? { replyTo: replyTo()! } : {}),
+      subject: regen.subject,
+      html: regen.html,
+      attachments,
+    },
+    // A deliberate re-send must go out even if an identical one did recently.
+    { idempotencyKey: `resend-${deliveryId}-${Date.now()}` },
+  )
+  if (error) throw new Error(`Resend failed: ${error.message ?? JSON.stringify(error)}`)
+
+  const supabase = makeSupabase()
+  const { data: original, error: origErr } = await supabase
+    .from('document_deliveries')
+    .select('report_month, kind, company_id, member_id, recipient_name, recipient_email, document_number, billing_document_id, gross_cents')
+    .eq('id', deliveryId)
+    .single()
+  if (origErr) throw new Error(`Re-send delivered but could not be recorded: ${origErr.message}`)
+  // Copy the original's fields explicitly — never spread the row, which would
+  // carry its id or sent_at into the new record.
+  const { data: row, error: insErr } = await supabase
+    .from('document_deliveries')
+    .insert({
+      report_month: original.report_month,
+      kind: original.kind,
+      company_id: original.company_id,
+      member_id: original.member_id,
+      recipient_name: original.recipient_name,
+      recipient_email: original.recipient_email,
+      document_number: original.document_number,
+      billing_document_id: original.billing_document_id,
+      gross_cents: original.gross_cents,
+      has_pdf: !!pdf,
+      has_xlsx: true,
+      resend_message_id: data?.id ?? null,
+      resend_of: deliveryId,
+    })
+    .select('id')
+    .single()
+  if (insErr) throw new Error(`Re-send delivered but could not be recorded: ${insErr.message}`)
+  return { id: row.id }
 }

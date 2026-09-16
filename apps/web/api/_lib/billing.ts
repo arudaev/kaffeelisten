@@ -32,13 +32,22 @@ export interface IssuerRow {
   invoice_number_prefix: string | null
   invoice_payment_terms: string | null
   invoice_vat_rate: number
+  // Legal gate (migration 036). Optional so a row read before that migration
+  // resolves as not authorised rather than failing to type-check.
+  invoice_mode_authorized?: boolean
 }
 
-// Effective issuer config — present only when invoice mode is on AND every
-// mandatory field is set. Mirrors the guard in api/admin/settings.ts so the
-// report path can never issue an invoice with a missing issuer/VAT id/account.
+// Effective issuer config — present only when invoice mode is on, ITC1's written
+// authority to issue in its name is recorded, AND every mandatory field is set.
+// Mirrors the guard in api/admin/settings.ts so the report path can never issue
+// an invoice with a missing issuer/VAT id/account.
+//
+// Every invoice path in report.ts keys off this returning non-null, so the
+// authorisation check here gates invoice mode as a whole. Statement mode is
+// unaffected. See docs/prd-billing-commercial-addendum.md §1.1.
 export function resolveIssuer(row: IssuerRow | null | undefined): IssuerConfig | null {
   if (!row || !row.issue_invoices) return null
+  if (row.invoice_mode_authorized !== true) return null
   if (!row.issuer_legal_name || !row.issuer_vat_id || !row.issuer_iban || !row.issuer_bic) return null
   return {
     legalName: row.issuer_legal_name,
@@ -50,6 +59,19 @@ export function resolveIssuer(row: IssuerRow | null | undefined): IssuerConfig |
     paymentTerms: row.invoice_payment_terms,
     vatRate: row.invoice_vat_rate,
   }
+}
+
+// Issuer for regenerating a copy of an invoice that was ALREADY issued. Unlike
+// resolveIssuer it does not require invoice mode to be on or authorised now:
+// the authority was needed to issue the number, not to reproduce the document
+// that carries it. It still requires every mandatory field.
+//
+// Caveat, surfaced in the admin UI: the issuer block is today's. If ITC1's IBAN or
+// address changed since issuance, the copy shows the current details, while the
+// number and every amount come from the stored ledger row and are unchanged.
+export function resolveIssuerForReissue(row: IssuerRow | null | undefined): IssuerConfig | null {
+  if (!row) return null
+  return resolveIssuer({ ...row, issue_invoices: true, invoice_mode_authorized: true })
 }
 
 // Sample issuer for previews before the admin has filled the real block — so an

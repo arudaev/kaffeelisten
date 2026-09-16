@@ -128,7 +128,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (type !== 'admin' && type !== 'company' && type !== 'member') {
       return res.status(400).json({ error: 'Unbekannter Berichtstyp.' })
     }
-    const asInvoice = String(body.variant ?? req.query.variant ?? 'report') === 'invoice'
+    const variant = String(body.variant ?? req.query.variant ?? 'report')
+    const asInvoice = variant === 'invoice'
+    // A member of a company that pays receives an information copy (documentMatrix.ts).
+    const asInfo = variant === 'info' && type === 'member'
 
     const settings = await fetchReportSettings()
     const format = coerceFormat(settings.format, body.format)
@@ -188,11 +191,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? renderTemplate(format.memberSubject, vars)
       : asInvoice
         ? `Kaffeelisten – Rechnung ${monthLabel}`
-        : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
+        : asInfo
+          ? `Kaffeelisten – Deine Übersicht ${monthLabel}`
+          : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
     const html = buildMemberStatementHtml(memberName, entries, monthLabel, {
       accent: format.accent,
       intro: format.memberIntro ? renderTemplate(format.memberIntro, vars) : undefined,
       invoice,
+      infoOnly: asInfo ? { payerName: firstTx.company_name } : undefined,
     })
     return res.status(200).json({ subject, html })
   } catch (err) {
