@@ -45,6 +45,9 @@ const REQUIRED: Record<string, Priv[]> = {
 
 // Privileges service_role must NOT hold per table.
 const FORBIDDEN: Record<string, Priv[]> = {
+  // The archive is the permanent record of reported months (migration 040).
+  // Deleting from it once destroyed all history after ~2-3 months.
+  transactions_archive: ['delete'],
   // A payment record is never removed on its own (migration 035).
   company_payments: ['delete'],
   // Append-only: a re-send adds a row, it never rewrites or removes one.
@@ -57,6 +60,7 @@ const FORBIDDEN: Record<string, Priv[]> = {
 // The replay below cannot see a bootstrap grant, so a FORBIDDEN check alone
 // would pass even if nothing revoked it. These must each be revoked EXPLICITLY.
 const MUST_REVOKE_EXPLICITLY: Record<string, Priv[]> = {
+  transactions_archive: ['delete'],
   company_payments: ['delete'],
   document_deliveries: ['update', 'delete'],
   email_delivery_events: ['update', 'delete'],
