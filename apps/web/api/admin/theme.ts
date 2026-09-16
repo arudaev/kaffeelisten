@@ -6,6 +6,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { PRESET_PALETTES, CUSTOM_SLOTS, isHex } from '../_lib/palettes'
 import type { Database } from '../../src/lib/database.types'
+import { classifyServerError } from '../_lib/errors'
 
 type ThemeUpdate = Database['public']['Tables']['app_theme']['Update']
 
@@ -83,6 +84,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[theme]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

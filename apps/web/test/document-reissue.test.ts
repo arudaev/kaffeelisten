@@ -7,6 +7,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFakeClient, type FakeDb } from './support/fakeSupabase'
 
+// These tests exercise production delivery; outside production the mail guard
+// (api/_lib/mail.ts) would drop the non-example.com recipients they assert on.
+process.env.VERCEL_ENV = 'production'
+
 const state = vi.hoisted(() => ({
   db: null as unknown as FakeDb,
   sent: [] as Array<{ to: string[]; subject: string; html: string; attachments?: { filename: string }[] }>,

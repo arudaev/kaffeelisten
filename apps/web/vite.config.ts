@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Baked in at build time so the bundle knows which Vercel environment it belongs
+  // to (src/lib/environment.ts). Vercel sets VERCEL_ENV during builds.
+  define: {
+    __VERCEL_ENV__: JSON.stringify(process.env.VERCEL_ENV ?? 'development'),
+  },
   plugins: [
     react(),
     VitePWA({

@@ -15,6 +15,7 @@ import { resolveMx, resolve } from 'node:dns/promises'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { sendMemberConfirmation } from '../_lib/confirmationEmail'
 import { companyBillingTouched, companyConfigError, type BillingMode, type CheckoutMode } from '../_lib/documentMatrix'
+import { classifyServerError } from '../_lib/errors'
 
 // Request origin (e.g. https://kaffeelisten.de) for building confirmation links.
 function baseUrl(req: VercelRequest): string {
@@ -397,6 +398,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[admin/data]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

@@ -17,6 +17,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { DeliveryNotFoundError, regenerateDelivery, resendDelivery } from '../_lib/report'
 import { launchBrowser, pageToPdf } from '../_lib/pdf'
+import { classifyServerError } from '../_lib/errors'
 
 export const config = { maxDuration: 60 }
 
@@ -100,6 +101,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     if (err instanceof DeliveryNotFoundError) return res.status(404).json({ error: 'Dokument nicht gefunden.' })
     console.error('[admin/documents]', err instanceof Error ? err.message : err)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
