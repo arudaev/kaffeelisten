@@ -4,7 +4,7 @@
 // Archived months are deliberately NOT shown in the admin's Einträge table (it
 // reads only the live table, see api/admin/data.ts); they are reachable here.
 
-import { toCsv } from './csv'
+import { toCsv } from '../../shared/csv'
 import { mergeLiveAndArchive, unitPriceOf, type TransactionCore } from './pricing'
 import type { EnrichedTransaction } from './reportHtml'
 

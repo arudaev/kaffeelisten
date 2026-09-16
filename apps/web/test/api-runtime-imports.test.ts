@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 // Vercel runs api/ as CommonJS but src/ is an ES module package. A runtime
 // (non-type) import from api/ into src/ crashes every function at startup with
 // ERR_REQUIRE_ESM, which unit tests and typecheck do not catch. Happened on
-// 2026-09-16; shared code lives in api/_lib and src/ re-exports it.
+// 2026-09-16. Shared pure code lives in shared/ (its own CommonJS package.json);
+// src/ re-exports it. Not api/_lib: the dev server proxies every /api path.
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
     const p = join(dir, name)

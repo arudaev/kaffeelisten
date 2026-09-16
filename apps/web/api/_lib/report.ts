@@ -30,7 +30,7 @@ import {
 } from './billing'
 import { findPalette } from './palettes'
 import { makeMailer, replyTo } from './mail'
-import { databaseConfigError } from './environment'
+import { databaseConfigError } from '../../shared/environment'
 import { mergeLiveAndArchive, unitPriceOf } from './pricing'
 import {
   computeCampusRollup,

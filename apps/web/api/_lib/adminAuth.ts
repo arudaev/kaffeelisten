@@ -8,7 +8,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
-import { databaseConfigError } from './environment'
+import { databaseConfigError } from '../../shared/environment'
 
 export function makeAdminClient(): SupabaseClient<Database> {
   const url = process.env.VITE_SUPABASE_URL
