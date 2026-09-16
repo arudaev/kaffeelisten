@@ -11,6 +11,7 @@
 // the schedule in between. The settings API accepts partial updates, so each tab
 // sends only its own fields and cannot disturb unsaved edits in another tab.
 
+import { matrixMode } from '../../lib/invoiceMatrix'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Topbar } from '../../components/admin/Topbar'
 import Modal from '../../components/admin/Modal'
@@ -376,7 +377,8 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
       : !form.authorized
         ? 'unauthorized'
         : 'active'
-  const invoicing = invoiceState === 'active'
+  // The matrix follows the chosen mode; `pendingNotice` explains when it is not live yet.
+  const { showInvoices: invoicing, pendingNotice: invoicePending } = matrixMode(invoiceState, issuerMissing)
 
   const tabProblem = (t: TabId): string | null => {
     if (t === 'billing') {
@@ -587,6 +589,12 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
                       </div>
                       <Toggle checked={form.companyDocs} onChange={v => set('companyDocs', v)} label="Unternehmen erhalten ein Monatsdokument an ihren Kontakt" />
                     </div>
+
+                    {invoicePending && (
+                      <p role="status" className="text-sm text-fg bg-accent-subtle border border-accent rounded-lg px-4 py-3 leading-relaxed">
+                        {invoicePending}
+                      </p>
+                    )}
 
                     <div className="overflow-x-auto -mx-1 px-1">
                       <div className="grid grid-cols-[7.5rem_minmax(12rem,1fr)_minmax(12rem,1fr)] gap-2 min-w-[34rem]">
