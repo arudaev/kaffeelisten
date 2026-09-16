@@ -1,5 +1,7 @@
 -- Migration 035: per-company, per-month payment tracking.
 --
+-- deploy: pre
+--
 -- member_payments (migration 027) is keyed (member_id, report_month), so it can
 -- only say "this person paid". When a company pays for all of its people, there
 -- is one payment for the whole company, and ticking each employee separately

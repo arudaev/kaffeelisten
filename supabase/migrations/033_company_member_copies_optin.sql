@@ -1,5 +1,7 @@
 -- Migration 033: employer copies of employees' documents become opt-in.
 --
+-- deploy: pre
+--
 -- For a company whose employees each pay their own way, the monthly run used to
 -- zip every employee's individual invoice and send it to the employer's billing
 -- contact — automatically, for every such company, in invoice mode. That hands

@@ -1,5 +1,7 @@
 -- Migration 036: document-matrix settings and the invoice-mode legal gate.
 --
+-- deploy: pre
+--
 -- company_paid_member_reports_enabled
 --   Members of a company that pays now receive an information copy of their own
 --   consumption (previously they received nothing). On by default; the copy names
