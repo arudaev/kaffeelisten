@@ -1,7 +1,7 @@
 // Shared mail helpers.
 
 import { Resend } from 'resend'
-import { filterRecipients, subjectFor } from './environment'
+import { filterRecipients, subjectFor } from '../../shared/environment'
 
 /**
  * Reply-to for all outgoing mail. A from-address (bericht@kaffeelisten.de) that
