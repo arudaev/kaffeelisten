@@ -14,7 +14,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { resolveMx, resolve } from 'node:dns/promises'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { sendMemberConfirmation } from '../_lib/confirmationEmail'
-import { companyBillingTouched, companyConfigError, type BillingMode, type CheckoutMode } from '../_lib/documentMatrix'
+import { companyBillingTouched, companyConfigError, hasHouseAccount, type BillingMode, type CheckoutMode } from '../_lib/documentMatrix'
 import { classifyServerError } from '../_lib/errors'
 
 // Request origin (e.g. https://kaffeelisten.de) for building confirmation links.
@@ -104,7 +104,7 @@ async function validateCompany(
   }
   if (!partial || body.checkout_mode !== undefined) {
     const mode = String(body.checkout_mode ?? 'member')
-    if (mode !== 'member' && mode !== 'company') return { error: 'Ungültiger Checkout-Modus.' }
+    if (mode !== 'member' && mode !== 'company' && mode !== 'both') return { error: 'Ungültiger Checkout-Modus.' }
     out.checkout_mode = mode
   }
 
@@ -236,7 +236,7 @@ async function provisionHouseAccount(
   supabase: ReturnType<typeof makeAdminClient>,
   company: { id: string; checkout_mode: string },
 ): Promise<void> {
-  if (company.checkout_mode !== 'company') return
+  if (!hasHouseAccount(company.checkout_mode as CheckoutMode)) return
   const { error } = await supabase.rpc('ensure_house_member', { p_company_id: company.id })
   if (error) throw new Error(`ensure_house_member failed: ${error.message}`)
 }

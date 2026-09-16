@@ -176,7 +176,14 @@ export function isInvoice(kind: MemberDocKind | CompanyDocKind): boolean {
 
 // ─── Company checkout rules (mirrors migration 034) ──────────────────────────
 
-export type CheckoutMode = 'member' | 'company'
+// 'member': people book for themselves. 'company': only the shared account (no
+// person step). 'both': people plus the shared account (migration 039).
+export type CheckoutMode = 'member' | 'company' | 'both'
+
+/** Whether the company has a shared house account to book on. */
+export function hasHouseAccount(mode: CheckoutMode): boolean {
+  return mode === 'company' || mode === 'both'
+}
 
 /**
  * Why a company's configuration is invalid, or null when it is valid.
@@ -194,8 +201,8 @@ export function companyConfigError(c: {
   if (c.billing_mode === 'company_paid' && !c.billing_contact_email) {
     return 'Bei „Firma zahlt“ ist eine Rechnungs-E-Mail-Adresse erforderlich.'
   }
-  if (c.checkout_mode === 'company' && c.billing_mode !== 'company_paid') {
-    return 'Firmen-Checkout ist nur möglich, wenn die Firma zahlt – es gibt keine Einzelpersonen, die eine Rechnung erhalten könnten.'
+  if (hasHouseAccount(c.checkout_mode) && c.billing_mode !== 'company_paid') {
+    return 'Ein gemeinsames Firmenkonto ist nur möglich, wenn die Firma zahlt – sonst gäbe es niemanden, der die Buchungen darauf bezahlt.'
   }
   return null
 }

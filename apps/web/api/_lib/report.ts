@@ -49,6 +49,7 @@ import {
   type MatrixMember,
   type MemberDelivery,
   type SkippedDelivery,
+  type CheckoutMode,
 } from './documentMatrix'
 import { previousMonth } from './schedule'
 import { computeAdminInsights, type AdminInsights } from './adminInsights'
@@ -110,7 +111,7 @@ export interface ReportSettings {
 // opt-in (033) and the checkout mode (034). documentMatrix.ts decides what each
 // company and its members receive.
 export interface CompanyBilling extends MatrixCompany {
-  checkout_mode: 'member' | 'company'
+  checkout_mode: CheckoutMode
 }
 
 // Reads the singleton app_settings row and resolves the effective recipients:

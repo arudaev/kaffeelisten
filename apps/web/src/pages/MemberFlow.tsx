@@ -164,8 +164,11 @@ export default function MemberFlow() {
   const [addSelfError, setAddSelfError] = useState<string | null>(null)
   const firstNameRef = useRef<HTMLInputElement>(null)
 
-  // Everyone at this company books on one shared account; there is no person step.
-  const companyCheckout = selectedCompany?.checkout_mode === 'company'
+  // 'company': everyone books on one shared account, so there is no person step.
+  // 'both': named people plus a "Für die Firma buchen" tile on the person step.
+  const [bookOnCompany, setBookOnCompany] = useState(false)
+  const skipsPersonStep = selectedCompany?.checkout_mode === 'company'
+  const companyCheckout = skipsPersonStep || bookOnCompany
   const cartEntries = [...cart.values()]
   const cartCount = cartEntries.reduce((sum, e) => sum + e.quantity, 0)
   const cartTotal = cartEntries.reduce((sum, e) => sum + e.item.price_cents * e.quantity, 0)
@@ -232,6 +235,7 @@ export default function MemberFlow() {
     setStep('start')
     setSelectedCompany(null)
     setSelectedMember(null)
+    setBookOnCompany(false)
     setCart(new Map())
     setError(null)
     setLimitReached(false)
@@ -347,8 +351,8 @@ export default function MemberFlow() {
 
   const availableCategories = [...new Set(items.map(i => i.category))]
   const filteredItems = items.filter(i => i.category === activeCategory)
-  const totalSteps = companyCheckout ? 3 : 4
-  const stepIndex = companyCheckout
+  const totalSteps = skipsPersonStep ? 3 : 4
+  const stepIndex = skipsPersonStep
     ? { start: 0, company: 0, member: 0, item: 1, confirm: 2, success: 2 }[step]
     : { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
   const whoLabel = companyCheckout
@@ -437,6 +441,7 @@ export default function MemberFlow() {
             recordChoice(c.id)
             setSelectedCompany(c)
             setSelectedMember(null)
+            setBookOnCompany(false)
             setCart(new Map())
             setStep(c.checkout_mode === 'company' ? 'item' : 'member')
           }
@@ -484,6 +489,7 @@ export default function MemberFlow() {
           totalSteps={totalSteps}
           onBack={() => {
             setSelectedMember(null)
+            setBookOnCompany(false)
             setCart(new Map())
             setStep('company')
           }}
@@ -505,6 +511,22 @@ export default function MemberFlow() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {selectedCompany?.checkout_mode === 'both' && (
+                <>
+                  <Tile
+                    label="Für die Firma buchen"
+                    sub={`Gemeinsames Konto – wird ${selectedCompany.name} berechnet`}
+                    accentColor={getLetterColor(selectedCompany.name)}
+                    onClick={() => {
+                      setSelectedMember(null)
+                      setBookOnCompany(true)
+                      setCart(new Map())
+                      setStep('item')
+                    }}
+                  />
+                  <p className="text-sm font-medium text-fg-muted uppercase tracking-[0.06em] mt-2">Oder für dich selbst</p>
+                </>
+              )}
               <div className={twoCol ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
                 {members.map(m => (
                   <Tile
@@ -513,6 +535,7 @@ export default function MemberFlow() {
                     accentColor={getLetterColor(m.name)}
                     onClick={() => {
                       setSelectedMember(m)
+                      setBookOnCompany(false)
                       setCart(new Map())
                       setStep('item')
                     }}
@@ -649,7 +672,7 @@ export default function MemberFlow() {
         onBack={() => {
           setCart(new Map())
           setLimitReached(false)
-          setStep(companyCheckout ? 'company' : 'member')
+          setStep(skipsPersonStep ? 'company' : 'member')
         }}
         header={
           <>

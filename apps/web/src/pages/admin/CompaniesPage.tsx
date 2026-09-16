@@ -50,7 +50,7 @@ function formProblem(f: CompanyForm): string | null {
   const email = f.billing_contact_email.trim()
   if (email && !EMAIL_RE.test(email)) return 'Die Kontakt-E-Mail ist ungültig.'
   if (f.billing_mode === 'company_paid' && !email) return 'Wenn die Firma zahlt, ist eine Kontakt-E-Mail Pflicht – dorthin geht die Rechnung.'
-  if (f.checkout_mode === 'company' && f.billing_mode !== 'company_paid') return 'Firmen-Checkout geht nur, wenn die Firma zahlt.'
+  if (f.checkout_mode !== 'member' && f.billing_mode !== 'company_paid') return 'Ein Firmenkonto geht nur, wenn die Firma zahlt.'
   return null
 }
 
@@ -209,7 +209,9 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
       key: 'checkout',
       label: 'Checkout',
       sortValue: r => r.checkout_mode ?? 'member',
-      render: r => (r.checkout_mode === 'company'
+      render: r => (r.checkout_mode === 'both'
+        ? <Badge kind="inactive">Personen + Firmenkonto</Badge>
+        : r.checkout_mode === 'company'
         ? <Badge kind="inactive">Firmen-Checkout</Badge>
         : <span className="text-sm text-fg-muted">pro Person</span>),
     },
@@ -379,14 +381,17 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
                 value={form.checkout_mode}
                 onChange={checkout_mode => setForm(f => ({ ...f, checkout_mode }))}
                 options={[
-                  { value: 'member', label: 'Personen wählen sich aus' },
-                  { value: 'company', label: 'Ein gemeinsames Konto' },
+                  { value: 'member', label: 'Nur Personen' },
+                  { value: 'both', label: 'Personen + Firmenkonto' },
+                  { value: 'company', label: 'Nur Firmenkonto' },
                 ]}
               />
               <p className="text-[13px] text-fg-muted leading-relaxed">
                 {form.checkout_mode === 'company'
                   ? 'Niemand muss sich registrieren: Wer die Firma antippt, bucht direkt auf das gemeinsame Firmenkonto. Einzelne Personen werden nicht erfasst.'
-                  : 'Jede Person wählt am iPad ihren Namen. Die Firma sieht in ihrer Abrechnung, wer was getrunken hat.'}
+                  : form.checkout_mode === 'both'
+                    ? 'Am iPad erscheint über den Namen die Kachel „Für die Firma buchen“. Wer keinen eigenen Namen hat, bucht dort auf das gemeinsame Firmenkonto; alle anderen wählen sich wie gewohnt aus.'
+                    : 'Jede Person wählt am iPad ihren Namen. Die Firma sieht in ihrer Abrechnung, wer was getrunken hat.'}
               </p>
             </fieldset>
           ) : (
