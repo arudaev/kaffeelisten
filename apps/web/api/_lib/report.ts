@@ -29,7 +29,7 @@ import {
 } from './billing'
 import { findPalette } from './palettes'
 import { makeMailer, replyTo } from './mail'
-import { databaseConfigError } from '../../src/lib/environment'
+import { databaseConfigError } from './environment'
 import { mergeLiveAndArchive, unitPriceOf } from './pricing'
 import {
   computeCampusRollup,
