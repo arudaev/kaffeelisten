@@ -82,6 +82,9 @@ export interface SkippedDelivery {
   id: string
   name: string
   reason: SkipReason
+  // Expected and harmless: a shared account has no inbox, and a company whose
+  // people pay for themselves does not need a contact. Not reported as a problem.
+  optional?: boolean
 }
 
 export interface DeliveryPlan {
@@ -118,7 +121,7 @@ export function planDeliveries(
     consumingCompanyIds.add(company.id)
 
     if (isHouseMember(m)) {
-      plan.skipped.push({ recipient: 'member', id: m.id, name: m.name, reason: 'house_account' })
+      plan.skipped.push({ recipient: 'member', id: m.id, name: m.name, reason: 'house_account', optional: true })
       continue
     }
 
@@ -149,11 +152,14 @@ export function planDeliveries(
       plan.skipped.push({ recipient: 'company', id: company.id, name: company.name, reason: 'disabled' })
       continue
     }
+    const companyPays = company.billing_mode === 'company_paid'
     if (!company.billing_contact_email) {
-      plan.skipped.push({ recipient: 'company', id: company.id, name: company.name, reason: 'no_billing_contact' })
+      plan.skipped.push({
+        recipient: 'company', id: company.id, name: company.name, reason: 'no_billing_contact',
+        ...(companyPays ? {} : { optional: true }),
+      })
       continue
     }
-    const companyPays = company.billing_mode === 'company_paid'
     plan.companies.push({
       kind: companyPays && settings.invoiceMode ? 'company_invoice' : 'company_statement',
       companyId: company.id,
