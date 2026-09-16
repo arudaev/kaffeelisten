@@ -1,4 +1,6 @@
 // Member-facing logging flow: start → company → member → item → confirm → success
+// A company-checkout company (migration 034) skips the member step: everyone
+// books on the company's shared account, so the flow is company → item → confirm.
 // Design spec: docs/design-foundation.md, ui_kits/member-flow/
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -38,6 +40,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 function formatPrice(priceCents: number): string {
+  if (priceCents === 0) return 'kostenlos'
   return (priceCents / 100).toFixed(2).replace('.', ',') + ' €'
 }
 
@@ -158,6 +161,8 @@ export default function MemberFlow() {
   const [addSelfError, setAddSelfError] = useState<string | null>(null)
   const firstNameRef = useRef<HTMLInputElement>(null)
 
+  // Everyone at this company books on one shared account; there is no person step.
+  const companyCheckout = selectedCompany?.checkout_mode === 'company'
   const cartEntries = [...cart.values()]
   const cartCount = cartEntries.reduce((sum, e) => sum + e.quantity, 0)
   const cartTotal = cartEntries.reduce((sum, e) => sum + e.item.price_cents * e.quantity, 0)
@@ -267,13 +272,14 @@ export default function MemberFlow() {
   // path is closed too: if the person undoes, the rows are deleted before they can
   // re-confirm.
   const handleConfirm = async () => {
-    if (!selectedMember || !selectedCompany || cartEntries.length === 0 || submitting) return
+    if (!selectedCompany || cartEntries.length === 0 || submitting) return
+    if (!companyCheckout && !selectedMember) return
     setSubmitting(true)
     setError(null)
-    const { data, error: err } = await supabase.rpc('log_order', {
-      p_member_id: selectedMember.id,
-      p_items: cartEntries.map(e => ({ item_id: e.item.id, quantity: e.quantity })),
-    })
+    const lines = cartEntries.map(e => ({ item_id: e.item.id, quantity: e.quantity }))
+    const { data, error: err } = companyCheckout
+      ? await supabase.rpc('log_company_order', { p_company_id: selectedCompany.id, p_items: lines })
+      : await supabase.rpc('log_order', { p_member_id: selectedMember!.id, p_items: lines })
     setSubmitting(false)
     if (err || !data) {
       setError('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
@@ -338,11 +344,22 @@ export default function MemberFlow() {
 
   const availableCategories = [...new Set(items.map(i => i.category))]
   const filteredItems = items.filter(i => i.category === activeCategory)
-  const stepIndex = { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
+  const totalSteps = companyCheckout ? 3 : 4
+  const stepIndex = companyCheckout
+    ? { start: 0, company: 0, member: 0, item: 1, confirm: 2, success: 2 }[step]
+    : { start: 0, company: 0, member: 1, item: 2, confirm: 3, success: 3 }[step]
+  const whoLabel = companyCheckout
+    ? selectedCompany?.name ?? ''
+    : selectedMember
+      ? `${getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))} · ${selectedCompany?.name ?? ''}`
+      : ''
 
-  const successSummary = selectedMember && selectedCompany
-    ? [getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)), selectedCompany.name, cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')].join(' - ')
-    : ''
+  const orderLine = cartEntries.map(e => e.quantity + 'x ' + e.item.name).join(', ')
+  const successSummary = companyCheckout && selectedCompany
+    ? [selectedCompany.name, orderLine].join(' - ')
+    : selectedMember && selectedCompany
+      ? [getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)), selectedCompany.name, orderLine].join(' - ')
+      : ''
 
   if (step === 'success') {
     return (
@@ -396,7 +413,7 @@ export default function MemberFlow() {
     return (
       <FlowShell
         step={stepIndex}
-        totalSteps={4}
+        totalSteps={totalSteps}
         onBack={() => setStep('start')}
         header={
           <>
@@ -418,7 +435,7 @@ export default function MemberFlow() {
             setSelectedCompany(c)
             setSelectedMember(null)
             setCart(new Map())
-            setStep('member')
+            setStep(c.checkout_mode === 'company' ? 'item' : 'member')
           }
           return (
             <div className="flex flex-col gap-3">
@@ -461,7 +478,7 @@ export default function MemberFlow() {
       <>
         <FlowShell
           step={stepIndex}
-          totalSteps={4}
+          totalSteps={totalSteps}
           onBack={() => {
             setSelectedMember(null)
             setCart(new Map())
@@ -625,18 +642,19 @@ export default function MemberFlow() {
     return (
       <FlowShell
         step={stepIndex}
-        totalSteps={4}
+        totalSteps={totalSteps}
         onBack={() => {
           setCart(new Map())
           setLimitReached(false)
-          setStep('member')
+          setStep(companyCheckout ? 'company' : 'member')
         }}
         header={
           <>
-            <p className="text-sm font-medium text-fg-muted uppercase tracking-[0.06em]">
-              {selectedMember ? getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name)) : ''} · {selectedCompany?.name}
-            </p>
+            <p className="text-sm font-medium text-fg-muted uppercase tracking-[0.06em]">{whoLabel}</p>
             <h1 className="text-3xl font-bold text-fg tracking-tight">Was hast du genommen?</h1>
+            {companyCheckout && (
+              <p className="text-base text-fg-muted">Wird auf das gemeinsame Konto von {selectedCompany?.name} gebucht.</p>
+            )}
           </>
         }
         footer={
@@ -701,11 +719,11 @@ export default function MemberFlow() {
     )
   }
 
-  if (step === 'confirm' && selectedMember && selectedCompany && cartEntries.length > 0) {
+  if (step === 'confirm' && selectedCompany && (selectedMember || companyCheckout) && cartEntries.length > 0) {
     return (
       <FlowShell
         step={stepIndex}
-        totalSteps={4}
+        totalSteps={totalSteps}
         onBack={() => setStep('item')}
         header={
           <h1 className="text-3xl font-bold text-fg tracking-tight">Alles richtig?</h1>
@@ -727,12 +745,14 @@ export default function MemberFlow() {
         }
       >
         <div className="bg-surface border border-border rounded-2xl p-7 shadow-sm flex flex-col gap-4">
+          {selectedMember && !companyCheckout && (
+            <div className="flex justify-between items-center border-b border-border pb-3.5">
+              <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">Person</span>
+              <span className="text-xl font-semibold text-fg">{getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center border-b border-border pb-3.5">
-            <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">Person</span>
-            <span className="text-xl font-semibold text-fg">{getDisplayName(selectedMember.name, members.filter(x => x.id !== selectedMember.id).map(x => x.name))}</span>
-          </div>
-          <div className="flex justify-between items-center border-b border-border pb-3.5">
-            <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">Unternehmen</span>
+            <span className="text-sm text-fg-muted uppercase tracking-[0.06em]">{companyCheckout ? 'Firmenkonto' : 'Unternehmen'}</span>
             <span className="text-xl font-semibold text-fg">{selectedCompany.name}</span>
           </div>
           {cartEntries.map(({ item, quantity }) => (

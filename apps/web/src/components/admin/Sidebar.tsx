@@ -4,7 +4,7 @@ import Logo from '../Logo'
 
 type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
 
-type PageId = 'dashboard' | 'log' | 'companies' | 'members' | 'items' | 'settings'
+export type PageId = 'dashboard' | 'log' | 'documents' | 'companies' | 'members' | 'items' | 'settings'
 
 interface NavItem {
   id: PageId
@@ -15,9 +15,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'dashboard',  label: 'Übersicht',      icon: 'home' },
   { id: 'log',        label: 'Einträge',        icon: 'log' },
+  { id: 'documents',  label: 'Dokumente',       icon: 'document' },
   { id: 'companies',  label: 'Unternehmen',     icon: 'building' },
   { id: 'members',    label: 'Mitarbeitende',   icon: 'users' },
-  { id: 'items',      label: 'Items',           icon: 'coffee' },
+  { id: 'items',      label: 'Artikel',         icon: 'coffee' },
   { id: 'settings',   label: 'Einstellungen',   icon: 'settings' },
 ]
 
