@@ -55,3 +55,6 @@ Kaffeerechnung-Vorlage.pdf
 apps/web/dev-api.mts
 apps/web/vite.config.local.ts
 apps/web/dev-fake/
+
+# Staging-only seeds with real names (repo is public)
+supabase/seeds/*.local.sql
