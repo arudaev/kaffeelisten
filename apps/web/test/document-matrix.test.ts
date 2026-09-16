@@ -194,6 +194,25 @@ describe('global switches', () => {
   })
 })
 
+describe('expected gaps are not reported as problems', () => {
+  it('marks shared accounts and person-pays companies without a contact as optional', () => {
+    const plan = planDeliveries(
+      [
+        { id: 'h', company_id: 'ind', name: 'Sammelkonto', email: null, kind: 'house' },
+        { id: 'p', company_id: 'ind', name: 'Anna', email: 'anna@example.com', kind: 'person' },
+        { id: 'q', company_id: 'paid', name: 'Ben', email: 'ben@example.com', kind: 'person' },
+      ],
+      new Map([
+        ['ind', { id: 'ind', name: 'Gramm', billing_mode: 'individual', billing_contact_name: null, billing_contact_email: null, member_document_copies_enabled: false }],
+        ['paid', { id: 'paid', name: 'PBI', billing_mode: 'company_paid', billing_contact_name: null, billing_contact_email: null, member_document_copies_enabled: false }],
+      ]),
+      { memberStatementsEnabled: true, companyDocumentsEnabled: true, companyPaidMemberReportsEnabled: true, invoiceMode: false },
+    )
+    const bySkip = Object.fromEntries(plan.skipped.map(s => [`${s.name}:${s.reason}`, !!s.optional]))
+    expect(bySkip).toEqual({ 'Sammelkonto:house_account': true, 'Gramm:no_billing_contact': true, 'PBI:no_billing_contact': false })
+  })
+})
+
 describe('companyConfigError', () => {
   const ok = { checkout_mode: 'member' as const, billing_mode: 'individual' as const, billing_contact_email: null }
 

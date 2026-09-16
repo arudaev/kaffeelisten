@@ -1072,7 +1072,7 @@ export async function runMonthlyReport(
         })
         skipped = plan.skipped
         for (const s of skipped) {
-          if (s.reason !== 'disabled') console.warn(`[report] ${s.recipient} ${s.name} not sent: ${s.reason}`)
+          if (s.reason !== 'disabled' && !s.optional) console.warn(`[report] ${s.recipient} ${s.name} not sent: ${s.reason}`)
         }
 
         const resendKey = process.env.RESEND_API_KEY
@@ -1128,7 +1128,7 @@ export async function runMonthlyReport(
       const archiveTarget = archiveZip ? settings.ceoEmail : null
       const insights = computeAdminInsights({
         rollup,
-        skipped: skipped.filter(s => s.reason !== 'disabled'),
+        skipped: skipped.filter(s => s.reason !== 'disabled' && !s.optional),
         failedDeliveries: memberStatements?.failed ?? 0,
         missingFiles: (m => m.pdf + m.xlsx)(countMissingFiles(issuedDocs)),
         archiveNotSent: !!archiveZip && !archiveTarget,
@@ -1164,7 +1164,7 @@ export async function runMonthlyReport(
       return {
         status: 'sent',
         memberStatements,
-        skipped: skipped.filter(s => s.reason !== 'disabled'),
+        skipped: skipped.filter(s => s.reason !== 'disabled' && !s.optional),
         missingFiles: countMissingFiles(issuedDocs),
       }
     } finally {
