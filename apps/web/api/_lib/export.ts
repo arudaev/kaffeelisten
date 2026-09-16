@@ -140,7 +140,7 @@ const euro = (cents: number) => (cents / 100).toFixed(2).replace('.', ',')
 
 /** Semicolon CSV for German Excel, formula-injection safe, with a UTF-8 BOM. */
 export function exportCsv(rows: readonly EnrichedTransaction[]): string {
-  const header = ['Datum', 'Uhrzeit', 'Person', 'E-Mail', 'Unternehmen', 'Item', 'Kategorie', 'Menge', 'Einzelpreis (€)', 'Betrag (€)']
+  const header = ['Datum', 'Uhrzeit', 'Person', 'E-Mail', 'Unternehmen', 'Artikel', 'Kategorie', 'Menge', 'Einzelpreis (€)', 'Betrag (€)']
   const body = rows.map(t => {
     const d = new Date(t.logged_at)
     return [

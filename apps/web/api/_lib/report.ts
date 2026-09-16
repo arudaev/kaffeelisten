@@ -508,7 +508,10 @@ function attachmentsFor(doc: IssuedDoc): Array<{ filename: string; content: stri
 interface PreparedDoc {
   to: string
   subject: string
+  // The email body, and the HTML rendered to the attached PDF. They differ for
+  // company documents: the email stays short, the PDF carries every person.
   html: string
+  pdfHtml: string
   idempotencyKey: string
   ledgerId: string | null
   issued: IssuedDoc
@@ -521,7 +524,7 @@ interface PreparedDoc {
 async function renderPrepared(ctx: DeliveryContext, prepared: PreparedDoc[]): Promise<void> {
   await mapWithConcurrency(prepared, PDF_CONCURRENCY, async p => {
     const [pdf, xlsx] = await Promise.all([
-      renderDocPdf(ctx.budget, p.html),
+      renderDocPdf(ctx.budget, p.pdfHtml),
       safeExcel(`${p.issued.kind} ${p.issued.memberId ?? p.issued.companyId}`, p.buildExcel),
     ])
     p.issued.pdf = pdf
@@ -628,17 +631,19 @@ export async function sendMemberStatements(
       invoiceRender = toInvoiceRender(ctx.issuer, doc.document_number, split)
     }
 
+    const memberHtml = buildMemberStatementHtml(d.name, entries, ctx.monthLabel, {
+      accent: ctx.format.accent,
+      intro: ctx.format.memberIntro ? renderTemplate(ctx.format.memberIntro, vars) : undefined,
+      invoice: invoiceRender,
+      infoOnly: d.kind === 'member_info' ? { payerName: d.payerName ?? companyNames.get(d.companyId) ?? '' } : undefined,
+    })
     prepared.push({
       to: d.email,
       subject: ctx.format.memberSubject
         ? renderTemplate(ctx.format.memberSubject, vars)
         : `Kaffeelisten – ${MEMBER_SUBJECT[d.kind]} ${ctx.monthLabel}`,
-      html: buildMemberStatementHtml(d.name, entries, ctx.monthLabel, {
-        accent: ctx.format.accent,
-        intro: ctx.format.memberIntro ? renderTemplate(ctx.format.memberIntro, vars) : undefined,
-        invoice: invoiceRender,
-        infoOnly: d.kind === 'member_info' ? { payerName: d.payerName ?? companyNames.get(d.companyId) ?? '' } : undefined,
-      }),
+      html: memberHtml,
+      pdfHtml: memberHtml,
       idempotencyKey: `member-${ctx.idempotencyKey}-${d.memberId}`,
       ledgerId,
       issued: {
@@ -698,16 +703,18 @@ export async function sendCompanyDocuments(
       invoice = toInvoiceRender(ctx.issuer, doc.document_number, split)
     }
 
+    const companyOpts = {
+      accent: ctx.format.accent,
+      intro: ctx.format.reportIntro ? renderTemplate(ctx.format.reportIntro, { monat: ctx.monthLabel, jahr: yearStr }) : undefined,
+      invoice,
+    }
     const p: PreparedDoc = {
       to: d.email,
       subject: invoice
         ? `Kaffeelisten – Rechnung ${d.companyName} ${ctx.monthLabel}`
         : `Kaffeelisten – Aufstellung ${d.companyName} ${ctx.monthLabel}`,
-      html: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, {
-        accent: ctx.format.accent,
-        intro: ctx.format.reportIntro ? renderTemplate(ctx.format.reportIntro, { monat: ctx.monthLabel, jahr: yearStr }) : undefined,
-        invoice,
-      }),
+      html: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, { ...companyOpts, variant: 'email' }),
+      pdfHtml: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, { ...companyOpts, variant: 'document' }),
       idempotencyKey: `companydoc-${ctx.idempotencyKey}-${d.companyId}`,
       ledgerId,
       issued: {
@@ -1166,6 +1173,7 @@ export interface RegeneratedDocument {
   }
   subject: string
   html: string
+  pdfHtml: string
   fileStem: string
   xlsx: Buffer
 }
@@ -1229,6 +1237,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
   const [yearStr] = delivery.report_month.split('-')
   let subject: string
   let html: string
+  let pdfHtml: string
   let xlsx: Buffer
 
   if (delivery.member_id) {
@@ -1250,6 +1259,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
       invoice,
       infoOnly: kind === 'member_info' ? { payerName: companyName } : undefined,
     })
+    pdfHtml = html
     xlsx = await generateMemberExcel(entries)
   } else {
     const summary = computeSummary(transactions).find(s => s.company_id === delivery.company_id)
@@ -1257,13 +1267,15 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
     subject = invoice
       ? `Kaffeelisten – Rechnung ${companyName} ${monthLabel}`
       : `Kaffeelisten – Aufstellung ${companyName} ${monthLabel}`
-    html = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, {
+    const companyOpts = {
       accent,
       intro: settings.format.reportIntro
         ? renderTemplate(settings.format.reportIntro, { monat: monthLabel, jahr: yearStr })
         : undefined,
       invoice,
-    })
+    }
+    html = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, { ...companyOpts, variant: 'email' })
+    pdfHtml = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, { ...companyOpts, variant: 'document' })
     xlsx = await generateCompanyExcel(members)
   }
 
@@ -1279,7 +1291,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
     netCents: null, taxCents: null, grossCents: 0, pdf: null, xlsx: null,
   })
 
-  return { delivery, subject, html, fileStem, xlsx }
+  return { delivery, subject, html, pdfHtml, fileStem, xlsx }
 }
 
 /**
@@ -1292,7 +1304,7 @@ export async function resendDelivery(
   renderPdf: (html: string) => Promise<Buffer | null>,
 ): Promise<{ id: string }> {
   const regen = await regenerateDelivery(deliveryId)
-  const pdf = await renderPdf(regen.html)
+  const pdf = await renderPdf(regen.pdfHtml)
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
 

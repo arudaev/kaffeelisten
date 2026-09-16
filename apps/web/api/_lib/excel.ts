@@ -8,6 +8,7 @@
 
 import ExcelJS from 'exceljs'
 import { formatDate, type CompanySummary, type EnrichedTransaction, type MemberSummary } from './reportHtml'
+import { aggregateLines } from './lines'
 
 const AMBER      = 'FFD97706'
 const AMBER_DARK = 'FFB45309'
@@ -194,7 +195,7 @@ function addLineItemSheet(
   }
   if (opts.withCompany) cols.push({ header: 'Unternehmen', key: 'company', width: 26 })
   cols.push(
-    { header: 'Item', key: 'item', width: 22 },
+    { header: 'Artikel', key: 'item', width: 26 },
     { header: 'Kategorie', key: 'category', width: 14 },
     { header: 'Menge', key: 'quantity', width: 9 },
     { header: 'Einzelpreis', key: 'unit_price', width: 16 },
@@ -267,6 +268,33 @@ export async function generateCompanyExcel(members: MemberSummary[]): Promise<Bu
     euros(members.reduce((s, m) => s + m.subtotal_cents, 0)),
   ])
   styleMoneyTotal(tot, 4, [4], [3])
+
+  // One row per person, item and price: what each person consumed, summed.
+  const pi = addReportWorksheet(wb, 'Pro Person × Artikel')
+  pi.columns = [
+    { key: 'person', width: 28 },
+    { key: 'item', width: 30 },
+    { key: 'quantity', width: 10 },
+    { key: 'unit', width: 14 },
+    { key: 'total', width: 14 },
+  ]
+  const piHdr = pi.addRow(['Person', 'Artikel', 'Menge', 'Einzelpreis', 'Betrag'])
+  styleHeaderRow(piHdr, 5)
+  alignHeader(piHdr, { right: [3, 4, 5] })
+  let piIndex = 0
+  for (const m of members) {
+    const label = m.entries[0]?.member_kind === 'house' ? 'Sammelkonto (Firma)' : m.member_name
+    for (const line of aggregateLines(m.entries)) {
+      styleBodyRow(pi.addRow([label, line.itemName, line.quantity, euros(line.unitPriceCents), euros(line.totalCents)]), piIndex++, 5, { money: [4, 5], right: [3] })
+    }
+  }
+  const piTot = pi.addRow([
+    'Gesamt', '',
+    members.reduce((s, m) => s + m.entries.reduce((q, e) => q + e.quantity, 0), 0),
+    '',
+    euros(members.reduce((s, m) => s + m.subtotal_cents, 0)),
+  ])
+  styleMoneyTotal(piTot, 5, [5])
 
   const allEntries = members
     .flatMap(m => m.entries)
