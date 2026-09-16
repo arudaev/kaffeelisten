@@ -20,7 +20,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Shared company accounts at the iPad.** *Nur Firmenkonto* skips the name step (4process). *Personen + Firmenkonto* adds a *Für die Firma buchen* tile above the names (ITC1, PBI, Level51).
 - **Export** from every list as CSV, Excel or PDF, over any date range including archived months.
 - **Company payments:** companies that pay are ticked once per month in *Mitarbeitende*, with their people in bold underneath.
-- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active.
+- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active. Every cell's preview shows the email, the PDF attachment and the Excel attachment (sheets as tables, plus download).
 - **Staging environment.** Pull-request previews and local runs use a separate staging database. Mail outside production goes only to a test inbox, and a preview wired to production data refuses to start.
 
 #### Changed

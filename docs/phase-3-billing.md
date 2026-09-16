@@ -33,7 +33,10 @@ other party gets an overview.
 
 The matrix is shown and explained under *Einstellungen → Abrechnung*. When
 invoice mode is switched on but not yet active, the matrix already shows
-invoices and says why they are not sent yet.
+invoices and says why they are not sent yet. Each cell's *Vorschau* has three
+tabs: the email, the PDF attachment (rendered on demand) and the Excel
+attachment (sheets as tables, with download). Previews use unsaved settings,
+this month's data, and placeholder issuer data where fields are missing.
 
 ## Email, PDF and Excel have different jobs
 
