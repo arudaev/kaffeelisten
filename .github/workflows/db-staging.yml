@@ -1,0 +1,39 @@
+name: Database - staging
+
+# Applies pending migrations to the STAGING Supabase project whenever a pull
+# request changes supabase/migrations, so the Vercel preview (which reads
+# staging) has the schema its code expects. Never touches production.
+on:
+  pull_request:
+    branches: [main]
+    paths: ['supabase/migrations/**']
+  workflow_dispatch:
+
+concurrency:
+  group: db-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply migrations to staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Refuse a missing or production URL
+        run: |
+          if [ -z "$STAGING_DB_URL" ]; then echo "STAGING_DB_URL secret is not set"; exit 1; fi
+          if echo "$STAGING_DB_URL" | grep -q fdnfdscpefxqvtggbbbr; then echo "STAGING_DB_URL points at production"; exit 1; fi
+
+      - name: Pending migrations
+        run: supabase migration list --db-url "$STAGING_DB_URL"
+
+      - name: Apply
+        run: supabase db push --db-url "$STAGING_DB_URL"
