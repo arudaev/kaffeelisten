@@ -2,6 +2,7 @@
 // Rendered to PDF by Puppeteer.
 
 import { aggregateLines, type DocumentLine } from './lines'
+import type { AdminInsights } from './adminInsights'
 
 export interface EnrichedTransaction {
   id: string
@@ -498,10 +499,11 @@ export function buildCompanyEmailHtml(
   summaries: CompanySummary[],
   transactions: EnrichedTransaction[],
   monthLabel: string,
-  opts: { accent?: string; intro?: string; logoSrc: string },
+  opts: { accent?: string; intro?: string; logoSrc: string; insights?: AdminInsights },
 ): string {
   const accent = opts.accent || '#D97706'
   const totalCents = transactions.reduce((s, t) => s + t.total_cents, 0)
+  const insightsHtml = opts.insights ? adminInsightsHtml(opts.insights) : ''
   const introHtml = opts.intro
     ? escapeHtml(opts.intro)
     : `Anbei der Monatsbericht f&uuml;r <strong style="color:#1C1917;">${escapeHtml(monthLabel)}</strong> mit allen Eintr&auml;gen des ITC1-Campus.`
@@ -568,6 +570,8 @@ export function buildCompanyEmailHtml(
               </tr>
             </table>
 
+            ${insightsHtml}
+
             <!-- Section heading -->
             <p style="margin:0 0 10px 0;font-size:12px;font-weight:bold;color:#57534E;text-transform:uppercase;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;">Nach Unternehmen</p>
 
@@ -582,7 +586,7 @@ export function buildCompanyEmailHtml(
             </table>
 
             <!-- Attachments note -->
-            <p style="margin:0;color:#78716C;font-size:12px;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Die vollst&auml;ndigen Daten finden Sie in den beigef&uuml;gten Dateien.</p>
+            <p style="margin:0;color:#78716C;font-size:12px;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Im Anhang: der Monatsbericht als PDF, alle Einzelbuchungen als Excel und die Campus-Auswertung mit Vormonatsvergleich.</p>
             <p style="margin:12px 0 0 0;color:#78716C;font-size:12px;font-family:Arial,Helvetica,sans-serif;">Die Eintr&auml;ge wurden nach dem Versand archiviert. Die Originaldaten bleiben erhalten.</p>
 
           </td>
@@ -602,6 +606,67 @@ export function buildCompanyEmailHtml(
 </table>
 </body>
 </html>`
+}
+
+const SECTION = 'margin:0 0 10px 0;font-size:12px;font-weight:bold;color:#57534E;text-transform:uppercase;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;'
+const TD = 'padding:7px 16px;border-bottom:1px solid #E7E5E4;font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+
+function signedEuro(cents: number): string {
+  return (cents > 0 ? '+' : cents < 0 ? '−' : '±') + formatEuro(Math.abs(cents))
+}
+
+/** Vormonat, Nachbestellung and Hinweise for the admin email. */
+function adminInsightsHtml(i: AdminInsights): string {
+  const trend = i.previousTotalCents !== null
+    ? `<p style="margin:-12px 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">Vormonat: ${formatEuro(i.previousTotalCents)} &middot; Ver&auml;nderung ${signedEuro(i.totalCents - i.previousTotalCents)} &middot; ${i.activePeople} aktive Personen</p>`
+    : ''
+  const restock = i.restock.length
+    ? `
+            <p style="${SECTION}">Nachbestellung &ndash; meistverbraucht</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:24px;">
+              ${i.restock.map(r => `
+              <tr>
+                <td style="${TD}color:#1C1917;">${escapeHtml(r.name)}</td>
+                <td align="right" style="${TD}font-weight:bold;color:#1C1917;">${r.quantity}&times;</td>
+                <td align="right" style="${TD}font-size:12px;color:#78716C;">Vormonat ${r.previousQuantity}&times;</td>
+              </tr>`).join('')}
+            </table>`
+    : ''
+  const warnings = i.warnings.length
+    ? `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:24px;">
+              <tr>
+                <td style="padding:14px 18px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.55;color:#7F1D1D;">
+                  <strong>Bitte pr&uuml;fen</strong>
+                  <ul style="margin:6px 0 0;padding-left:18px;">${i.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
+                </td>
+              </tr>
+            </table>`
+    : ''
+  return trend + warnings + restock
+}
+
+/** Short cover email for the CEO's archive ZIP. */
+export function buildCeoArchiveEmailHtml(monthLabel: string, documentCount: number, opts: { accent?: string } = {}): string {
+  const accent = opts.accent || '#D97706'
+  return `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr><td align="center" style="padding:24px 16px;">
+    <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+      <tr><td style="background:${accent};padding:22px 32px;">
+        <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">Kaffeelisten</p>
+        <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">Dokumentenarchiv &ndash; ${escapeHtml(monthLabel)}</p>
+      </td></tr>
+      <tr><td style="padding:26px 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#57534E;">
+        <p style="margin:0 0 12px;">Im Anhang liegen unver&auml;nderte Kopien aller ${documentCount} Dokumente, die f&uuml;r ${escapeHtml(monthLabel)} versendet wurden, mit einer &Uuml;bersichtstabelle, dem Monatsbericht und der Campus-Auswertung.</p>
+        <p style="margin:0;">Bei R&uuml;ckfragen zu einer Rechnung oder Aufstellung finden Sie die versendete Fassung hier oder im Adminbereich unter &bdquo;Dokumente&ldquo;.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`
 }
 
 export function buildReportHtml(

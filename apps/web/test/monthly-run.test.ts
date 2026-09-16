@@ -133,8 +133,9 @@ const mailTo = (addr: string) => state.sent.filter(m => m.to.includes(addr))
 const names = (m: (typeof state.sent)[number]) => (m.attachments ?? []).map(a => a.filename)
 
 async function ceoZip(): Promise<JSZip> {
-  const [admin] = mailTo('admin@itc1.de')
-  const zip = admin.attachments!.find(a => a.filename.endsWith('.zip'))!
+  // The archive goes to the CEO alone, in its own email (ITC1, 2026-09-16).
+  const archive = state.sent.find(m => m.to.includes('ceo@itc1.de') && (m.attachments ?? []).some(a => a.filename.endsWith('.zip')))!
+  const zip = archive.attachments!.find(a => a.filename.endsWith('.zip'))!
   return JSZip.loadAsync(Buffer.from(zip.content, 'base64'))
 }
 
@@ -185,6 +186,17 @@ describe('statement mode, mixed campus', () => {
     const result = await runMonthlyReport('2026-08', { force: true })
     expect(result.skipped).toContainEqual(expect.objectContaining({ id: GRAMM, reason: 'no_billing_contact' }))
     expect(state.sent.some(m => m.subject.includes('Gramm'))).toBe(false)
+  })
+
+  it('sends the administration a short report with restocking, and no archive', async () => {
+    await runMonthlyReport('2026-08', { force: true })
+    const [admin] = mailTo('admin@itc1.de')
+    expect(names(admin).some(n => n.endsWith('.zip'))).toBe(false)
+    expect(names(admin)).toEqual(expect.arrayContaining(['Campus-Auswertung-2026-08.xlsx']))
+    expect(admin.html).toContain('Nachbestellung')
+    const archives = state.sent.filter(m => names(m).some(n => n.endsWith('.zip')) && !m.to.includes('ceo@itc1.de'))
+    // Only an opted-in company may receive a ZIP (its own employees' copies); nobody else.
+    for (const m of archives) expect(m.to).not.toContain('admin@itc1.de')
   })
 
   it('gives the CEO an archive with a copy of every document sent, plus the manifest and roll-up', async () => {
