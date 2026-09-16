@@ -12,6 +12,7 @@
 // sends only its own fields and cannot disturb unsaved edits in another tab.
 
 import { matrixMode } from '../../lib/invoiceMatrix'
+import DocumentPreview from '../../components/admin/DocumentPreview'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Topbar } from '../../components/admin/Topbar'
 import Modal from '../../components/admin/Modal'
@@ -289,7 +290,8 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
   const [newEmail, setNewEmail] = useState('')
   const [emailError, setEmailError] = useState('')
 
-  const [preview, setPreview] = useState<{ title: string; subject: string; html: string; loading: boolean } | null>(null)
+  // The request is built once when a preview opens, so its tabs share the same unsaved settings.
+  const [preview, setPreview] = useState<{ title: string; request: Record<string, unknown> } | null>(null)
 
   const [pinModal, setPinModal] = useState(false)
   const [curPin, setCurPin] = useState('')
@@ -454,36 +456,26 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
     setEmailError('')
   }
 
-  const openPreview = async (type: 'admin' | 'company' | 'member', variant: 'report' | 'invoice' | 'info', title: string) => {
-    setPreview({ title, subject: '', html: '', loading: true })
-    try {
-      const f = form
-      const res = await fetch('/api/admin/preview-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          variant,
-          format: {
-            report_subject: text(f.reportSubject), report_intro: text(f.reportIntro),
-            report_include_pdf: f.includePdf, report_include_excel: f.includeExcel,
-            member_subject: text(f.memberSubject), member_intro: text(f.memberIntro),
-          },
-          issuer: {
-            issue_invoices: f.issueInvoices, issuer_legal_name: f.issuerLegalName, issuer_address: f.issuerAddress,
-            issuer_vat_id: f.issuerVatId, issuer_iban: f.issuerIban, issuer_bic: f.issuerBic,
-            invoice_number_prefix: f.invoiceNumberPrefix, invoice_payment_terms: f.invoicePaymentTerms,
-            invoice_vat_rate: f.invoiceVatRate.trim() === '' ? 19 : Number(f.invoiceVatRate.replace(',', '.')),
-          },
-        }),
-      })
-      if (!res.ok) throw new Error()
-      const data = (await res.json()) as { html: string; subject: string }
-      setPreview({ title, subject: data.subject, html: data.html, loading: false })
-    } catch {
-      onToast('Vorschau konnte nicht geladen werden.')
-      setPreview(null)
-    }
+  const openPreview = (type: 'admin' | 'company' | 'member', variant: 'report' | 'invoice' | 'info', title: string) => {
+    const f = form
+    setPreview({
+      title,
+      request: {
+        type,
+        variant,
+        format: {
+          report_subject: text(f.reportSubject), report_intro: text(f.reportIntro),
+          report_include_pdf: f.includePdf, report_include_excel: f.includeExcel,
+          member_subject: text(f.memberSubject), member_intro: text(f.memberIntro),
+        },
+        issuer: {
+          issue_invoices: f.issueInvoices, issuer_legal_name: f.issuerLegalName, issuer_address: f.issuerAddress,
+          issuer_vat_id: f.issuerVatId, issuer_iban: f.issuerIban, issuer_bic: f.issuerBic,
+          invoice_number_prefix: f.invoiceNumberPrefix, invoice_payment_terms: f.invoicePaymentTerms,
+          invoice_vat_rate: f.invoiceVatRate.trim() === '' ? 19 : Number(f.invoiceVatRate.replace(',', '.')),
+        },
+      },
+    })
   }
 
   const submitPinChange = async () => {
@@ -918,14 +910,10 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
       >
         {preview && (
           <div className="flex flex-col gap-3">
-            <p className="text-sm"><span className="text-fg-muted">Betreff:</span> <span className="text-fg">{preview.subject || '—'}</span></p>
-            {preview.loading ? (
-              <div className="h-[60vh] flex items-center justify-center text-sm text-fg-muted">Vorschau wird geladen…</div>
-            ) : (
-              // No sandbox allowances: the document renders, but nothing in it can run.
-              <iframe title="Dokumentvorschau" srcDoc={preview.html} sandbox="" className="w-full h-[60vh] rounded-lg border border-border bg-white" />
-            )}
-            <p className="text-xs text-fg-muted">Zeigt die aktuellen – auch ungespeicherten – Einstellungen mit echten Daten dieses Monats.</p>
+            <DocumentPreview request={preview.request} onError={onToast} />
+            <p className="text-xs text-fg-muted">
+              Zeigt die aktuellen – auch ungespeicherten – Einstellungen mit echten Daten dieses Monats. Fehlende Ausstellerdaten erscheinen als Platzhalter.
+            </p>
           </div>
         )}
       </Modal>
