@@ -11,6 +11,8 @@ export type Database = {
           billing_contact_name: string | null
           billing_contact_email: string | null
           billing_notes: string | null
+          member_document_copies_enabled: boolean
+          checkout_mode: 'member' | 'company'
         }
         Insert: {
           id?: string
@@ -21,6 +23,8 @@ export type Database = {
           billing_contact_name?: string | null
           billing_contact_email?: string | null
           billing_notes?: string | null
+          member_document_copies_enabled?: boolean
+          checkout_mode?: 'member' | 'company'
         }
         Update: {
           id?: string
@@ -31,6 +35,8 @@ export type Database = {
           billing_contact_name?: string | null
           billing_contact_email?: string | null
           billing_notes?: string | null
+          member_document_copies_enabled?: boolean
+          checkout_mode?: 'member' | 'company'
         }
         Relationships: []
       }
@@ -45,6 +51,7 @@ export type Database = {
           email_verified_at: string | null
           email_verify_token_hash: string | null
           email_verify_expires_at: string | null
+          kind: 'person' | 'house'
         }
         Insert: {
           id?: string
@@ -56,6 +63,7 @@ export type Database = {
           email_verified_at?: string | null
           email_verify_token_hash?: string | null
           email_verify_expires_at?: string | null
+          kind?: 'person' | 'house'
         }
         Update: {
           id?: string
@@ -67,6 +75,7 @@ export type Database = {
           email_verified_at?: string | null
           email_verify_token_hash?: string | null
           email_verify_expires_at?: string | null
+          kind?: 'person' | 'house'
         }
         Relationships: [
           {
@@ -114,6 +123,7 @@ export type Database = {
           company_id: string
           item_id: string
           quantity: number
+          unit_price_cents: number | null
           logged_at: string
         }
         Insert: {
@@ -122,6 +132,7 @@ export type Database = {
           company_id: string
           item_id: string
           quantity?: number
+          unit_price_cents?: number | null
           logged_at?: string
         }
         Update: {
@@ -130,6 +141,7 @@ export type Database = {
           company_id?: string
           item_id?: string
           quantity?: number
+          unit_price_cents?: number | null
           logged_at?: string
         }
         Relationships: [
@@ -163,6 +175,10 @@ export type Database = {
           logged_at: string
           archived_at: string
           report_month: string
+          unit_price_cents: number | null
+          item_name: string | null
+          unit_label: string | null
+          item_category: string | null
         }
         Insert: {
           id: string
@@ -173,6 +189,10 @@ export type Database = {
           logged_at: string
           archived_at?: string
           report_month: string
+          unit_price_cents?: number | null
+          item_name?: string | null
+          unit_label?: string | null
+          item_category?: string | null
         }
         Update: {
           id?: string
@@ -183,6 +203,10 @@ export type Database = {
           logged_at?: string
           archived_at?: string
           report_month?: string
+          unit_price_cents?: number | null
+          item_name?: string | null
+          unit_label?: string | null
+          item_category?: string | null
         }
         Relationships: []
       }
@@ -219,6 +243,9 @@ export type Database = {
           invoice_number_prefix: string | null
           invoice_payment_terms: string | null
           invoice_vat_rate: number
+          company_paid_member_reports_enabled: boolean
+          invoice_mode_authorized: boolean
+          invoice_authority_note: string | null
           updated_at: string
         }
         Insert: {
@@ -253,6 +280,9 @@ export type Database = {
           invoice_number_prefix?: string | null
           invoice_payment_terms?: string | null
           invoice_vat_rate?: number
+          company_paid_member_reports_enabled?: boolean
+          invoice_mode_authorized?: boolean
+          invoice_authority_note?: string | null
           updated_at?: string
         }
         Update: {
@@ -287,6 +317,9 @@ export type Database = {
           invoice_number_prefix?: string | null
           invoice_payment_terms?: string | null
           invoice_vat_rate?: number
+          company_paid_member_reports_enabled?: boolean
+          invoice_mode_authorized?: boolean
+          invoice_authority_note?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -428,6 +461,94 @@ export type Database = {
           }
         ]
       }
+      company_payments: {
+        Row: {
+          company_id: string
+          report_month: string
+          amount_cents: number | null
+          paid: boolean
+          paid_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          report_month: string
+          amount_cents?: number | null
+          paid?: boolean
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          report_month?: string
+          amount_cents?: number | null
+          paid?: boolean
+          paid_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'company_payments_company_id_fkey'
+            columns: ['company_id']
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      document_deliveries: {
+        Row: {
+          id: string
+          report_month: string
+          kind: 'member_invoice' | 'member_statement' | 'member_info' | 'company_invoice' | 'company_statement'
+          company_id: string
+          member_id: string | null
+          recipient_name: string
+          recipient_email: string
+          document_number: string | null
+          billing_document_id: string | null
+          gross_cents: number
+          has_pdf: boolean
+          has_xlsx: boolean
+          resend_message_id: string | null
+          resend_of: string | null
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          report_month: string
+          kind: 'member_invoice' | 'member_statement' | 'member_info' | 'company_invoice' | 'company_statement'
+          company_id: string
+          member_id?: string | null
+          recipient_name: string
+          recipient_email: string
+          document_number?: string | null
+          billing_document_id?: string | null
+          gross_cents: number
+          has_pdf: boolean
+          has_xlsx: boolean
+          resend_message_id?: string | null
+          resend_of?: string | null
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          report_month?: string
+          kind?: 'member_invoice' | 'member_statement' | 'member_info' | 'company_invoice' | 'company_statement'
+          company_id?: string
+          member_id?: string | null
+          recipient_name?: string
+          recipient_email?: string
+          document_number?: string | null
+          billing_document_id?: string | null
+          gross_cents?: number
+          has_pdf?: boolean
+          has_xlsx?: boolean
+          resend_message_id?: string | null
+          resend_of?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
       app_theme: {
         Row: {
           id: number
@@ -478,6 +599,14 @@ export type Database = {
       undo_order: {
         Args: { p_ids: string[] }
         Returns: number
+      }
+      log_company_order: {
+        Args: { p_company_id: string; p_items: { item_id: string; quantity: number }[] }
+        Returns: string[]
+      }
+      ensure_house_member: {
+        Args: { p_company_id: string }
+        Returns: string
       }
       register_member: {
         Args: { p_company_id: string; p_name: string; p_email: string }
