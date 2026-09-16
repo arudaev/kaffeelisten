@@ -30,11 +30,16 @@ jobs:
           node-version: '24'
 
       - name: Check configuration
+        id: config
         run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$STAGING_PROJECT_REF" ]; then
-            echo "Set the SUPABASE_ACCESS_TOKEN secret and the STAGING_PROJECT_REF variable."; exit 1
-          fi
           if [ "$STAGING_PROJECT_REF" = "fdnfdscpefxqvtggbbbr" ]; then echo "STAGING_PROJECT_REF is production"; exit 1; fi
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$STAGING_PROJECT_REF" ]; then
+            echo "::warning::Staging not migrated: set the SUPABASE_ACCESS_TOKEN secret and STAGING_PROJECT_REF variable (docs/environments.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Apply
+        if: steps.config.outputs.ready == 'true'
         run: node scripts/db/migrate.mjs --project-ref "$STAGING_PROJECT_REF"
