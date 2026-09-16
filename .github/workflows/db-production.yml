@@ -1,0 +1,79 @@
+name: Database - production
+
+# The ONLY way migrations reach production. Run manually on main after merging.
+# "plan" prints the pending migrations and the exact SQL (read-only). "apply"
+# waits for approval in the "production" GitHub Environment, applies, checks for
+# schema drift, then redeploys production so code never goes live before its
+# schema. Procedure: docs/environments.md.
+on:
+  workflow_dispatch:
+    inputs:
+      redeploy:
+        description: 'Trigger the Vercel production deploy hook after migrating'
+        type: boolean
+        default: true
+
+concurrency:
+  group: db-production
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan (read-only)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production-plan
+    env:
+      PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Lint migrations
+        run: node scripts/lint-migrations.mjs HEAD~0
+      - name: Pending migrations
+        run: supabase migration list --db-url "$PROD_DB_URL"
+      - name: Dry run
+        run: supabase db push --dry-run --db-url "$PROD_DB_URL"
+
+  apply:
+    name: Apply (requires approval)
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: production
+    env:
+      PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply
+        run: supabase db push --db-url "$PROD_DB_URL"
+      - name: Schema drift check
+        env:
+          TARGET_DB_URL: ${{ secrets.PROD_DB_URL }}
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+        run: bash scripts/db/schema-drift.sh
+      - name: Redeploy production
+        if: inputs.redeploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK }}
+        run: curl -fsS -X POST "$DEPLOY_HOOK"
