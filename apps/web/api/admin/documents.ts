@@ -97,7 +97,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('report_month', month)
       .order('sent_at', { ascending: false })
     if (error) throw new Error(error.message)
-    return res.status(200).json({ months, month, deliveries: data ?? [] })
+    // The company name, so a company document is recognisable by more than its
+    // contact ("Office", "Buchhaltung") — the admin searches by company.
+    const companyIds = [...new Set((data ?? []).map(d => d.company_id))]
+    const { data: companyRows, error: companyErr } = companyIds.length
+      ? await supabase.from('companies').select('id, name').in('id', companyIds)
+      : { data: [], error: null }
+    if (companyErr) throw new Error(companyErr.message)
+    const names = new Map((companyRows ?? []).map(c => [c.id, c.name]))
+    const deliveries = (data ?? []).map(d => ({ ...d, company_name: names.get(d.company_id) ?? '—' }))
+    return res.status(200).json({ months, month, deliveries })
   } catch (err) {
     if (err instanceof DeliveryNotFoundError) return res.status(404).json({ error: 'Dokument nicht gefunden.' })
     console.error('[admin/documents]', err instanceof Error ? err.message : err)

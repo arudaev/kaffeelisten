@@ -92,7 +92,7 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
     return deliveries.filter(d =>
       (kind === 'all' || d.kind.includes(kind)) &&
       (!onlyProblems || needsAttention(d, resolved)) &&
-      (!q || d.recipient_name.toLowerCase().includes(q) || d.recipient_email.toLowerCase().includes(q) || (d.document_number ?? '').toLowerCase().includes(q)),
+      (!q || d.recipient_name.toLowerCase().includes(q) || d.company_name.toLowerCase().includes(q) || d.recipient_email.toLowerCase().includes(q) || (d.document_number ?? '').toLowerCase().includes(q)),
     )
   }, [deliveries, kind, search, onlyProblems, resolved])
 
@@ -165,7 +165,7 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
             </Badge>
             {d.document_number && <span className="font-mono text-sm">{d.document_number}</span>}
           </span>
-          <span className="text-xs text-fg-muted">{d.member_id ? 'Person' : 'Unternehmen'}{d.resend_of ? ' · erneut gesendet' : ''}</span>
+          <span className="text-xs text-fg-muted">{d.member_id ? `Person · ${d.company_name}` : d.company_name}{d.resend_of ? ' · erneut gesendet' : ''}</span>
         </span>
       ),
     },

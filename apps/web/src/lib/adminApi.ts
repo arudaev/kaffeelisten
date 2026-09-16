@@ -120,6 +120,7 @@ export interface DocumentDelivery {
   report_month: string
   kind: DeliveryKind
   company_id: string
+  company_name: string
   member_id: string | null
   recipient_name: string
   recipient_email: string
