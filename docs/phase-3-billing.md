@@ -20,6 +20,12 @@ What was built in PR #41 in response to ITC1's feedback of 2026-09-16
 The payer gets the invoice (or, while invoice mode is off, the statement); the
 other party gets an overview.
 
+**Only invoices have attachments.** An invoice email carries the official invoice
+as PDF and an Excel file with every entry; the payment box (IBAN, BIC,
+Verwendungszweck) is in the email and in the PDF. Statements, information copies
+and the non-paying side's overview are plain emails. The administration report
+always has its PDF and Excel. The CEO's ZIP holds copies of every invoice file.
+
 | Company | Person receives | Company contact receives |
 | --- | --- | --- |
 | Each person pays (`individual`) | **Aufstellung** / **Rechnung** | **Aufstellung** (overview). Copies of its employees' documents only if opted in. No contact → nothing, and that is fine. |
@@ -42,7 +48,7 @@ this month's data, and placeholder issuer data where fields are missing.
 
 ITC1 found emails listing every coffee unreadable.
 
-| | Email body | PDF | Excel |
+| | Email body | PDF (invoices only) | Excel (invoices only) |
 | --- | --- | --- | --- |
 | Person | Greeting, one line per item and price (`12× Espresso`), total, payment box (invoice only) | The same as a formal document; invoice fields when invoicing | `Meine Einträge`: every entry with date and time |
 | Company | Total, at most 15 people with their totals and a short item summary, "weitere im PDF" | Per-person totals plus **Anlage – Verzehr je Person**: each person's item lines and subtotal | `Pro Person`, `Pro Person × Artikel`, `Alle Einträge` |
@@ -53,7 +59,8 @@ change mid-month shows as two lines, each quantity × a price actually charged.
 
 ### Cost and runtime
 
-- One Chromium per run, four PDFs in parallel, each PDF rendered once and reused
+- PDFs and Excel files are produced for invoices only. One Chromium per run,
+  four PDFs in parallel, each PDF rendered once and reused
   for the email, the company ZIP and the CEO ZIP.
 - Budget: wall-clock deadline inside the 300 s function limit and at most 500
   PDFs. A document whose PDF misses the budget is still sent (with its Excel) and
@@ -88,7 +95,7 @@ Level51 have names plus unnamed rows (→ `both`).
 - **Übersicht** — month against the same days of the previous month, per company.
 - **Einträge** — live month only, full names with email, filters, export.
 - **Dokumente** — every delivered document with company, amount, attachments,
-  email preview, PDF and Excel download, re-send. Re-sending re-renders from the
+  email preview and re-send; PDF and Excel download for invoices. Re-sending re-renders from the
   stored data and never allocates a new invoice number.
 - **Unternehmen** — who pays, checkout mode, people, month total, contact warning.
 - **Mitarbeitende** — grouped by company; people of paying companies in bold; paid
