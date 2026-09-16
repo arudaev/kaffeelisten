@@ -1,7 +1,7 @@
 // Shared mail helpers.
 
 import { Resend } from 'resend'
-import { filterRecipients, subjectFor } from '../../shared/environment'
+import { filterRecipients, isProductionDeployment, subjectFor } from '../../shared/environment'
 
 /**
  * Reply-to for all outgoing mail. A from-address (bericht@kaffeelisten.de) that
@@ -35,12 +35,20 @@ export function makeMailer(apiKey: string, env: NodeJS.ProcessEnv = process.env)
     if (r.to.length === 0) {
       return { data: { id: 'blocked-by-mail-guard' }, error: null, headers: null } as SendResult
     }
+    // MAIL_SINK (non-production only): deliver every allowed message to one test
+    // inbox such as Resend's delivered@resend.dev instead of the example.com
+    // addresses, which would bounce and hurt the sending domain's reputation.
+    const sink = !isProductionDeployment(env.VERCEL_ENV) ? env.MAIL_SINK?.trim() : undefined
+    const intended = [...r.to, ...r.cc, ...r.bcc].join(', ')
+    const subject = payload.subject === undefined
+      ? undefined
+      : subjectFor(sink ? `${payload.subject} (an: ${intended})` : payload.subject, env.VERCEL_ENV)
     const guarded = {
       ...payload,
-      to: r.to,
-      ...(r.cc.length ? { cc: r.cc } : { cc: undefined }),
-      ...(r.bcc.length ? { bcc: r.bcc } : { bcc: undefined }),
-      ...(payload.subject !== undefined ? { subject: subjectFor(payload.subject, env.VERCEL_ENV) } : {}),
+      to: sink ? [sink] : r.to,
+      cc: !sink && r.cc.length ? r.cc : undefined,
+      bcc: !sink && r.bcc.length ? r.bcc : undefined,
+      ...(subject !== undefined ? { subject } : {}),
     } as SendArgs[0]
     return send(guarded, options)
   }
