@@ -28,7 +28,8 @@ import {
   type IssuerConfig,
 } from './billing'
 import { findPalette } from './palettes'
-import { replyTo } from './mail'
+import { makeMailer, replyTo } from './mail'
+import { databaseConfigError } from '../../src/lib/environment'
 import { mergeLiveAndArchive, unitPriceOf } from './pricing'
 import {
   computeCampusRollup,
@@ -64,6 +65,8 @@ function makeSupabase() {
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  const envError = databaseConfigError(url, process.env.VERCEL_ENV)
+  if (envError) throw new Error(envError)
   return createClient(url, key)
 }
 
@@ -419,7 +422,7 @@ export async function sendEmail(
     throw new Error('No report recipients configured (app_settings.report_recipients / ADMIN_EMAIL)')
   }
 
-  const resend = new Resend(resendKey)
+  const resend = makeMailer(resendKey)
 
   const [yearStr] = reportMonth.split('-')
   const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
@@ -1029,7 +1032,7 @@ export async function runMonthlyReport(
         const resendKey = process.env.RESEND_API_KEY
         if (!resendKey) throw new Error('Missing RESEND_API_KEY')
         const ctx: DeliveryContext = {
-          resend: new Resend(resendKey),
+          resend: makeMailer(resendKey),
           supabase: makeSupabase(),
           monthLabel, reportMonth, format, idempotencyKey, issuer, budget,
         }
@@ -1297,7 +1300,7 @@ export async function resendDelivery(
     ...(pdf ? [{ filename: `${regen.fileStem}.pdf`, content: pdf.toString('base64') }] : []),
     { filename: `${regen.fileStem}.xlsx`, content: regen.xlsx.toString('base64') },
   ]
-  const { data, error } = await new Resend(resendKey).emails.send(
+  const { data, error } = await makeMailer(resendKey).emails.send(
     {
       from: 'Kaffeelisten <bericht@kaffeelisten.de>',
       to: [regen.delivery.recipient_email],

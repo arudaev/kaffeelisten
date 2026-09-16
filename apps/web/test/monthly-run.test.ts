@@ -9,6 +9,10 @@ import JSZip from 'jszip'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFakeClient, type FakeDb } from './support/fakeSupabase'
 
+// These tests exercise production delivery; outside production the mail guard
+// (api/_lib/mail.ts) would drop the non-example.com recipients they assert on.
+process.env.VERCEL_ENV = 'production'
+
 // ── Mocks (hoisted above the import of report.ts) ────────────────────────────
 
 const state = vi.hoisted(() => ({

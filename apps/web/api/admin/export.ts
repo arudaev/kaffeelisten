@@ -22,6 +22,7 @@ import { generateExportExcel } from '../_lib/excel'
 import { launchBrowser, pageToPdf } from '../_lib/pdf'
 import { buildExportHtml } from '../_lib/reportHtml'
 import { sanitizeFile } from '../_lib/archive'
+import { classifyServerError } from '../_lib/errors'
 
 // A PDF export launches Chromium; spreadsheets finish in well under this.
 export const config = { maxDuration: 60 }
@@ -112,6 +113,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err) {
     console.error('[admin/export]', err instanceof Error ? err.message : err)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

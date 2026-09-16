@@ -8,11 +8,14 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
+import { databaseConfigError } from '../../src/lib/environment'
 
 export function makeAdminClient(): SupabaseClient<Database> {
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  const envError = databaseConfigError(url, process.env.VERCEL_ENV)
+  if (envError) throw new Error(envError)
   return createClient<Database>(url, key)
 }
 

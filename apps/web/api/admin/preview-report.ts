@@ -34,6 +34,7 @@ import {
   PLACEHOLDER_ISSUER,
   type IssuerConfig,
 } from '../_lib/billing'
+import { classifyServerError } from '../_lib/errors'
 
 // A tiny stand-in dataset so the preview is meaningful even before any real
 // transactions exist for the current month.
@@ -204,6 +205,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[preview-report]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

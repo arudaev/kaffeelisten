@@ -8,6 +8,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin, isDbPinSet } from '../_lib/adminAuth'
 import type { Database } from '../../src/lib/database.types'
+import { classifyServerError } from '../_lib/errors'
 
 type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
 
@@ -341,6 +342,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[settings]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

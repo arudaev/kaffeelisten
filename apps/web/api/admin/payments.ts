@@ -20,6 +20,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { amountOf, mergeLiveAndArchive } from '../_lib/pricing'
 import { derivePaidGrid, summarisePaidGrid } from '../_lib/paidGrid'
+import { classifyServerError } from '../_lib/errors'
 
 interface MonthPayment {
   report_month: string
@@ -213,6 +214,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[admin/payments]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
