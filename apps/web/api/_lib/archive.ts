@@ -11,7 +11,7 @@
 //   • Every member statement was named "Kaffeeliste-<month>.pdf", so inside one
 //     zip they overwrote each other and only one survived. Names are now unique.
 
-import type { CompanyDocKind, MemberDocKind } from './documentMatrix'
+import { carriesAttachments, type CompanyDocKind, type MemberDocKind } from './documentMatrix'
 import type { ManifestRow } from './excel'
 
 export type IssuedDocKind = MemberDocKind | CompanyDocKind
@@ -28,7 +28,7 @@ export interface IssuedDoc {
   netCents: number | null
   taxCents: number | null
   grossCents: number
-  pdf: Buffer | null              // null → could not be rendered
+  pdf: Buffer | null              // null → not rendered (failed, or an email-only document)
   xlsx: Buffer | null
 }
 
@@ -126,15 +126,17 @@ export function archiveEntries(docs: readonly IssuedDoc[]): { files: ArchiveFile
       grossCents: doc.grossCents,
       pdfFile,
       xlsxFile,
+      attachmentsExpected: carriesAttachments(doc.kind),
     })
   }
   return { files, manifest }
 }
 
-/** How many delivered documents are missing a file, for the run result. */
+/** How many invoices went out missing a file, for the run result. Email-only documents never count. */
 export function countMissingFiles(docs: readonly IssuedDoc[]): { pdf: number; xlsx: number } {
+  const withFiles = docs.filter(d => carriesAttachments(d.kind))
   return {
-    pdf: docs.filter(d => !d.pdf).length,
-    xlsx: docs.filter(d => !d.xlsx).length,
+    pdf: withFiles.filter(d => !d.pdf).length,
+    xlsx: withFiles.filter(d => !d.xlsx).length,
   }
 }

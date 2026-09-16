@@ -180,6 +180,15 @@ export function isInvoice(kind: MemberDocKind | CompanyDocKind): boolean {
   return kind === 'member_invoice' || kind === 'company_invoice'
 }
 
+/**
+ * Only an invoice carries a PDF and an Excel attachment (owner decision,
+ * 2026-09-16). Statements and information copies are the email alone: they
+ * demand nothing, so there is nothing to file, and they keep the run cheap.
+ */
+export function carriesAttachments(kind: MemberDocKind | CompanyDocKind): boolean {
+  return isInvoice(kind)
+}
+
 // ─── Company checkout rules (mirrors migration 034) ──────────────────────────
 
 // 'member': people book for themselves. 'company': only the shared account (no

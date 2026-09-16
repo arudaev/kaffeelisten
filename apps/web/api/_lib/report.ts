@@ -50,6 +50,7 @@ import {
   type MemberDelivery,
   type SkippedDelivery,
   type CheckoutMode,
+  carriesAttachments,
 } from './documentMatrix'
 import { previousMonth } from './schedule'
 import { computeAdminInsights, type AdminInsights } from './adminInsights'
@@ -559,7 +560,9 @@ interface PreparedDoc {
 // Render every prepared document's PDF and Excel a few at a time on the shared
 // browser. Serial rendering (~1s per PDF) could not fit ITC1's volume in one run.
 async function renderPrepared(ctx: DeliveryContext, prepared: PreparedDoc[]): Promise<void> {
-  await mapWithConcurrency(prepared, PDF_CONCURRENCY, async p => {
+  // Only invoices get files; statements and information copies are email only.
+  const withFiles = prepared.filter(p => carriesAttachments(p.issued.kind))
+  await mapWithConcurrency(withFiles, PDF_CONCURRENCY, async p => {
     const [pdf, xlsx] = await Promise.all([
       renderDocPdf(ctx.budget, p.pdfHtml),
       safeExcel(`${p.issued.kind} ${p.issued.memberId ?? p.issued.companyId}`, p.buildExcel),
@@ -782,7 +785,8 @@ export async function sendCompanyDocuments(
   const employeeCopies = async (p: PreparedDoc) => {
     const d = deliveryFor.get(p)!
     if (!d.includeMemberCopies) return []
-    const own = memberDocs.filter(m => m.companyId === d.companyId)
+    // Copies of files that exist: employees' invoices. Email-only documents have none.
+    const own = memberDocs.filter(m => m.companyId === d.companyId && (m.pdf || m.xlsx))
     if (own.length === 0) return []
     try {
       const { files, manifest } = archiveEntries(own)
@@ -1359,13 +1363,14 @@ export async function resendDelivery(
   renderPdf: (html: string) => Promise<Buffer | null>,
 ): Promise<{ id: string }> {
   const regen = await regenerateDelivery(deliveryId)
-  const pdf = await renderPdf(regen.pdfHtml)
+  const withFiles = carriesAttachments(regen.delivery.kind)
+  const pdf = withFiles ? await renderPdf(regen.pdfHtml) : null
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
 
   const attachments = [
     ...(pdf ? [{ filename: `${regen.fileStem}.pdf`, content: pdf.toString('base64') }] : []),
-    { filename: `${regen.fileStem}.xlsx`, content: regen.xlsx.toString('base64') },
+    ...(withFiles ? [{ filename: `${regen.fileStem}.xlsx`, content: regen.xlsx.toString('base64') }] : []),
   ]
   const { data, error } = await makeMailer(resendKey).emails.send(
     {
@@ -1374,7 +1379,7 @@ export async function resendDelivery(
       ...(replyTo() ? { replyTo: replyTo()! } : {}),
       subject: regen.subject,
       html: regen.html,
-      attachments,
+      ...(attachments.length ? { attachments } : {}),
     },
     // A deliberate re-send must go out even if an identical one did recently.
     { idempotencyKey: `resend-${deliveryId}-${Date.now()}` },
@@ -1403,7 +1408,7 @@ export async function resendDelivery(
       billing_document_id: original.billing_document_id,
       gross_cents: original.gross_cents,
       has_pdf: !!pdf,
-      has_xlsx: true,
+      has_xlsx: withFiles,
       resend_message_id: data?.id ?? null,
       resend_of: deliveryId,
     })

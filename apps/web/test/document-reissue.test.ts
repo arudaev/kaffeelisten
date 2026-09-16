@@ -142,9 +142,17 @@ describe('resendDelivery', () => {
     })
   })
 
-  it('still re-sends, with its Excel, when the PDF cannot be rendered — and records that', async () => {
-    const { id } = await resendDelivery(INFO_DELIVERY, async () => null)
-    expect(state.sent[0].attachments!.map(a => a.filename).some(n => n.endsWith('.xlsx'))).toBe(true)
+  it('still re-sends an invoice, with its Excel, when the PDF cannot be rendered — and records that', async () => {
+    const { id } = await resendDelivery(INVOICE_DELIVERY, async () => null)
+    expect(state.sent[0].attachments!.map(a => a.filename)).toEqual(['Rechnung-K-000017.xlsx'])
     expect(state.db.tables.document_deliveries.find(d => d.id === id)).toMatchObject({ has_pdf: false, has_xlsx: true })
+  })
+
+  it('re-sends an information copy as email only, without rendering a PDF', async () => {
+    let rendered = false
+    const { id } = await resendDelivery(INFO_DELIVERY, async () => { rendered = true; return Buffer.from('%PDF') })
+    expect(rendered).toBe(false)
+    expect(state.sent[0].attachments).toBeUndefined()
+    expect(state.db.tables.document_deliveries.find(d => d.id === id)).toMatchObject({ has_pdf: false, has_xlsx: false })
   })
 })

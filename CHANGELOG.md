@@ -13,14 +13,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 #### Added
 - **Documents for everyone involved, in both billing modes.** Whoever pays gets the invoice or statement; the other side gets an overview. People whose company pays now receive an information copy without payment details. Company documents cover a company's shared account as *Sammelkonto*. Requires migrations `030`–`039` (no `032`).
-- **Short emails, detailed attachments.** Emails list one line per item (`12× Espresso`) instead of every coffee. Company emails show at most 15 people. The company PDF adds *Anlage – Verzehr je Person*, and the Excel has *Pro Person*, *Pro Person × Artikel* and every single entry.
+- **Attachments only on invoices.** An invoice goes to whoever pays, with the payment details (IBAN, reference) in the email and in the attached PDF, plus an Excel file with every entry. Everything else (statements, information copies, the other party's overview) is a plain email. Emails list one line per item (`12× Espresso`) instead of every coffee. A company invoice email shows at most 15 people; its PDF adds *Anlage – Verzehr je Person*, and its Excel has *Pro Person*, *Pro Person × Artikel* and every entry.
 - **Monthly report for ITC1's administration** with the change against the previous month, the most-consumed items for restocking, warnings (a paying company without a contact, failed deliveries, missing attachments), and the campus roll-up attached.
-- **Dokumentenarchiv for the CEO only:** exact copies of every document sent that month, with a delivery list.
-- **Dokumente page:** every delivered document with company, amount and attachments, plus preview, download and re-send. Re-sending never allocates a new invoice number.
+- **Dokumentenarchiv for the CEO only:** exact copies of every invoice PDF and Excel sent that month, a delivery list of all documents, the report and the campus roll-up.
+- **Dokumente page:** every delivered document with company and amount, plus preview and re-send. Invoices also show their attachments and offer PDF and Excel download; everything else is marked *nur E-Mail*. Re-sending never allocates a new invoice number.
 - **Shared company accounts at the iPad.** *Nur Firmenkonto* skips the name step (4process). *Personen + Firmenkonto* adds a *Für die Firma buchen* tile above the names (ITC1, PBI, Level51).
 - **Export** from every list as CSV, Excel or PDF, over any date range including archived months.
 - **Company payments:** companies that pay are ticked once per month in *Mitarbeitende*, with their people in bold underneath.
-- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active. Every cell's preview shows the email, the PDF attachment and the Excel attachment (sheets as tables, plus download).
+- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active. Invoice cells and the administration report preview the email, the PDF attachment and the Excel attachment (sheets as tables, plus download); email-only cells preview the email.
 - **Staging environment.** Pull-request previews and local runs use a separate staging database. Mail outside production goes only to a test inbox, and a preview wired to production data refuses to start.
 
 #### Changed

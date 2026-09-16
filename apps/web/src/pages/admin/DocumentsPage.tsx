@@ -12,7 +12,7 @@ import FilterBar from '../../components/admin/FilterBar'
 import { adminApi, type DeliveryKind, type DocumentDelivery } from '../../lib/adminApi'
 import { monthLabel } from '../../lib/dates'
 import { formatEuro as euro } from '../../lib/money'
-import { needsAttention, resolvedByResend, summariseDeliveries } from '../../lib/deliveries'
+import { hasAttachments, needsAttention, resolvedByResend, summariseDeliveries } from '../../lib/deliveries'
 
 const KIND_LABEL: Record<DeliveryKind, string> = {
   member_invoice: 'Rechnung',
@@ -186,7 +186,9 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
       label: 'Anhänge',
       sortValue: d => Number(d.has_pdf) + Number(d.has_xlsx),
       render: d =>
-        d.has_pdf && d.has_xlsx ? (
+        !hasAttachments(d) ? (
+          <span className="text-xs text-fg-subtle">nur E-Mail</span>
+        ) : d.has_pdf && d.has_xlsx ? (
           <span className="text-xs text-fg-muted">PDF · Excel</span>
         ) : resolved.has(d.id) ? (
           <span className="text-xs text-fg-muted">fehlte · erneut vollständig gesendet</span>
@@ -222,14 +224,18 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
             title="Vorschau" aria-label={`Vorschau ${KIND_LABEL[d.kind]} für ${d.recipient_name}`}>
             <AdminIcon name="document" size={16} />
           </button>
-          <button type="button" className={`${iconButton} text-xs font-semibold px-1.5`} onClick={() => download(d, 'pdf')} disabled={busyDownload === `${d.id}-pdf`}
-            title="PDF herunterladen" aria-label={`PDF für ${d.recipient_name} herunterladen`}>
-            PDF
-          </button>
-          <button type="button" className={`${iconButton} text-xs font-semibold px-1.5`} onClick={() => download(d, 'xlsx')} disabled={busyDownload === `${d.id}-xlsx`}
-            title="Excel herunterladen" aria-label={`Excel für ${d.recipient_name} herunterladen`}>
-            XLS
-          </button>
+          {hasAttachments(d) && (
+            <>
+              <button type="button" className={`${iconButton} text-xs font-semibold px-1.5`} onClick={() => download(d, 'pdf')} disabled={busyDownload === `${d.id}-pdf`}
+                title="PDF herunterladen" aria-label={`PDF für ${d.recipient_name} herunterladen`}>
+                PDF
+              </button>
+              <button type="button" className={`${iconButton} text-xs font-semibold px-1.5`} onClick={() => download(d, 'xlsx')} disabled={busyDownload === `${d.id}-xlsx`}
+                title="Excel herunterladen" aria-label={`Excel für ${d.recipient_name} herunterladen`}>
+                XLS
+              </button>
+            </>
+          )}
           <button type="button" className={iconButton} onClick={() => setResendTarget(d)}
             title="Erneut senden" aria-label={`Erneut an ${d.recipient_name} senden`}>
             <AdminIcon name="send" size={16} />
@@ -258,6 +264,12 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
         }
       />
       <div className="p-4 md:p-8 flex flex-col gap-4">
+        <p className="text-sm text-fg-muted leading-relaxed max-w-3xl">
+          Alles, was der Monatsversand verschickt hat. Nur <strong className="text-fg font-medium">Rechnungen</strong> haben
+          Anhänge (PDF und Excel) – sie gehen an den, der zahlt, und die Geschäftsführung erhält Kopien davon als ZIP.
+          <strong className="text-fg font-medium"> Aufstellungen</strong> und <strong className="text-fg font-medium">Informationen</strong> sind
+          reine E-Mails an die andere Seite. Solange der Rechnungsmodus aus ist, gibt es nur Aufstellungen.
+        </p>
         {!loading && deliveries.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-surface p-4">
@@ -280,10 +292,10 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
                 onlyProblems ? 'ring-2 ring-error' : '',
               ].join(' ')}
             >
-              <span className="text-xs font-medium text-fg-muted">Fehlende Anhänge</span>
+              <span className="text-xs font-medium text-fg-muted">Rechnungen ohne Anhang</span>
               <p className={['text-lg font-semibold', problems > 0 ? 'text-error' : 'text-fg'].join(' ')}>{problems}</p>
               <span className="text-xs text-fg-muted">
-                {problems === 0 ? 'Alles vollständig' : onlyProblems ? 'Filter aktiv – klicken zum Aufheben' : 'Klicken zum Filtern'}
+                {problems === 0 ? (invoiceCount === 0 ? 'Keine Rechnungen in diesem Monat' : 'Alle Rechnungen vollständig') : onlyProblems ? 'Filter aktiv – klicken zum Aufheben' : 'Klicken zum Filtern'}
               </span>
             </button>
           </div>
@@ -308,7 +320,7 @@ export default function DocumentsPage({ onToast, onMenuClick }: Props) {
             defaultSort={{ key: 'sent_at', dir: 'desc' }}
             empty={
               deliveries.length === 0
-                ? { title: 'Noch keine Dokumente versendet.', body: 'Nach dem ersten Monatsversand erscheint hier jede Rechnung, Aufstellung und Information – mit Vorschau, Download und erneutem Versand.' }
+                ? { title: 'Noch keine Dokumente versendet.', body: 'Nach dem ersten Monatsversand erscheint hier jede Rechnung, Aufstellung und Information – mit Vorschau und erneutem Versand, bei Rechnungen auch mit PDF- und Excel-Download.' }
                 : { title: 'Keine Treffer.', body: 'Passe die Filter an.' }
             }
           />

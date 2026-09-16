@@ -17,8 +17,13 @@ export interface DeliverySummary {
   unresolvedMissing: number
 }
 
-export function isComplete(d: Pick<DocumentDelivery, 'has_pdf' | 'has_xlsx'>): boolean {
-  return d.has_pdf && d.has_xlsx
+/** Only invoices carry a PDF and an Excel; statements and information copies are email only. */
+export function hasAttachments(d: Pick<DocumentDelivery, 'kind'>): boolean {
+  return d.kind.endsWith('_invoice')
+}
+
+export function isComplete(d: Pick<DocumentDelivery, 'kind' | 'has_pdf' | 'has_xlsx'>): boolean {
+  return !hasAttachments(d) || (d.has_pdf && d.has_xlsx)
 }
 
 /** Ids of originals that were missing a file but a later re-send delivered complete. */

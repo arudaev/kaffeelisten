@@ -291,7 +291,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
   const [emailError, setEmailError] = useState('')
 
   // The request is built once when a preview opens, so its tabs share the same unsaved settings.
-  const [preview, setPreview] = useState<{ title: string; request: Record<string, unknown> } | null>(null)
+  const [preview, setPreview] = useState<{ title: string; request: Record<string, unknown>; withAttachments: boolean } | null>(null)
 
   const [pinModal, setPinModal] = useState(false)
   const [curPin, setCurPin] = useState('')
@@ -460,6 +460,8 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
     const f = form
     setPreview({
       title,
+      // Only invoices and the administration report have PDF and Excel attachments.
+      withAttachments: variant === 'invoice' || type === 'admin',
       request: {
         type,
         variant,
@@ -567,7 +569,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
                 <div className="flex flex-col gap-6">
                   <Section
                     title="Wer bekommt was?"
-                    description="Wer zahlt, bekommt die Rechnung, die andere Seite eine Übersicht. Die E-Mail selbst bleibt kurz: Im PDF steht die Abrechnung, in der Excel-Datei jede einzelne Buchung mit Datum und Uhrzeit."
+                    description="Wer zahlt, bekommt die Rechnung, die andere Seite eine Übersicht. Nur Rechnungen haben Anhänge: ein PDF als offizielle Rechnung und eine Excel-Datei mit jeder Buchung. Übersichten und Aufstellungen sind reine E-Mails."
                   >
                     <div className="flex flex-col gap-3">
                       <Toggle checked={form.memberDocs} onChange={v => set('memberDocs', v)} label="Personen erhalten ein eigenes Monatsdokument" />
@@ -596,18 +598,18 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                         <span className="text-sm font-semibold text-fg self-center">Person</span>
                         {form.memberDocs
-                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Mit Rechnungsnummer und Zahlungsdaten.' : 'Eigener Verzehr, zusammengefasst je Artikel – zum Bezahlen.', () => openPreview('member', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Person' : 'Aufstellung an Person'))
+                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Mit Rechnungsnummer und Zahlungsdaten. Anhänge: PDF und Excel.' : 'Eigener Verzehr je Artikel – nur E-Mail.', () => openPreview('member', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Person' : 'Aufstellung an Person'))
                           : cell('Nichts', 'Personen-Dokumente sind aus.', undefined, true)}
                         {form.memberDocs && form.infoCopies
-                          ? cell('Information', 'Eigener Verzehr zur Info – ohne Zahlungsdaten, die Firma zahlt.', () => openPreview('member', 'info', 'Information an Person'))
+                          ? cell('Information', 'Eigener Verzehr zur Info – die Firma zahlt. Nur E-Mail.', () => openPreview('member', 'info', 'Information an Person'))
                           : cell('Nichts', form.memberDocs ? 'Info-Kopien sind aus.' : 'Personen-Dokumente sind aus.', undefined, true)}
 
                         <span className="text-sm font-semibold text-fg self-center">Firmenkontakt</span>
                         {form.companyDocs
-                          ? cell('Aufstellung', 'Summe je Person, im PDF mit dem Verzehr jeder Person. Kopien der Einzeldokumente nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Aufstellung an Firma'))
+                          ? cell('Aufstellung', 'Summe und Verzehr je Person – nur E-Mail. Kopien der Rechnungen der Mitarbeitenden nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Aufstellung an Firma'))
                           : cell('Nichts', 'Firmen-Dokumente sind aus.', undefined, true)}
                         {form.companyDocs
-                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', `${invoicing ? 'Sammelrechnung' : 'Abrechnung'} über den Gesamtbetrag – im PDF aufgeschlüsselt je Person.`, () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma'))
+                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Sammelrechnung über den Gesamtbetrag. Anhänge: PDF (aufgeschlüsselt je Person) und Excel.' : 'Summe und Verzehr je Person – nur E-Mail.', () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma'))
                           : cell('Nichts – Firma wird nicht abgerechnet', 'Zahlende Firmen erhalten so keine Abrechnung.', undefined, false, true)}
 
                         <span className="text-sm font-semibold text-fg self-center">Verwaltung</span>
@@ -617,7 +619,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                         <span className="text-sm font-semibold text-fg self-center">Geschäfts&shy;führung</span>
                         <div className="col-span-2">
-                          {cell('Archiv (ZIP)', 'Nur an die Geschäftsführung: unveränderte Kopien aller versendeten Dokumente mit Versandliste – für Rückfragen zu einzelnen Rechnungen.', undefined)}
+                          {cell('Archiv (ZIP)', 'Nur an die Geschäftsführung: unveränderte Kopien aller versendeten Rechnungen (PDF und Excel) mit Versandliste aller Dokumente, dazu Monatsbericht und Campus-Auswertung.', undefined)}
                         </div>
                       </div>
                     </div>
@@ -910,7 +912,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
       >
         {preview && (
           <div className="flex flex-col gap-3">
-            <DocumentPreview request={preview.request} onError={onToast} />
+            <DocumentPreview request={preview.request} withAttachments={preview.withAttachments} onError={onToast} />
             <p className="text-xs text-fg-muted">
               Zeigt die aktuellen – auch ungespeicherten – Einstellungen mit echten Daten dieses Monats. Fehlende Ausstellerdaten erscheinen als Platzhalter.
             </p>

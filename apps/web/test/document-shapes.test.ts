@@ -6,6 +6,7 @@ import {
   buildCompanyDocumentHtml,
   buildMemberStatementHtml,
   type EnrichedTransaction,
+  type InvoiceRender,
   type MemberSummary,
 } from '../api/_lib/reportHtml'
 import { generateCompanyExcel } from '../api/_lib/excel'
@@ -14,6 +15,11 @@ import { generateCompanyExcel } from '../api/_lib/excel'
 // what each person consumed, and the Excel keeps every single entry.
 
 let seq = 0
+const invoice: InvoiceRender = {
+  documentNumber: 'K-000001', issuerLegalName: 'ITC1 GmbH', issuerAddress: null, issuerVatId: 'DE1',
+  issuerIban: 'DE33741500000380009340', issuerBic: 'BYLADEM1DEG', paymentTerms: null, vatRate: 19,
+  netCents: 0, taxCents: 0, grossCents: 0,
+}
 function tx(o: Partial<EnrichedTransaction> = {}): EnrichedTransaction {
   const price = o.price_cents ?? 50
   const qty = o.quantity ?? 1
@@ -68,7 +74,11 @@ describe('member document', () => {
     expect(html).toContain('>40<')
     expect(html).toContain('€ 20,00')
     expect(html).not.toMatch(/\d{2}\.08\.2026/)
-    expect(html).toContain('Excel-Datei')
+  })
+
+  it('points to the Excel only on an invoice, which is the only document that has one', () => {
+    expect(buildMemberStatementHtml('Anna Keller', [tx()], 'August 2026')).not.toContain('Excel')
+    expect(buildMemberStatementHtml('Anna Keller', [tx()], 'August 2026', { invoice })).toContain('Excel-Datei')
   })
 })
 
@@ -77,16 +87,23 @@ describe('company document', () => {
     member(`m${i}`, `Person ${String(i).padStart(2, '0')}`, [tx({ quantity: i + 1 }), tx({ item_id: 'cap', item_name: 'Cappuccino', price_cents: 70 })]),
   )
 
-  it('email lists at most the limit and points to the PDF for the rest', () => {
-    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'email' })
+  it('invoice email lists at most the limit and points to the PDF for the rest', () => {
+    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'email', invoice })
     const listed = people.filter(p => html.includes(`>${p.member_name}<`))
     expect(listed).toHaveLength(EMAIL_PERSON_LIMIT)
     expect(html).toContain('und 5 weitere Personen')
     expect(html).not.toContain('Anlage')
   })
 
-  it('PDF lists every person with their own item lines, summing to the company total', () => {
-    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'document' })
+  it('statement email has no attachment to point to, so it lists everyone and mentions no PDF', () => {
+    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'email' })
+    expect(people.filter(p => html.includes(`>${p.member_name}<`))).toHaveLength(people.length)
+    expect(html).not.toContain('weitere')
+    expect(html).not.toContain('PDF')
+  })
+
+  it('invoice PDF lists every person with their own item lines, summing to the company total', () => {
+    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'document', invoice })
     expect(html).toContain('Anlage &ndash; Verzehr je Person')
     for (const p of people) {
       expect(html.split(`>${p.member_name}<`).length - 1).toBeGreaterThanOrEqual(2) // summary row + appendix heading
@@ -97,7 +114,7 @@ describe('company document', () => {
 
   it('labels the shared house account instead of a fictional person', () => {
     const house = member('h', '4process', [tx({ member_kind: 'house' })])
-    const html = buildCompanyDocumentHtml('4process', null, [house], 'August 2026', { variant: 'document' })
+    const html = buildCompanyDocumentHtml('4process', null, [house], 'August 2026', { variant: 'document', invoice })
     expect(html).toContain('Sammelkonto (Firma)')
   })
 })

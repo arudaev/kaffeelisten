@@ -4,12 +4,21 @@ import type { DocumentDelivery } from '../src/lib/adminApi'
 
 function d(o: Partial<DocumentDelivery>): DocumentDelivery {
   return {
-    id: 'x', report_month: '2026-08', kind: 'member_statement', company_id: 'c', member_id: 'm',
+    id: 'x', report_month: '2026-08', kind: 'member_invoice', company_id: 'c', member_id: 'm',
     recipient_name: 'Anna', recipient_email: 'anna@example.com', document_number: null, billing_document_id: null,
     gross_cents: 100, has_pdf: true, has_xlsx: true, resend_of: null, sent_at: '2026-09-01T20:00:00Z',
     ...o,
   }
 }
+
+describe('email-only documents', () => {
+  it('never flags a statement or information copy as missing its attachments', () => {
+    const d = (kind: string, has: boolean) => ({ id: kind, kind, has_pdf: has, has_xlsx: has, resend_of: null }) as unknown as Parameters<typeof needsAttention>[0]
+    expect(needsAttention(d('member_info', false), new Set())).toBe(false)
+    expect(needsAttention(d('company_statement', false), new Set())).toBe(false)
+    expect(needsAttention(d('member_invoice', false), new Set())).toBe(true)
+  })
+})
 
 describe('summariseDeliveries', () => {
   it('counts a re-sent document once, and the re-send separately', () => {

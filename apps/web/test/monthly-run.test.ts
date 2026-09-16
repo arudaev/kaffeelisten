@@ -148,16 +148,24 @@ beforeEach(() => {
 })
 
 // ── Statement mode ───────────────────────────────────────────────────────────
+// Only invoices carry a PDF and an Excel (owner decision 2026-09-16); every
+// statement and information copy is the email alone.
+
+const hasFiles = (m: (typeof state.sent)[number]) => names(m).some(n => n.endsWith('.pdf') || n.endsWith('.xlsx') || n.startsWith('Mitarbeitende-'))
 
 describe('statement mode, mixed campus', () => {
   beforeEach(() => { state.db = seed() })
 
-  it('sends each individually-billed person a statement with PDF and Excel', async () => {
+  it('sends statements and information copies as email only, without PDF or Excel', async () => {
     await runMonthlyReport('2026-08', { force: true })
     const [shen] = mailTo('shen@efco.de')
     expect(shen.subject).toContain('Aufstellung')
-    expect(names(shen).some(n => n.endsWith('.pdf'))).toBe(true)
-    expect(names(shen).some(n => n.endsWith('.xlsx'))).toBe(true)
+    for (const addr of ['shen@efco.de', 'bettina@efco.de', 'anna@4process.de', 'billing@efco.de', 'billing@4process.de']) {
+      expect(hasFiles(mailTo(addr)[0]), addr).toBe(false)
+    }
+    // With nothing attached, the email itself says what was consumed.
+    expect(shen.html).not.toContain('Excel')
+    expect(mailTo('billing@4process.de')[0].html).toContain('Anna Keller')
   })
 
   it('sends a member of a paying company an information copy naming the payer, with no payment block', async () => {
@@ -174,12 +182,6 @@ describe('statement mode, mixed campus', () => {
     const [anna] = mailTo('anna@4process.de')
     expect(anna.html).toContain('€ 2,10') // 3 × 0,70, not 3 × 0,90
     expect(anna.html).not.toContain('€ 2,70')
-  })
-
-  it('attaches employee copies only for the company that opted in', async () => {
-    await runMonthlyReport('2026-08', { force: true })
-    expect(names(mailTo('billing@efco.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(true)
-    expect(names(mailTo('billing@4process.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(false)
   })
 
   it('reports the paying company with no contact instead of dropping it silently', async () => {
@@ -199,36 +201,18 @@ describe('statement mode, mixed campus', () => {
     for (const m of archives) expect(m.to).not.toContain('admin@itc1.de')
   })
 
-  it('gives the CEO an archive with a copy of every document sent, plus the manifest and roll-up', async () => {
+  it('gives the CEO an archive with the delivery list, report and roll-up, and no document files', async () => {
     await runMonthlyReport('2026-08', { force: true })
     const zip = await ceoZip()
-    // JSZip lists folders as entries too; count files only.
     const files = Object.keys(zip.files).filter(f => !zip.files[f].dir)
-
-    // 4 people + 2 companies were sent documents; each carries a PDF and an Excel.
-    const personFiles = files.filter(f => f.startsWith('Personen/'))
-    const companyFiles = files.filter(f => f.startsWith('Unternehmen/'))
-    expect(personFiles).toHaveLength(8)
-    expect(companyFiles).toHaveLength(4)
-
+    expect(files.filter(f => f.startsWith('Personen/') || f.startsWith('Unternehmen/'))).toEqual([])
     expect(files).toContain('Übersicht-versandte-Dokumente-2026-08.xlsx')
     expect(files).toContain('Monatsbericht-2026-08.pdf')
     expect(files).toContain('Campus-Auswertung-2026-08.xlsx')
   })
 
-  it('the attachment each person received is byte-identical to its copy in the archive', async () => {
-    await runMonthlyReport('2026-08', { force: true })
-    const zip = await ceoZip()
-    const [bettina] = mailTo('bettina@efco.de')
-    for (const att of bettina.attachments!) {
-      const copy = zip.file(`Personen/${att.filename}`)
-      expect(copy, att.filename).not.toBeNull()
-      expect((await copy!.async('nodebuffer')).equals(Buffer.from(att.content, 'base64'))).toBe(true)
-    }
-  })
-
-  it('records every delivered document in the delivery ledger, statements included', async () => {
-    await runMonthlyReport('2026-08', { force: true })
+  it('records every delivered document in the delivery ledger, as email only', async () => {
+    const result = await runMonthlyReport('2026-08', { force: true })
     const ledger = state.db.tables.document_deliveries
     // Shen and Bettina pay their own way; Anna (4process) and Harald (Gramm) work
     // for paying companies, so they get information copies. Gramm itself has no
@@ -237,8 +221,10 @@ describe('statement mode, mixed campus', () => {
       'company_statement', 'company_statement',
       'member_info', 'member_info', 'member_statement', 'member_statement',
     ])
-    expect(ledger.every(d => d.has_pdf === true && d.has_xlsx === true)).toBe(true)
+    expect(ledger.every(d => d.has_pdf === false && d.has_xlsx === false)).toBe(true)
     expect(ledger.every(d => d.document_number === null)).toBe(true)
+    // Email-only documents are not "missing" their files.
+    expect(result.missingFiles).toEqual({ pdf: 0, xlsx: 0 })
   })
 
   it('issues no invoice numbers in statement mode', async () => {
@@ -279,6 +265,41 @@ describe('invoice mode', () => {
     expect(docs.every(d => d.status === 'sent')).toBe(true)
   })
 
+  it('attaches PDF and Excel to invoices only', async () => {
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
+    await runMonthlyReport('2026-08', { force: true })
+    for (const addr of ['shen@efco.de', 'bettina@efco.de', 'billing@4process.de']) {
+      const n = names(mailTo(addr)[0])
+      expect(n.some(f => f.endsWith('.pdf')), addr).toBe(true)
+      expect(n.some(f => f.endsWith('.xlsx')), addr).toBe(true)
+    }
+    // Overviews stay email only: EFCO's company statement and Anna's info copy.
+    expect(names(mailTo('anna@4process.de')[0]).some(f => f.endsWith('.pdf') || f.endsWith('.xlsx'))).toBe(false)
+    expect(names(mailTo('billing@efco.de')[0]).some(f => f.endsWith('.pdf') || f.endsWith('.xlsx'))).toBe(false)
+  })
+
+  it('attaches the employees invoices only for the company that opted in', async () => {
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
+    await runMonthlyReport('2026-08', { force: true })
+    expect(names(mailTo('billing@efco.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(true)
+    expect(names(mailTo('billing@4process.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(false)
+  })
+
+  it('gives the CEO exact copies of every invoice file', async () => {
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
+    await runMonthlyReport('2026-08', { force: true })
+    const zip = await ceoZip()
+    const files = Object.keys(zip.files).filter(f => !zip.files[f].dir)
+    expect(files.filter(f => f.startsWith('Personen/'))).toHaveLength(4)    // Shen, Bettina: PDF + Excel
+    expect(files.filter(f => f.startsWith('Unternehmen/'))).toHaveLength(2) // 4process: PDF + Excel
+    const [bettina] = mailTo('bettina@efco.de')
+    for (const att of bettina.attachments!) {
+      const copy = zip.file(`Personen/${att.filename}`)
+      expect(copy, att.filename).not.toBeNull()
+      expect((await copy!.async('nodebuffer')).equals(Buffer.from(att.content, 'base64'))).toBe(true)
+    }
+  })
+
   it('when switched on but NOT authorised: nothing is invoiced', async () => {
     state.db = seed({ issue_invoices: true, invoice_mode_authorized: false })
     await runMonthlyReport('2026-08', { force: true })
@@ -290,8 +311,8 @@ describe('invoice mode', () => {
 // ── Failure handling ─────────────────────────────────────────────────────────
 
 describe('a PDF that cannot be rendered', () => {
-  it('still delivers the document, keeps its Excel, and flags the gap in the archive manifest', async () => {
-    state.db = seed()
+  it('still delivers the invoice, keeps its Excel, and flags the gap in the archive manifest', async () => {
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
     // Only Bettina's own document greets her by name. A bare /Bettina/ would also
     // fail EFCO's company document and the monthly report, which list her.
     state.failPdfFor = /Hallo Bettina,/
@@ -304,11 +325,9 @@ describe('a PDF that cannot be rendered', () => {
 
     const zip = await ceoZip()
     const personPdfs = Object.keys(zip.files).filter(f => f.startsWith('Personen/') && f.endsWith('.pdf'))
-    expect(personPdfs).toHaveLength(3) // the other three are intact
-
-    // Her Excel is still archived, and the manifest lists her document as missing its PDF.
+    expect(personPdfs).toHaveLength(1) // Shen's is intact
     const personXlsx = Object.keys(zip.files).filter(f => f.startsWith('Personen/') && f.endsWith('.xlsx'))
-    expect(personXlsx).toHaveLength(4)
+    expect(personXlsx).toHaveLength(2)
     expect(zip.file('Übersicht-versandte-Dokumente-2026-08.xlsx')).not.toBeNull()
   })
 })

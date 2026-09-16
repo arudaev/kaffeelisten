@@ -46,13 +46,34 @@ describe('preview-report outputs', () => {
   })
 
   it('returns the Excel file as a download', async () => {
-    const r = await call({ type: 'member', variant: 'report', output: 'xlsx' })
+    const r = await call({ type: 'member', variant: 'invoice', output: 'xlsx' })
     expect(r.headers['content-type']).toContain('spreadsheetml')
-    expect(r.headers['content-disposition']).toMatch(/Vorschau-Aufstellung-Person-2026-09\.xlsx/)
+    expect(r.headers['content-disposition']).toMatch(/Vorschau-Rechnung-Person-2026-09\.xlsx/)
+  })
+
+  it('refuses attachments for email-only documents: statements and information copies', async () => {
+    for (const body of [
+      { type: 'member', variant: 'report', output: 'pdf' },
+      { type: 'member', variant: 'info', output: 'sheets' },
+      { type: 'company', variant: 'report', output: 'xlsx' },
+    ]) {
+      const r = await call(body)
+      expect(r.status, JSON.stringify(body)).toBe(400)
+      expect((r.body as { error: string }).error).toMatch(/nur als E-Mail/)
+    }
+  })
+
+  it('shows where to pay in both the invoice email and its PDF', async () => {
+    const r = await call({ type: 'member', variant: 'invoice', output: 'html' })
+    const { html, documentHtml } = r.body as { html: string; documentHtml: string }
+    for (const doc of [html, documentHtml]) {
+      expect(doc).toContain('Zahlbar an')
+      expect(doc).toContain('IBAN')
+    }
   })
 
   it('returns the Excel sheets as tables for the in-browser preview', async () => {
-    const r = await call({ type: 'company', variant: 'report', output: 'sheets' })
+    const r = await call({ type: 'company', variant: 'invoice', output: 'sheets' })
     const sheets = (r.body as { sheets: { name: string; rows: string[][] }[] }).sheets
     expect(sheets.map(s => s.name)).toEqual(['Pro Person', 'Pro Person × Artikel', 'Alle Einträge'])
     expect(sheets[1].rows[0]).toEqual(['Person', 'Artikel', 'Menge', 'Einzelpreis', 'Betrag'])
