@@ -1,5 +1,7 @@
 -- Migration 030: snapshot the unit price onto every transaction at checkout.
 --
+-- deploy: pre
+--
 -- Amounts were always derived by joining transactions to the CURRENT
 -- items.price_cents (report.ts fetchAndEnrich, api/admin/payments.ts). Changing a
 -- price therefore silently rewrote every past month's totals, and a re-sent

@@ -1,5 +1,7 @@
 -- Migration 037: an append-only ledger of every document delivered.
 --
+-- deploy: pre
+--
 -- billing_documents (migration 025) records INVOICES only, and invoice mode stays
 -- off until ITC1 authorises it (migration 036). A documents view built on it would
 -- therefore be empty for statements and information copies — which is everything

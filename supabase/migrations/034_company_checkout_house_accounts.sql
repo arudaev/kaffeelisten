@@ -1,5 +1,7 @@
 -- Migration 034: company-level checkout via a house account.
 --
+-- deploy: pre
+--
 -- Some tenants (4process first) will not register individuals: everyone books on
 -- one shared account and the company is billed as a unit. The member flow for
 -- such a company skips "Wer bist du?" entirely.

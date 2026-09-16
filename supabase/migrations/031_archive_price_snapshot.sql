@@ -1,5 +1,7 @@
 -- Migration 031: carry the price snapshot, and the item's identity, into the archive.
 --
+-- deploy: pre
+--
 -- transactions_archive is now permanent (the code no longer prunes it; the revoke follows in migration 039), so it must be able to
 -- stand on its own: a reported month has to be reproducible years later even if
 -- the item was since renamed, repriced or deactivated. The archive therefore
