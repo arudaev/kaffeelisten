@@ -9,7 +9,7 @@
 // automatically on same-origin requests, so no PIN is stored or sent here.
 
 export type BillingMode = 'individual' | 'company_paid'
-export type CheckoutMode = 'member' | 'company'
+export type CheckoutMode = 'member' | 'company' | 'both'
 
 export interface AdminCompany {
   id: string

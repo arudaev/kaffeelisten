@@ -12,7 +12,7 @@ export type Database = {
           billing_contact_email: string | null
           billing_notes: string | null
           member_document_copies_enabled: boolean
-          checkout_mode: 'member' | 'company'
+          checkout_mode: 'member' | 'company' | 'both'
         }
         Insert: {
           id?: string
@@ -24,7 +24,7 @@ export type Database = {
           billing_contact_email?: string | null
           billing_notes?: string | null
           member_document_copies_enabled?: boolean
-          checkout_mode?: 'member' | 'company'
+          checkout_mode?: 'member' | 'company' | 'both'
         }
         Update: {
           id?: string
@@ -36,7 +36,7 @@ export type Database = {
           billing_contact_email?: string | null
           billing_notes?: string | null
           member_document_copies_enabled?: boolean
-          checkout_mode?: 'member' | 'company'
+          checkout_mode?: 'member' | 'company' | 'both'
         }
         Relationships: []
       }
@@ -359,7 +359,7 @@ export type Database = {
           id: string
           report_month: string
           document_number: string
-          recipient_type: 'member' | 'company' | 'itc1_archive'
+          recipient_type: 'member' | 'company' | 'both' | 'itc1_archive'
           recipient_name: string
           recipient_email: string
           company_id: string | null
@@ -378,7 +378,7 @@ export type Database = {
           id?: string
           report_month: string
           document_number: string
-          recipient_type: 'member' | 'company' | 'itc1_archive'
+          recipient_type: 'member' | 'company' | 'both' | 'itc1_archive'
           recipient_name: string
           recipient_email: string
           company_id?: string | null
@@ -397,7 +397,7 @@ export type Database = {
           id?: string
           report_month?: string
           document_number?: string
-          recipient_type?: 'member' | 'company' | 'itc1_archive'
+          recipient_type?: 'member' | 'company' | 'both' | 'itc1_archive'
           recipient_name?: string
           recipient_email?: string
           company_id?: string | null

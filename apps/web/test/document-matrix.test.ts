@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   companyBillingTouched,
   companyConfigError,
+  hasHouseAccount,
   isInvoice,
   planDeliveries,
   type BillingMode,
@@ -209,7 +210,17 @@ describe('companyConfigError', () => {
   })
 
   it('refuses company checkout where individuals would have to pay — there are no individuals', () => {
-    expect(companyConfigError({ ...ok, checkout_mode: 'company' })).toMatch(/Firmen-Checkout/)
+    expect(companyConfigError({ ...ok, checkout_mode: 'company' })).toMatch(/Firmenkonto/)
+  })
+
+  it('treats mixed checkout like company checkout: the company must pay and have a contact', () => {
+    expect(companyConfigError({ ...ok, checkout_mode: 'both' })).toMatch(/Firmenkonto/)
+    expect(companyConfigError({ checkout_mode: 'both', billing_mode: 'company_paid', billing_contact_email: null })).toMatch(/Rechnungs-E-Mail/)
+    expect(companyConfigError({ checkout_mode: 'both', billing_mode: 'company_paid', billing_contact_email: 'a@b.de' })).toBeNull()
+  })
+
+  it('knows which modes have a shared account', () => {
+    expect(['member', 'company', 'both'].map(m => hasHouseAccount(m as 'member'))).toEqual([false, true, true])
   })
 })
 

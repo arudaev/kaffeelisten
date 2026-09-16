@@ -324,7 +324,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
     // still be reachable — it gets a header of its own while filters allow it.
     const q = filterName.trim().toLowerCase()
     const sharedAccount = (c: AdminCompany) =>
-      c.checkout_mode === 'company' &&
+      (c.checkout_mode === 'company' || c.checkout_mode === 'both') &&
       (filterStatus === 'all' || c.active === (filterStatus === 'active')) &&
       (!filterCompanyId || filterCompanyId === c.id) &&
       (!q || c.name.toLowerCase().includes(q))
@@ -341,6 +341,7 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
               {c.name}
               {pays && <Badge kind="warn">Firma zahlt</Badge>}
               {c.checkout_mode === 'company' && <Badge kind="inactive">Firmen-Checkout</Badge>}
+              {c.checkout_mode === 'both' && <Badge kind="inactive">+ Firmenkonto</Badge>}
             </span>
           ),
           rows: byCompany.get(c.id) ?? [],
