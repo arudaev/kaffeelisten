@@ -212,6 +212,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const asInvoice = variant === 'invoice'
     // A member of a company that pays receives an information copy (documentMatrix.ts).
     const asInfo = variant === 'info' && type === 'member'
+    // Only invoices and the administration report have attachments to preview.
+    if (output !== 'html' && type !== 'admin' && !asInvoice) {
+      return res.status(400).json({ error: 'Dieses Dokument wird nur als E-Mail versendet – es hat keinen PDF- oder Excel-Anhang.' })
+    }
 
     const settings = await fetchReportSettings()
     const format = coerceFormat(settings.format, body.format)

@@ -18,6 +18,7 @@ import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
 import { DeliveryNotFoundError, regenerateDelivery, resendDelivery } from '../_lib/report'
 import { launchBrowser, pageToPdf } from '../_lib/pdf'
 import { classifyServerError } from '../_lib/errors'
+import { carriesAttachments } from '../_lib/documentMatrix'
 
 export const config = { maxDuration: 60 }
 
@@ -65,6 +66,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Cache-Control', 'no-store')
       if (as === 'html') {
         return res.status(200).json({ subject: doc.subject, html: doc.html, documentHtml: doc.pdfHtml })
+      }
+      if (!carriesAttachments(doc.delivery.kind)) {
+        return res.status(404).json({ error: 'Dieses Dokument wurde nur als E-Mail versendet und hat keinen Anhang.' })
       }
       if (as === 'xlsx') {
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

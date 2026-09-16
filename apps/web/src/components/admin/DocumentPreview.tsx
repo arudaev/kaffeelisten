@@ -18,6 +18,9 @@ export interface PreviewSheet {
 interface Props {
   // The /api/admin/preview-report request body, without `output`.
   request: Record<string, unknown>
+  // Invoices and the administration report carry a PDF and an Excel. Every other
+  // document is email only, so its preview is just the email.
+  withAttachments: boolean
   onError: (message: string) => void
 }
 
@@ -35,7 +38,7 @@ async function post(request: Record<string, unknown>, output: string): Promise<R
   return res
 }
 
-export default function DocumentPreview({ request, onError }: Props) {
+export default function DocumentPreview({ request, withAttachments, onError }: Props) {
   const [view, setView] = useState<View>('email')
   const [email, setEmail] = useState<{ subject: string; html: string } | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -102,6 +105,25 @@ export default function DocumentPreview({ request, onError }: Props) {
   )
   const sheet = sheets?.[sheetIndex]
 
+  const emailView = (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm"><span className="text-fg-muted">Betreff:</span> <span className="text-fg">{email?.subject || '—'}</span></p>
+      {!email ? loading('E-Mail wird geladen…') : (
+        // No sandbox allowances: the document renders, but nothing in it can run.
+        <iframe title="E-Mail-Vorschau" srcDoc={email.html} sandbox="" className="w-full h-[60vh] rounded-lg border border-border bg-white" />
+      )}
+    </div>
+  )
+
+  if (!withAttachments) {
+    return (
+      <div className="flex flex-col gap-3">
+        {emailView}
+        <p className="text-xs text-fg-muted">Wird nur als E-Mail versendet – ohne PDF- oder Excel-Anhang.</p>
+      </div>
+    )
+  }
+
   return (
     <Tabs<View>
       ariaLabel="Vorschau-Format"
@@ -113,15 +135,7 @@ export default function DocumentPreview({ request, onError }: Props) {
         { id: 'excel', label: 'Excel-Anhang' },
       ]}
     >
-      {view === 'email' && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm"><span className="text-fg-muted">Betreff:</span> <span className="text-fg">{email?.subject || '—'}</span></p>
-          {!email ? loading('E-Mail wird geladen…') : (
-            // No sandbox allowances: the document renders, but nothing in it can run.
-            <iframe title="E-Mail-Vorschau" srcDoc={email.html} sandbox="" className="w-full h-[60vh] rounded-lg border border-border bg-white" />
-          )}
-        </div>
-      )}
+      {view === 'email' && emailView}
 
       {view === 'pdf' && (
         busy === 'pdf' || !pdfUrl ? loading('PDF wird erstellt… (einige Sekunden)') : (

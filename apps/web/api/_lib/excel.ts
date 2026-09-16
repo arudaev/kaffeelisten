@@ -358,8 +358,10 @@ export interface ManifestRow {
   netCents: number | null
   taxCents: number | null
   grossCents: number
-  pdfFile: string | null     // null → the PDF could not be produced
+  pdfFile: string | null     // null → no PDF (failed, or an email-only document)
   xlsxFile: string | null
+  // false for statements and information copies, which are sent as email only.
+  attachmentsExpected?: boolean
 }
 
 /**
@@ -395,12 +397,12 @@ export async function generateManifestExcel(rows: ManifestRow[]): Promise<Buffer
       r.netCents === null ? '' : euros(r.netCents),
       r.taxCents === null ? '' : euros(r.taxCents),
       euros(r.grossCents),
-      r.pdfFile ?? 'FEHLT – PDF konnte nicht erstellt werden',
-      r.xlsxFile ?? 'FEHLT – Excel konnte nicht erstellt werden',
+      r.pdfFile ?? (r.attachmentsExpected === false ? '– (nur E-Mail)' : 'FEHLT – PDF konnte nicht erstellt werden'),
+      r.xlsxFile ?? (r.attachmentsExpected === false ? '– (nur E-Mail)' : 'FEHLT – Excel konnte nicht erstellt werden'),
     ])
     styleBodyRow(row, i, 10, { money: [6, 7, 8] })
     for (const [col, file] of [[9, r.pdfFile], [10, r.xlsxFile]] as const) {
-      if (file === null) row.getCell(col).font = { bold: true, color: { argb: 'FFB91C1C' } }
+      if (file === null && r.attachmentsExpected !== false) row.getCell(col).font = { bold: true, color: { argb: 'FFB91C1C' } }
     }
   })
   return toBuffer(wb)

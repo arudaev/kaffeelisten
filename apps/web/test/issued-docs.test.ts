@@ -93,7 +93,21 @@ describe('sanitizeFile', () => {
 })
 
 describe('countMissingFiles', () => {
-  it('counts documents lacking each file type', () => {
-    expect(countMissingFiles([doc({ pdf: null }), doc({ pdf: null, xlsx: null }), doc({})])).toEqual({ pdf: 2, xlsx: 1 })
+  it('counts invoices lacking each file type', () => {
+    const inv = (o: Partial<IssuedDoc>) => doc({ kind: 'member_invoice', documentNumber: 'K-1', ...o })
+    expect(countMissingFiles([inv({ pdf: null }), inv({ pdf: null, xlsx: null }), inv({})])).toEqual({ pdf: 2, xlsx: 1 })
+  })
+
+  it('never counts an email-only statement or information copy as missing files', () => {
+    expect(countMissingFiles([
+      doc({ kind: 'member_statement', pdf: null, xlsx: null }),
+      doc({ kind: 'member_info', pdf: null, xlsx: null }),
+      doc({ kind: 'company_statement', memberId: null, pdf: null, xlsx: null }),
+    ])).toEqual({ pdf: 0, xlsx: 0 })
+  })
+
+  it('marks email-only documents in the manifest instead of flagging them as missing', () => {
+    const { manifest } = archiveEntries([doc({ kind: 'member_statement', pdf: null, xlsx: null }), doc({ kind: 'member_invoice', documentNumber: 'K-2', pdf: null })])
+    expect(manifest.map(m => m.attachmentsExpected)).toEqual([false, true])
   })
 })

@@ -279,7 +279,7 @@ export function buildMemberStatementHtml(
             ${infoNoticeHtml}
 
             ${linesTableHtml(lines, 'Gesamt')}
-            ${EXCEL_NOTE}
+            ${invoice ? EXCEL_NOTE : ''}
             ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
           </td>
         </tr>
@@ -322,6 +322,9 @@ export function buildCompanyDocumentHtml(
   const accent = opts.accent || '#D97706'
   const invoice = opts.invoice
   const variant = opts.variant ?? 'document'
+  // Only an invoice has attachments. A statement email must stand on its own:
+  // every person listed, no pointer to a PDF or Excel that does not exist.
+  const hasAttachments = !!invoice
   const greeting = contactName?.trim() ? escapeHtml(contactName.trim().split(/\s+/)[0]) : escapeHtml(companyName)
   const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
   const introHtml = opts.intro
@@ -331,7 +334,7 @@ export function buildCompanyDocumentHtml(
       : `anbei die Aufstellung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
 
   const sorted = [...members].sort((x, y) => y.subtotal_cents - x.subtotal_cents || x.member_name.localeCompare(y.member_name, 'de'))
-  const shown = variant === 'email' ? sorted.slice(0, EMAIL_PERSON_LIMIT) : sorted
+  const shown = variant === 'email' && hasAttachments ? sorted.slice(0, EMAIL_PERSON_LIMIT) : sorted
   const hidden = sorted.length - shown.length
   const personLabel = (m: MemberSummary) => (m.entries[0]?.member_kind === 'house' ? 'Sammelkonto (Firma)' : m.member_name)
   const rows = shown
@@ -347,7 +350,7 @@ export function buildCompanyDocumentHtml(
   const moreRow = hidden > 0
     ? `<tr><td colspan="3" style="padding:10px 0;${CELL}font-size:13px;color:#78716C;">&hellip; und ${hidden} weitere ${hidden === 1 ? 'Person' : 'Personen'} &ndash; vollst&auml;ndig im PDF-Anhang.</td></tr>`
     : ''
-  const appendix = variant === 'document'
+  const appendix = variant === 'document' && hasAttachments
     ? `
             <p style="margin:32px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#57534E;">Anlage &ndash; Verzehr je Person</p>
             ${sorted.map(m => `
@@ -356,9 +359,11 @@ export function buildCompanyDocumentHtml(
               ${linesTableHtml(aggregateLines(m.entries), 'Summe', true)}
             </div>`).join('')}`
     : ''
-  const footnote = variant === 'email'
-    ? `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Im PDF-Anhang steht f&uuml;r jede Person, was sie verzehrt hat; die Excel-Datei enth&auml;lt jede Einzelbuchung.</p>`
-    : EXCEL_NOTE
+  const footnote = !hasAttachments
+    ? ''
+    : variant === 'email'
+      ? `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Im PDF-Anhang steht f&uuml;r jede Person, was sie verzehrt hat; die Excel-Datei enth&auml;lt jede Einzelbuchung.</p>`
+      : EXCEL_NOTE
 
   return `<!DOCTYPE html>
 <html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
