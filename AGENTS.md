@@ -92,7 +92,7 @@ Full procedure: `docs/environments.md`. The rules every agent follows:
 1. **`supabase/migrations/*.sql` is the only way the schema changes.** Never edit schema in Supabase Studio, on staging or production.
 2. **If production needs it to work, it is a migration, not a seed.** Settings rows, defaults, grants, RLS, RPCs and required reference data go in migrations. Seeds are disposable test data only. CI builds the schema from migrations with no seeds and runs the SQL guards on it.
 3. **Every migration starts with a phase tag**: `-- deploy: pre` (additive/backwards-compatible, applied before the code ships) or `-- deploy: post` (only after the code is live). A post-deploy migration goes in its own follow-up PR, because the Supabase CLI applies pending migrations strictly in order.
-4. **Agents may migrate staging, never production.** Production migrations run only through the `db-production` GitHub workflow, which requires the owner's approval.
+4. **Agents may migrate staging, never production.** Production migrations run only through the `Database - production` GitHub workflow, which runs automatically when a merge to `main` changes `supabase/migrations`.
 5. **Previews and local dev use staging.** Vercel Preview/Development env vars point at the staging Supabase project. Outgoing mail outside production is restricted to `MAIL_ALLOWLIST` (default `example.com`), and non-production deployments refuse to run against the production database.
 6. **Real people's data never enters the repo** (it is public). Staging rosters live in gitignored `supabase/seeds/*.local.sql`.
 7. Every migration also needs: an update to the hand-maintained `apps/web/src/lib/database.types.ts`, `service_role` grant assertions in `apps/web/test/migration-grants.test.ts`, and a passing `scripts/test-migrations.sh`.
@@ -161,8 +161,8 @@ When a teammate's agent session starts on a fresh clone:
    - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — frontend Supabase client (also needed for `vite build` in CI via repo secrets).
    - `SUPABASE_SERVICE_ROLE_KEY` — only needed if running migration scripts or the report API locally.
    - `VERCEL_TOKEN` — Vercel CLI (`vercel env`, `vercel dev`, deploy inspection) with `--scope arudaev-projects`.
-   - `SUPABASE_ACCESS_TOKEN` — Supabase CLI management API (staging only for writes).
-   - `STAGING_DB_URL` — direct Postgres connection to the staging project for `supabase db push --db-url`.
+   - `SUPABASE_ACCESS_TOKEN` — Supabase Management API: `node scripts/db/migrate.mjs --project-ref <staging ref>` applies migrations to staging; `scripts/db/drift.mjs` compares schemas read-only. The migrator refuses production outside GitHub Actions.
+   - `STAGING_SUPABASE_*` / `PROD_SUPABASE_*` — project URLs and keys. Local runs use the staging values only.
 4. The agent must **never** commit `.env.local`, print secret values in responses, or embed them in source files.
 
 ## Useful references

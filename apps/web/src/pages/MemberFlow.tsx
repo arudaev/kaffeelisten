@@ -17,7 +17,10 @@ import CappuccinoMark from '../components/CappuccinoMark'
 import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 
-type Company = Database['public']['Tables']['companies']['Row']
+// Only the columns anon may read. Billing contact details are admin-only; keep this
+// shape in sync with the column grant (migrations 038 and its follow-up).
+type Company = Pick<Database['public']['Tables']['companies']['Row'], 'id' | 'name' | 'active' | 'checkout_mode'>
+const COMPANY_PUBLIC_COLS = 'id, name, active, checkout_mode' as const
 // The anonymous member flow may only read the non-PII columns of members
 // (work_email is admin-only — migration 015). Keep this shape in sync with the
 // column-level SELECT grant.
@@ -172,7 +175,7 @@ export default function MemberFlow() {
     const fetchInitial = async () => {
       setLoadingCompanies(true)
       setLoadingItems(true)
-      const cosResult = await supabase.from('companies').select('*').eq('active', true).order('name')
+      const cosResult = await supabase.from('companies').select(COMPANY_PUBLIC_COLS).eq('active', true).order('name')
       setLoadingCompanies(false)
       const itsResult = await supabase.from('items').select('*').eq('active', true).order('name')
       setLoadingItems(false)

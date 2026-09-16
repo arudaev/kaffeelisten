@@ -1,79 +1,45 @@
 name: Database - production
 
-# The ONLY way migrations reach production. Run manually on main after merging.
-# "plan" prints the pending migrations and the exact SQL (read-only). "apply"
-# waits for approval in the "production" GitHub Environment, applies, checks for
-# schema drift, then redeploys production so code never goes live before its
-# schema. Procedure: docs/environments.md.
+# The ONLY way migrations reach production. Runs automatically when a merge to
+# main changes supabase/migrations, at the same time as Vercel builds main.
+# Every migration in a release must be tagged "deploy: pre" (backwards-compatible),
+# which CI enforces, so it does not matter which of the two finishes first.
+# Post-deploy migrations ship in their own later PR. Procedure: docs/environments.md.
 on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
   workflow_dispatch:
-    inputs:
-      redeploy:
-        description: 'Trigger the Vercel production deploy hook after migrating'
-        type: boolean
-        default: true
 
 concurrency:
   group: db-production
   cancel-in-progress: false
 
 jobs:
-  plan:
-    name: Plan (read-only)
+  migrate:
+    name: Apply migrations to production
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    environment: production-plan
+    environment: production
     env:
-      PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PRODUCTION_PROJECT_REF: fdnfdscpefxqvtggbbbr
+      STAGING_PROJECT_REF: ${{ vars.STAGING_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - name: Lint migrations
-        run: node scripts/lint-migrations.mjs HEAD~0
-      - name: Pending migrations
-        run: supabase migration list --db-url "$PROD_DB_URL"
-      - name: Dry run
-        run: supabase db push --dry-run --db-url "$PROD_DB_URL"
 
-  apply:
-    name: Apply (requires approval)
-    runs-on: ubuntu-latest
-    needs: plan
-    environment: production
-    env:
-      PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Plan
+        run: node scripts/db/migrate.mjs --project-ref "$PRODUCTION_PROJECT_REF" --dry-run
+
       - name: Apply
-        run: supabase db push --db-url "$PROD_DB_URL"
-      - name: Schema drift check
-        env:
-          TARGET_DB_URL: ${{ secrets.PROD_DB_URL }}
-          PGHOST: localhost
-          PGPORT: '5432'
-          PGUSER: postgres
-        run: bash scripts/db/schema-drift.sh
-      - name: Redeploy production
-        if: inputs.redeploy
-        env:
-          DEPLOY_HOOK: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK }}
-        run: curl -fsS -X POST "$DEPLOY_HOOK"
+        run: node scripts/db/migrate.mjs --project-ref "$PRODUCTION_PROJECT_REF" --production
+
+      # Informational: staging may be ahead when another PR's migrations are open.
+      - name: Compare schema with staging
+        if: env.STAGING_PROJECT_REF != ''
+        continue-on-error: true
+        run: node scripts/db/drift.mjs --a "$STAGING_PROJECT_REF" --b "$PRODUCTION_PROJECT_REF"
