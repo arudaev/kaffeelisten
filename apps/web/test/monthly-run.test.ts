@@ -166,7 +166,11 @@ describe('statement mode, mixed campus', () => {
     }
     // With nothing attached, the email itself says what was consumed.
     expect(shen.html).not.toContain('Excel')
-    expect(mailTo('billing@4process.de')[0].html).toContain('Anna Keller')
+    // 4process pays and did not ask for the Verzehrliste: the amount, no names.
+    expect(mailTo('billing@4process.de')[0].html).not.toContain('Anna Keller')
+    expect(mailTo('billing@4process.de')[0].html).toContain('Cappuccino')
+    // EFCO's people pay for themselves: EFCO gets the overview of who consumed what.
+    expect(mailTo('billing@efco.de')[0].html).toContain('Shen Li')
   })
 
   it('sends a member of a paying company an information copy naming the payer, with no payment block', async () => {
@@ -304,6 +308,22 @@ describe('invoice mode', () => {
     await runMonthlyReport('2026-08', { force: true })
     expect(names(mailTo('billing@efco.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(true)
     expect(names(mailTo('billing@4process.de')[0]).some(n => n.startsWith('Mitarbeitende-'))).toBe(false)
+  })
+
+  it("never names employees on a paying company's invoice; the Verzehrliste goes only on request", async () => {
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
+    await runMonthlyReport('2026-08', { force: true })
+    const plain = mailTo('billing@4process.de')[0]
+    expect(plain.html).not.toContain('Anna Keller')
+    expect(names(plain).some(n => n.startsWith('Verzehrliste-'))).toBe(false)
+
+    state.sent = []
+    state.db = seed({ issue_invoices: true, invoice_mode_authorized: true })
+    state.db.tables.companies.find(c => c.id === FOURP)!.employee_list_enabled = true
+    await runMonthlyReport('2026-08', { force: true })
+    const requested = mailTo('billing@4process.de')[0]
+    expect(requested.html).not.toContain('Anna Keller')
+    expect(names(requested)).toEqual(expect.arrayContaining(['Verzehrliste-4process-2026-08.pdf', 'Verzehrliste-4process-2026-08.xlsx']))
   })
 
   it('gives the CEO exact copies of every invoice file', async () => {

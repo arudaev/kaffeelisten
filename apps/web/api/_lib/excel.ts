@@ -241,11 +241,44 @@ export async function generateMemberExcel(entries: EnrichedTransaction[]): Promi
 }
 
 /**
- * A company's month: a per-person roll-up plus every member's individual entries.
- * The line items are the point — the company document's HTML shows only one row
- * per person, which is not enough for a company to check what it is paying for.
+ * The Excel attached to a paying company's invoice: the amount by item and every
+ * entry with date and time, without naming anyone. Who consumed what is the
+ * separate, opt-in Verzehrliste (generateEmployeeListExcel, migration 041).
  */
-export async function generateCompanyExcel(members: MemberSummary[]): Promise<Buffer> {
+export async function generateCompanyItemsExcel(members: MemberSummary[]): Promise<Buffer> {
+  const wb = newWorkbook()
+  const entries = members.flatMap(m => m.entries).sort((a, b) => a.logged_at.localeCompare(b.logged_at))
+
+  const ws = addReportWorksheet(wb, 'Artikel')
+  ws.columns = [
+    { key: 'item', width: 30 },
+    { key: 'quantity', width: 10 },
+    { key: 'unit', width: 14 },
+    { key: 'total', width: 14 },
+  ]
+  const hdr = ws.addRow(['Artikel', 'Menge', 'Einzelpreis', 'Betrag'])
+  styleHeaderRow(hdr, 4)
+  alignHeader(hdr, { right: [2, 3, 4] })
+  aggregateLines(entries).forEach((line, i) => {
+    styleBodyRow(ws.addRow([line.itemName, line.quantity, euros(line.unitPriceCents), euros(line.totalCents)]), i, 4, { money: [3, 4], right: [2] })
+  })
+  const tot = ws.addRow([
+    'Gesamt',
+    entries.reduce((q, e) => q + e.quantity, 0),
+    '',
+    euros(entries.reduce((s, e) => s + e.total_cents, 0)),
+  ])
+  styleMoneyTotal(tot, 4, [4])
+
+  addLineItemSheet(wb, 'Alle Einträge', entries, { withPerson: false, withCompany: false })
+  return toBuffer(wb)
+}
+
+/**
+ * The Verzehrliste as Excel (opt-in, migration 041): a per-person roll-up, each
+ * person's items, and every entry with the person's name.
+ */
+export async function generateEmployeeListExcel(members: MemberSummary[]): Promise<Buffer> {
   const wb = newWorkbook()
 
   const ws = addReportWorksheet(wb, 'Pro Person')

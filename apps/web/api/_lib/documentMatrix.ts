@@ -29,6 +29,9 @@ export interface MatrixCompany {
   // Employer receives copies of its employees' own documents. Opt-in, and only
   // meaningful where employees are billed individually.
   member_document_copies_enabled?: boolean
+  // A paying company receives the per-person Verzehrliste as a separate document.
+  // Opt-in (migration 041); only meaningful where the company pays.
+  employee_list_enabled?: boolean
 }
 
 export interface MatrixMember {
@@ -66,8 +69,13 @@ export interface CompanyDelivery {
   companyName: string
   contactName: string | null
   email: string
+  // The company pays: its document is the full amount by item, naming no one.
+  // Otherwise it is an overview of what its self-paying people consumed.
+  companyPays: boolean
   // Attach copies of the documents this company's employees received.
   includeMemberCopies: boolean
+  // Send the per-person Verzehrliste as its own document (paying companies only).
+  includeEmployeeList: boolean
 }
 
 export type SkipReason =
@@ -169,6 +177,8 @@ export function planDeliveries(
       // Only individually billed employees have documents of their own worth
       // copying, and only where the company has opted in.
       includeMemberCopies: !companyPays && !!company.member_document_copies_enabled,
+      companyPays,
+      includeEmployeeList: companyPays && !!company.employee_list_enabled,
     })
   }
 

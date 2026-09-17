@@ -9,6 +9,7 @@ import {
   buildCompanyEmailHtml,
   buildMemberStatementHtml,
   buildCompanyDocumentHtml,
+  buildEmployeeListHtml,
   buildCeoArchiveEmailHtml,
   renderTemplate,
   formatEuro,
@@ -36,7 +37,8 @@ import {
   computeCampusRollup,
   generateCampusRollupExcel,
   type CampusRollup,
-  generateCompanyExcel,
+  generateCompanyItemsExcel,
+  generateEmployeeListExcel,
   generateExcel,
   generateManifestExcel,
   generateMemberExcel,
@@ -183,7 +185,7 @@ export async function fetchCompanyBilling(): Promise<Map<string, CompanyBilling>
   const supabase = makeSupabase()
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, billing_mode, billing_contact_name, billing_contact_email, member_document_copies_enabled, checkout_mode')
+    .select('id, name, billing_mode, billing_contact_name, billing_contact_email, member_document_copies_enabled, employee_list_enabled, checkout_mode')
   if (error) throw new Error(`Failed to read company billing: ${error.message}`)
   return new Map((data ?? []).map(c => [c.id, c as CompanyBilling]))
 }
@@ -560,6 +562,27 @@ interface PreparedDoc {
   buildExcel: () => Promise<Buffer>
 }
 
+// The opt-in Verzehrliste (migration 041) as PDF and Excel, attached next to a
+// paying company's invoice as its own document. A file that fails is left out;
+// the invoice still goes.
+export async function employeeListAttachments(
+  ctx: Pick<DeliveryContext, 'budget' | 'monthLabel' | 'reportMonth' | 'format'>,
+  companyName: string,
+  members: MemberSummary[],
+  invoiceNumber: string | null,
+): Promise<Array<{ filename: string; content: string }>> {
+  const stem = `Verzehrliste-${sanitizeFile(companyName)}-${ctx.reportMonth}`
+  const html = buildEmployeeListHtml(companyName, members, ctx.monthLabel, { accent: ctx.format.accent, invoiceNumber })
+  const [pdf, xlsx] = await Promise.all([
+    renderDocPdf(ctx.budget, html),
+    safeExcel(`employee list ${companyName}`, () => generateEmployeeListExcel(members)),
+  ])
+  return [
+    ...(pdf ? [{ filename: `${stem}.pdf`, content: pdf.toString('base64') }] : []),
+    ...(xlsx ? [{ filename: `${stem}.xlsx`, content: xlsx.toString('base64') }] : []),
+  ]
+}
+
 // Render every prepared document's PDF and Excel a few at a time on the shared
 // browser. Serial rendering (~1s per PDF) could not fit ITC1's volume in one run.
 async function renderPrepared(ctx: DeliveryContext, prepared: PreparedDoc[]): Promise<void> {
@@ -750,14 +773,16 @@ export async function sendCompanyDocuments(
       accent: ctx.format.accent,
       intro: ctx.format.reportIntro ? renderTemplate(ctx.format.reportIntro, { monat: ctx.monthLabel, jahr: yearStr }) : undefined,
       invoice,
+      layout: d.companyPays ? ('items' as const) : ('people' as const),
+      employeeList: d.includeEmployeeList,
     }
     const p: PreparedDoc = {
       to: d.email,
       subject: invoice
         ? `Kaffeelisten – Rechnung ${d.companyName} ${ctx.monthLabel}`
         : `Kaffeelisten – Aufstellung ${d.companyName} ${ctx.monthLabel}`,
-      html: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, { ...companyOpts, variant: 'email' }),
-      pdfHtml: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, { ...companyOpts, variant: 'document' }),
+      html: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, companyOpts),
+      pdfHtml: buildCompanyDocumentHtml(d.companyName, d.contactName, members, ctx.monthLabel, companyOpts),
       idempotencyKey: `companydoc-${ctx.idempotencyKey}-${d.companyId}`,
       ledgerId,
       issued: {
@@ -775,7 +800,7 @@ export async function sendCompanyDocuments(
         pdf: null,
         xlsx: null,
       },
-      buildExcel: () => generateCompanyExcel(members),
+      buildExcel: () => generateCompanyItemsExcel(members),
     }
     prepared.push(p)
     deliveryFor.set(p, d)
@@ -783,10 +808,13 @@ export async function sendCompanyDocuments(
 
   await renderPrepared(ctx, prepared)
 
-  // Opt-in employer copies (migration 033): the documents this company's own
-  // employees received, with a manifest.
-  const employeeCopies = async (p: PreparedDoc) => {
+  // Opt-in extras: the Verzehrliste for a paying company's invoice (migration 041),
+  // and copies of the documents a self-paying company's employees received (033).
+  const extras = async (p: PreparedDoc) => {
     const d = deliveryFor.get(p)!
+    if (d.includeEmployeeList && carriesAttachments(d.kind)) {
+      return employeeListAttachments(ctx, d.companyName, summariesByCompany.get(d.companyId)?.members ?? [], p.issued.documentNumber)
+    }
     if (!d.includeMemberCopies) return []
     // Copies of files that exist: employees' invoices. Email-only documents have none.
     const own = memberDocs.filter(m => m.companyId === d.companyId && (m.pdf || m.xlsx))
@@ -802,7 +830,7 @@ export async function sendCompanyDocuments(
     }
   }
 
-  return sendPrepared(ctx, prepared, employeeCopies, collect, 'company-document')
+  return sendPrepared(ctx, prepared, extras, collect, 'company-document')
 }
 
 // ─── Billing run ledger (invoice mode) ────────────────────────────────────────
@@ -1276,6 +1304,9 @@ export interface RegeneratedDocument {
   pdfHtml: string
   fileStem: string
   xlsx: Buffer
+  // A paying company's invoice for a company that asked for the Verzehrliste
+  // (migration 041): the list as its own document, sent alongside.
+  employeeList: { html: string; xlsx: Buffer; stem: string } | null
 }
 
 export class DeliveryNotFoundError extends Error {
@@ -1306,7 +1337,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
   const [{ transactions, monthLabel }, settings, { data: company }] = await Promise.all([
     fetchAndEnrich(delivery.report_month),
     fetchReportSettings(),
-    supabase.from('companies').select('id, name, billing_contact_name').eq('id', delivery.company_id).maybeSingle(),
+    supabase.from('companies').select('id, name, billing_contact_name, billing_mode, employee_list_enabled').eq('id', delivery.company_id).maybeSingle(),
   ])
   const companyName: string = company?.name ?? '—'
 
@@ -1339,6 +1370,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
   let html: string
   let pdfHtml: string
   let xlsx: Buffer
+  let employeeList: RegeneratedDocument['employeeList'] = null
 
   if (delivery.member_id) {
     const entries = transactions.filter(t => t.member_id === delivery.member_id)
@@ -1373,10 +1405,20 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
         ? renderTemplate(settings.format.reportIntro, { monat: monthLabel, jahr: yearStr })
         : undefined,
       invoice,
+      // Today's company settings decide the layout and the list, as for a new send.
+      layout: company?.billing_mode === 'individual' ? ('people' as const) : ('items' as const),
+      employeeList: company?.billing_mode === 'company_paid' && !!company.employee_list_enabled,
     }
-    html = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, { ...companyOpts, variant: 'email' })
-    pdfHtml = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, { ...companyOpts, variant: 'document' })
-    xlsx = await generateCompanyExcel(members)
+    html = buildCompanyDocumentHtml(companyName, company?.billing_contact_name ?? null, members, monthLabel, companyOpts)
+    pdfHtml = html
+    xlsx = await generateCompanyItemsExcel(members)
+    if (invoice && companyOpts.employeeList) {
+      employeeList = {
+        html: buildEmployeeListHtml(companyName, members, monthLabel, { accent, invoiceNumber: invoice.documentNumber }),
+        xlsx: await generateEmployeeListExcel(members),
+        stem: `Verzehrliste-${sanitizeFile(companyName)}-${delivery.report_month}`,
+      }
+    }
   }
 
   const fileStem = documentFileStem({
@@ -1391,7 +1433,7 @@ export async function regenerateDelivery(deliveryId: string): Promise<Regenerate
     netCents: null, taxCents: null, grossCents: 0, pdf: null, xlsx: null,
   })
 
-  return { delivery, subject, html, pdfHtml, fileStem, xlsx }
+  return { delivery, subject, html, pdfHtml, fileStem, xlsx, employeeList }
 }
 
 /**
@@ -1409,9 +1451,12 @@ export async function resendDelivery(
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
 
+  const listPdf = withFiles && regen.employeeList ? await renderPdf(regen.employeeList.html) : null
   const attachments = [
     ...(pdf ? [{ filename: `${regen.fileStem}.pdf`, content: pdf.toString('base64') }] : []),
     ...(withFiles ? [{ filename: `${regen.fileStem}.xlsx`, content: regen.xlsx.toString('base64') }] : []),
+    ...(listPdf && regen.employeeList ? [{ filename: `${regen.employeeList.stem}.pdf`, content: listPdf.toString('base64') }] : []),
+    ...(withFiles && regen.employeeList ? [{ filename: `${regen.employeeList.stem}.xlsx`, content: regen.employeeList.xlsx.toString('base64') }] : []),
   ]
   const { data, error } = await makeMailer(resendKey).emails.send(
     {

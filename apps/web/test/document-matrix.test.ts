@@ -104,6 +104,25 @@ describe('company_paid company — the company pays', () => {
   })
 })
 
+describe('Verzehrliste for a paying company (migration 041)', () => {
+  it('is off by default: a paying company gets the amount, no names', () => {
+    const plan = planDeliveries([member('a', '4process')], companies(company('4process', 'company_paid')), { ...ALL_ON, invoiceMode: true })
+    expect(plan.companies[0]).toMatchObject({ kind: 'company_invoice', companyPays: true, includeEmployeeList: false })
+  })
+
+  it('is included when the paying company asked for it', () => {
+    const cos = companies(company('4process', 'company_paid', { employee_list_enabled: true }))
+    const plan = planDeliveries([member('a', '4process')], cos, { ...ALL_ON, invoiceMode: true })
+    expect(plan.companies[0].includeEmployeeList).toBe(true)
+  })
+
+  it('does not exist for a company whose people pay for themselves', () => {
+    const cos = companies(company('efco', 'individual', { employee_list_enabled: true }))
+    const plan = planDeliveries([member('a', 'efco')], cos, ALL_ON)
+    expect(plan.companies[0]).toMatchObject({ companyPays: false, includeEmployeeList: false })
+  })
+})
+
 describe('employer copies of employee documents', () => {
   it('are off by default', () => {
     const plan = planDeliveries([member('a', 'efco')], companies(company('efco', 'individual')), ALL_ON)

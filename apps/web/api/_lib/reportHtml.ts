@@ -118,7 +118,7 @@ function issuerBlockHtml(inv: InvoiceRender): string {
 function vatAndPaymentHtml(inv: InvoiceRender, accent: string): string {
   const rate = Number.isInteger(inv.vatRate) ? String(inv.vatRate) : inv.vatRate.toFixed(2).replace('.', ',')
   return `
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:14px 0 0;">
+            <table class="doc-keep" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:14px 0 0;">
               <tr>
                 <td align="right" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">Nettobetrag</td>
                 <td align="right" width="120" style="padding:2px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#57534E;">${formatEuro(inv.netCents)}</td>
@@ -133,7 +133,7 @@ function vatAndPaymentHtml(inv: InvoiceRender, accent: string): string {
               </tr>
             </table>
 
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:22px 0 0;">
+            <table class="doc-keep" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:22px 0 0;">
               <tr>
                 <td style="padding:16px 18px;background:#FFFBEB;border:1px solid ${accent};border-radius:8px;font-family:Arial,Helvetica,sans-serif;">
                   <p style="margin:0 0 8px;font-size:12px;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;color:#92400E;">Zahlbar an</p>
@@ -189,10 +189,28 @@ function linesTableHtml(lines: readonly DocumentLine[], totalLabel: string, comp
             </table>`
 }
 
-/** Company emails list this many people; the PDF always lists everyone. */
-export const EMAIL_PERSON_LIMIT = 15
-
 const EXCEL_NOTE = `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Alle Einzelbuchungen mit Datum und Uhrzeit finden Sie in der angeh&auml;ngten Excel-Datei.</p>`
+
+// PDFs are rendered from the email HTML. In print, drop the email's grey frame and
+// its footer bar: they spilled onto an otherwise empty second page whenever the
+// content nearly filled one (ITC1, 2026-09-17). The issuer is already named at the
+// top, and the totals and payment box never split across pages. Email clients
+// ignore @media print.
+// Page margins and the "Seite x von y" footer come from pageToPdf (DOC_PAGE_MARKER).
+export const DOC_PAGE_MARKER = 'class="doc-page"'
+const PRINT_CSS = `<style>
+    @media print {
+      html, body, .doc-page { background: #ffffff !important; }
+      .doc-page-cell { padding: 0 !important; }
+      /* Chrome never splits one table cell across pages, and the whole email body
+         is one cell: flow the layout tables as blocks so content can continue. */
+      .doc-page, .doc-page > tbody, .doc-page > tbody > tr, .doc-page > tbody > tr > td,
+      .doc-card, .doc-card > tbody, .doc-card > tbody > tr, .doc-card > tbody > tr > td { display: block !important; }
+      .doc-card { margin: 0 auto !important; }
+      .doc-card > tbody > tr > td.doc-footer { display: none !important; }
+      .doc-keep { break-inside: avoid; page-break-inside: avoid; }
+    }
+  </style>`
 
 // ── Per-member monthly statement (Phase 2 feature E) ──────────────────────────
 // A warm, table-based HTML email sent to each member who consumed that month.
@@ -254,13 +272,14 @@ export function buildMemberStatementHtml(
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  ${PRINT_CSS}
 </head>
 <body style="margin:0;padding:0;background:#FAFAF9;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+<table class="doc-page" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
   <tr>
-    <td align="center" style="padding:24px 16px;">
+    <td class="doc-page-cell" align="center" style="padding:24px 16px;">
       <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+      <table class="doc-card" width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
 
         <!-- HEADER -->
         <tr>
@@ -286,7 +305,7 @@ export function buildMemberStatementHtml(
 
         <!-- FOOTER -->
         <tr>
-          <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
+          <td class="doc-footer" style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${invoice ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten' : 'ITC1 Deggendorf &middot; Diese Aufstellung dient deiner &Uuml;bersicht.'}</p>
           </td>
         </tr>
@@ -301,43 +320,28 @@ export function buildMemberStatementHtml(
 }
 
 // ── Company document (per company): report/Aufstellung, or invoice ───────────
-// One email to the company billing contact covering all its members' consumption
-// for the month. With `invoice` set it is an ITC1 invoice (money to ITC1's IBAN);
-// without, an informational Aufstellung the company uses to bill its own people.
-export function buildCompanyDocumentHtml(
-  companyName: string,
-  contactName: string | null,
-  members: MemberSummary[],
-  monthLabel: string,
-  opts: {
-    accent?: string
-    intro?: string
-    invoice?: InvoiceRender
-    // 'email': the message body — totals per person, capped, pointing to the PDF.
-    // 'document': the PDF — per-person totals plus an appendix listing what each
-    // person consumed, which is what a company checks before paying.
-    variant?: 'email' | 'document'
-  },
-): string {
-  const accent = opts.accent || '#D97706'
-  const invoice = opts.invoice
-  const variant = opts.variant ?? 'document'
-  // Only an invoice has attachments. A statement email must stand on its own:
-  // every person listed, no pointer to a PDF or Excel that does not exist.
-  const hasAttachments = !!invoice
-  const greeting = contactName?.trim() ? escapeHtml(contactName.trim().split(/\s+/)[0]) : escapeHtml(companyName)
-  const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
-  const introHtml = opts.intro
-    ? escapeHtml(opts.intro)
-    : invoice
-      ? `anbei die Sammelrechnung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
-      : `anbei die Aufstellung f&uuml;r <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> f&uuml;r den Verzehr aller Mitarbeitenden im ${escapeHtml(monthLabel)}.`
+// One email to the company billing contact for the month.
+//
+// A company that PAYS gets the full amount, item by item: an invoice (money to
+// ITC1's IBAN) or, while invoice mode is off, a statement. It names no employees.
+// What each person consumed is a separate, optional document (the Verzehrliste,
+// buildEmployeeListHtml), sent only to companies that asked for it (ITC1,
+// 2026-09-17; companies.employee_list_enabled, migration 041).
+//
+// A company whose people pay for themselves gets an overview of who consumed what
+// (layout 'people'): it bills nobody, and each person has their own document.
 
-  const sorted = [...members].sort((x, y) => y.subtotal_cents - x.subtotal_cents || x.member_name.localeCompare(y.member_name, 'de'))
-  const shown = variant === 'email' && hasAttachments ? sorted.slice(0, EMAIL_PERSON_LIMIT) : sorted
-  const hidden = sorted.length - shown.length
-  const personLabel = (m: MemberSummary) => (m.entries[0]?.member_kind === 'house' ? 'Sammelkonto (Firma)' : m.member_name)
-  const rows = shown
+function sortedPeople(members: MemberSummary[]): MemberSummary[] {
+  return [...members].sort((x, y) => y.subtotal_cents - x.subtotal_cents || x.member_name.localeCompare(y.member_name, 'de'))
+}
+
+function personLabel(m: MemberSummary): string {
+  return m.entries[0]?.member_kind === 'house' ? 'Sammelkonto (Firma)' : m.member_name
+}
+
+// Person | what they consumed | amount, one row each, with the total.
+function peopleTableHtml(members: MemberSummary[]): string {
+  const rows = sortedPeople(members)
     .map(
       m => `
         <tr>
@@ -347,49 +351,8 @@ export function buildCompanyDocumentHtml(
         </tr>`,
     )
     .join('')
-  const moreRow = hidden > 0
-    ? `<tr><td colspan="3" style="padding:10px 0;${CELL}font-size:13px;color:#78716C;">&hellip; und ${hidden} weitere ${hidden === 1 ? 'Person' : 'Personen'} &ndash; vollst&auml;ndig im PDF-Anhang.</td></tr>`
-    : ''
-  const appendix = variant === 'document' && hasAttachments
-    ? `
-            <p style="margin:32px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#57534E;">Anlage &ndash; Verzehr je Person</p>
-            ${sorted.map(m => `
-            <div style="page-break-inside:avoid;margin:18px 0 0;">
-              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(personLabel(m))}</p>
-              ${linesTableHtml(aggregateLines(m.entries), 'Summe', true)}
-            </div>`).join('')}`
-    : ''
-  const footnote = !hasAttachments
-    ? ''
-    : variant === 'email'
-      ? `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">Im PDF-Anhang steht f&uuml;r jede Person, was sie verzehrt hat; die Excel-Datei enth&auml;lt jede Einzelbuchung.</p>`
-      : EXCEL_NOTE
-
-  return `<!DOCTYPE html>
-<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head>
-<body style="margin:0;padding:0;background:#FAFAF9;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
-  <tr>
-    <td align="center" style="padding:24px 16px;">
-      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-      <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
-        <tr>
-          <td style="background:${accent};padding:26px 32px;">
-            <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
-            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Aufstellung'} &ndash; ${escapeHtml(monthLabel)}</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:28px 32px 24px;background:#ffffff;">
-            ${invoice ? issuerBlockHtml(invoice) : ''}
-            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${greeting},</p>
-            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
+  const totalCents = members.reduce((s, m) => s + m.subtotal_cents, 0)
+  return `
             <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
               <tr>
                 <th align="left" style="${HEAD}">Person</th>
@@ -397,20 +360,46 @@ export function buildCompanyDocumentHtml(
                 <th align="right" style="${HEAD}">Betrag</th>
               </tr>
               ${rows}
-              ${moreRow}
               <tr>
                 <td colspan="2" align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#1C1917;">Gesamt</td>
                 <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#B45309;">${formatEuro(totalCents)}</td>
               </tr>
-            </table>
-            ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
-            ${footnote}
-            ${appendix}
+            </table>`
+}
+
+const SECTION_TITLE = 'margin:32px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#57534E;'
+
+// The shared, Outlook-safe shell of the company documents.
+function documentShell(opts: { accent: string; headerLabel: string; monthLabel: string; body: string; footer: string }): string {
+  return `<!DOCTYPE html>
+<html lang="de" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  ${PRINT_CSS}
+</head>
+<body style="margin:0;padding:0;background:#FAFAF9;">
+<table class="doc-page" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:#FAFAF9;">
+  <tr>
+    <td class="doc-page-cell" align="center" style="padding:24px 16px;">
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table class="doc-card" width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E7E5E4;">
+        <tr>
+          <td style="background:${opts.accent};padding:26px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:17px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;letter-spacing:-.01em;line-height:1.2;">Kaffeelisten</p>
+            <p style="margin:2px 0 0;color:#FEF3C7;font-size:13px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">${opts.headerLabel} &ndash; ${escapeHtml(opts.monthLabel)}</p>
           </td>
         </tr>
         <tr>
-          <td style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${invoice ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten' : 'ITC1 Deggendorf &middot; Diese Aufstellung dient der &Uuml;bersicht.'}</p>
+          <td style="padding:28px 32px 24px;background:#ffffff;">
+            ${opts.body}
+          </td>
+        </tr>
+        <tr>
+          <td class="doc-footer" style="background:#F5F5F4;padding:18px 32px;border-top:1px solid #E7E5E4;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A8A29E;">${opts.footer}</p>
           </td>
         </tr>
       </table>
@@ -420,6 +409,110 @@ export function buildCompanyDocumentHtml(
 </table>
 </body>
 </html>`
+}
+
+export function buildCompanyDocumentHtml(
+  companyName: string,
+  contactName: string | null,
+  members: MemberSummary[],
+  monthLabel: string,
+  opts: {
+    accent?: string
+    intro?: string
+    invoice?: InvoiceRender
+    // 'items' (default): the company pays — the full amount by item, no names.
+    // 'people': the company's people pay for themselves — an overview per person.
+    layout?: 'items' | 'people'
+    // The company asked for the per-person list (migration 041). An invoice then
+    // carries it as a separate attachment; a statement, which has no attachments,
+    // shows it as its own section below the amount.
+    employeeList?: boolean
+  } = {},
+): string {
+  const accent = opts.accent || '#D97706'
+  const invoice = opts.invoice
+  const layout = invoice ? 'items' : (opts.layout ?? 'items')
+  const greeting = contactName?.trim() ? escapeHtml(contactName.trim().split(/\s+/)[0]) : escapeHtml(companyName)
+  const company = `<strong style="color:#1C1917;">${escapeHtml(companyName)}</strong>`
+  const introHtml = opts.intro
+    ? escapeHtml(opts.intro)
+    : invoice
+      ? `anbei die Rechnung f&uuml;r ${company} &uuml;ber den Verzehr im ${escapeHtml(monthLabel)}.`
+      : layout === 'items'
+        ? `anbei die Aufstellung f&uuml;r ${company} &uuml;ber den Verzehr im ${escapeHtml(monthLabel)}.`
+        : `hier ist die &Uuml;bersicht &uuml;ber den Verzehr bei ${company} im ${escapeHtml(monthLabel)}. Jede Person erh&auml;lt ihre eigene Abrechnung.`
+
+  const allEntries = members.flatMap(m => m.entries)
+  const amount = layout === 'items' ? linesTableHtml(aggregateLines(allEntries), 'Gesamt') : peopleTableHtml(members)
+
+  const notes: string[] = []
+  if (invoice) {
+    notes.push('Alle Einzelbuchungen mit Datum und Uhrzeit finden Sie in der angeh&auml;ngten Excel-Datei.')
+    if (opts.employeeList) notes.push('Die Verzehrliste je Person liegt als eigenes Dokument bei.')
+  }
+  const notesHtml = notes.length
+    ? `<p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#78716C;">${notes.join(' ')}</p>`
+    : ''
+  const statementList = !invoice && layout === 'items' && opts.employeeList
+    ? `
+            <p style="${SECTION_TITLE}">Verzehrliste je Person</p>
+            ${peopleTableHtml(members)}`
+    : ''
+
+  const body = `
+            ${invoice ? issuerBlockHtml(invoice) : ''}
+            <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#1C1917;">Hallo ${greeting},</p>
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">${introHtml}</p>
+            ${amount}
+            ${invoice ? vatAndPaymentHtml(invoice, accent) : ''}
+            ${notesHtml}
+            ${statementList}`
+
+  return documentShell({
+    accent,
+    headerLabel: invoice ? 'Rechnung Nr. ' + escapeHtml(invoice.documentNumber) : 'Aufstellung',
+    monthLabel,
+    body,
+    footer: invoice
+      ? 'Rechnungssteller: ' + escapeHtml(invoice.issuerLegalName) + ' &middot; erstellt mit Kaffeelisten'
+      : 'ITC1 Deggendorf &middot; Diese Aufstellung dient der &Uuml;bersicht.',
+  })
+}
+
+/**
+ * The Verzehrliste: what each person at a paying company consumed, sent only to
+ * companies that asked for it (migration 041). Its own document, never part of
+ * the invoice, and it demands no payment.
+ */
+export function buildEmployeeListHtml(
+  companyName: string,
+  members: MemberSummary[],
+  monthLabel: string,
+  opts: { accent?: string; invoiceNumber?: string | null } = {},
+): string {
+  const accent = opts.accent || '#D97706'
+  const belongsTo = opts.invoiceNumber
+    ? ` Sie geh&ouml;rt zur Rechnung Nr. ${escapeHtml(opts.invoiceNumber)} und ist selbst keine Rechnung.`
+    : ' Sie ist keine Rechnung.'
+  const details = sortedPeople(members)
+    .map(m => `
+            <div style="page-break-inside:avoid;margin:18px 0 0;">
+              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#1C1917;">${escapeHtml(personLabel(m))}</p>
+              ${linesTableHtml(aggregateLines(m.entries), 'Summe', true)}
+            </div>`)
+    .join('')
+  const body = `
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#57534E;">Verzehr je Person bei <strong style="color:#1C1917;">${escapeHtml(companyName)}</strong> im ${escapeHtml(monthLabel)}.${belongsTo}</p>
+            ${peopleTableHtml(members)}
+            <p style="${SECTION_TITLE}">Einzeln je Person</p>
+            ${details}`
+  return documentShell({
+    accent,
+    headerLabel: 'Verzehrliste ' + escapeHtml(companyName),
+    monthLabel,
+    body,
+    footer: 'ITC1 Deggendorf &middot; Verzehrliste zur Information, keine Rechnung.',
+  })
 }
 
 // ── Email-confirmation message ────────────────────────────────────────────────

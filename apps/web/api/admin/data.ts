@@ -56,6 +56,7 @@ interface CompanyValues {
   billing_contact_email: string | null
   billing_notes: string | null
   member_document_copies_enabled: boolean   // migration 033
+  employee_list_enabled: boolean            // migration 041
   checkout_mode: CheckoutMode                // migration 034
 }
 async function validateCompany(
@@ -101,6 +102,9 @@ async function validateCompany(
 
   if (!partial || body.member_document_copies_enabled !== undefined) {
     out.member_document_copies_enabled = Boolean(body.member_document_copies_enabled)
+  }
+  if (!partial || body.employee_list_enabled !== undefined) {
+    out.employee_list_enabled = Boolean(body.employee_list_enabled)
   }
   if (!partial || body.checkout_mode !== undefined) {
     const mode = String(body.checkout_mode ?? 'member')
@@ -291,7 +295,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (resource === 'companies') {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, active, billing_mode, billing_contact_name, billing_contact_email, billing_notes, member_document_copies_enabled, checkout_mode')
+          .select('id, name, active, billing_mode, billing_contact_name, billing_contact_email, billing_notes, member_document_copies_enabled, employee_list_enabled, checkout_mode')
           .order('name')
         if (error) throw new Error(error.message)
         return res.status(200).json({ companies: data ?? [] })

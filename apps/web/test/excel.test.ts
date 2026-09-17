@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computeCampusRollup,
   generateCampusRollupExcel,
-  generateCompanyExcel,
+  generateEmployeeListExcel,
   generateManifestExcel,
   generateMemberExcel,
 } from '../api/_lib/excel'
@@ -56,7 +56,7 @@ describe('generateMemberExcel', () => {
   })
 })
 
-describe('generateCompanyExcel', () => {
+describe('generateEmployeeListExcel', () => {
   const members: MemberSummary[] = [
     { member_id: 'a', member_name: 'Anna', work_email: 'anna@x.de', subtotal_cents: 170,
       entries: [tx({ member_id: 'a', quantity: 2, price_cents: 50 }), tx({ member_id: 'a', price_cents: 70 })] },
@@ -65,13 +65,13 @@ describe('generateCompanyExcel', () => {
   ]
 
   it('itemises every member’s entries, not just one row per person', async () => {
-    const wb = await read(await generateCompanyExcel(members))
+    const wb = await read(await generateEmployeeListExcel(members))
     const lines = wb.getWorksheet('Alle Einträge')!
     expect(dataRowCount(lines)).toBe(3)
   })
 
   it('line items sum to the same total as the per-person roll-up', async () => {
-    const wb = await read(await generateCompanyExcel(members))
+    const wb = await read(await generateEmployeeListExcel(members))
     const rollup = lastRowValues(wb.getWorksheet('Pro Person')!)
     const lines = lastRowValues(wb.getWorksheet('Alle Einträge')!)
     expect(rollup[rollup.length - 1]).toBe(2.2)
