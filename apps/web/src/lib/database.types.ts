@@ -12,6 +12,7 @@ export type Database = {
           billing_contact_email: string | null
           billing_notes: string | null
           member_document_copies_enabled: boolean
+          employee_list_enabled: boolean
           checkout_mode: 'member' | 'company' | 'both'
         }
         Insert: {
@@ -24,6 +25,7 @@ export type Database = {
           billing_contact_email?: string | null
           billing_notes?: string | null
           member_document_copies_enabled?: boolean
+          employee_list_enabled?: boolean
           checkout_mode?: 'member' | 'company' | 'both'
         }
         Update: {
@@ -36,6 +38,7 @@ export type Database = {
           billing_contact_email?: string | null
           billing_notes?: string | null
           member_document_copies_enabled?: boolean
+          employee_list_enabled?: boolean
           checkout_mode?: 'member' | 'company' | 'both'
         }
         Relationships: []
