@@ -2,6 +2,7 @@
 
 import { Resend } from 'resend'
 import { filterRecipients, isProductionDeployment, subjectFor } from '../../shared/environment'
+import { BLOCKED_MESSAGE_ID } from '../../shared/reportProgress'
 
 /**
  * Reply-to for all outgoing mail. A from-address (bericht@kaffeelisten.de) that
@@ -33,7 +34,7 @@ export function makeMailer(apiKey: string, env: NodeJS.ProcessEnv = process.env)
     const r = filterRecipients(payload, env.VERCEL_ENV, env.MAIL_ALLOWLIST)
     if (r.blocked.length) console.warn('[mail-guard] blocked outside production:', r.blocked.join(', '))
     if (r.to.length === 0) {
-      return { data: { id: 'blocked-by-mail-guard' }, error: null, headers: null } as SendResult
+      return { data: { id: BLOCKED_MESSAGE_ID }, error: null, headers: null } as SendResult
     }
     // MAIL_SINK (non-production only): deliver every allowed message to one test
     // inbox such as Resend's delivered@resend.dev instead of the example.com

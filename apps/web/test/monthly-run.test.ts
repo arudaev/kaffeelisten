@@ -8,6 +8,7 @@
 import JSZip from 'jszip'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFakeClient, type FakeDb } from './support/fakeSupabase'
+import { summariseProgress, type ProgressDelivery, type ProgressRun } from '../shared/reportProgress'
 
 // These tests exercise production delivery; outside production the mail guard
 // (api/_lib/mail.ts) would drop the non-example.com recipients they assert on.
@@ -225,6 +226,26 @@ describe('statement mode, mixed campus', () => {
     expect(ledger.every(d => d.document_number === null)).toBe(true)
     // Email-only documents are not "missing" their files.
     expect(result.missingFiles).toEqual({ pdf: 0, xlsx: 0 })
+  })
+
+  it('records live progress on the run: the plan, each phase and the report message id', async () => {
+    await runMonthlyReport('2026-08', { force: true })
+    const run = state.db.tables.report_runs[0]
+    const progress = summariseProgress(
+      run as unknown as ProgressRun,
+      state.db.tables.document_deliveries as unknown as ProgressDelivery[],
+      [],
+    )
+    expect(progress.phase).toBe('done')
+    expect(progress.documents).toEqual({
+      invoice: { planned: 0, sent: 0 },
+      statement: { planned: 4, sent: 4 },
+      info: { planned: 2, sent: 2 },
+    })
+    expect(progress.report.sent).toBe(true)
+    expect(progress.report.messageId).toBeTruthy()
+    expect(progress.archive).toMatchObject({ planned: true, sent: true })
+    expect(progress.failed).toBe(0)
   })
 
   it('issues no invoice numbers in statement mode', async () => {

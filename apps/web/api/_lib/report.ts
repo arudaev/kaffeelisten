@@ -55,6 +55,7 @@ import {
 import { previousMonth } from './schedule'
 import { computeAdminInsights, type AdminInsights } from './adminInsights'
 import { mapWithConcurrency } from './concurrency'
+import { docGroup, emptyProgress, type StoredProgress } from '../../shared/reportProgress'
 
 // Kept exported from here so existing callers and tests need not change imports.
 export { generateExcel }
@@ -423,7 +424,7 @@ export async function sendEmail(
   // the campus roll-up workbook. The archive ZIP is NOT attached here: it goes
   // to the CEO alone (sendCeoArchive).
   extras: { insights?: AdminInsights; rollupXlsx?: Buffer | null } = {},
-): Promise<void> {
+): Promise<string | null> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
   if (recipients.length === 0) {
@@ -454,7 +455,7 @@ export async function sendEmail(
     attachments.push({ filename: `Campus-Auswertung-${reportMonth}.xlsx`, content: extras.rollupXlsx.toString('base64') })
   }
 
-  const { error } = await resend.emails.send(
+  const { data, error } = await resend.emails.send(
     {
       from: 'Kaffeelisten <bericht@kaffeelisten.de>',
       to: recipients,
@@ -475,6 +476,7 @@ export async function sendEmail(
   if (error) {
     throw new Error(`Resend company report failed: ${error.message ?? JSON.stringify(error)}`)
   }
+  return data?.id ?? null
 }
 
 /**
@@ -490,10 +492,10 @@ export async function sendCeoArchive(
   reportMonth: string,
   format: ReportFormat,
   idempotencyKey: string,
-): Promise<void> {
+): Promise<string | null> {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) throw new Error('Missing RESEND_API_KEY')
-  const { error } = await makeMailer(resendKey).emails.send(
+  const { data, error } = await makeMailer(resendKey).emails.send(
     {
       from: 'Kaffeelisten <bericht@kaffeelisten.de>',
       to: [ceoEmail],
@@ -505,6 +507,7 @@ export async function sendCeoArchive(
     { idempotencyKey: `ceo-archive-${idempotencyKey}` },
   )
   if (error) throw new Error(`Resend CEO archive failed: ${error.message ?? JSON.stringify(error)}`)
+  return data?.id ?? null
 }
 
 // ─── Per-person and per-company documents ─────────────────────────────────────
@@ -1005,6 +1008,26 @@ async function failReportRun(reportMonth: string, message: string): Promise<void
     .eq('report_month', reportMonth)
 }
 
+// Live progress on report_runs.progress (migration 040), read by the admin send
+// dialog. Every write also refreshes updated_at, which keeps a long run from
+// looking stale to beginReportRun. A failed write is logged, never thrown: the
+// progress display must not break the run.
+class RunProgress {
+  readonly state: StoredProgress = emptyProgress()
+  private readonly supabase = makeSupabase()
+
+  constructor(private readonly reportMonth: string) {}
+
+  async update(change: (state: StoredProgress) => void): Promise<void> {
+    change(this.state)
+    const { error } = await this.supabase
+      .from('report_runs')
+      .update({ progress: this.state, updated_at: new Date().toISOString() })
+      .eq('report_month', this.reportMonth)
+    if (error) console.error('[report] progress not saved:', error.message)
+  }
+}
+
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 // force: bypass the run ledger's skip-if-completed guard (admin explicit re-send)
@@ -1018,6 +1041,8 @@ export async function runMonthlyReport(
   const force = opts.force ?? false
   const acquired = await beginReportRun(reportMonth, force)
   if (!acquired) return { status: 'skipped' }
+  const progress = new RunProgress(reportMonth)
+  await progress.update(() => {})
 
   // Stable key dedupes retries of this run; a forced re-send gets a unique key so
   // Resend actually delivers it again.
@@ -1075,6 +1100,9 @@ export async function runMonthlyReport(
           invoiceMode: !!issuer,
         })
         skipped = plan.skipped
+        await progress.update(state => {
+          for (const d of [...plan.members, ...plan.companies]) state.planned[docGroup(d.kind)]++
+        })
         for (const s of skipped) {
           if (s.reason !== 'disabled' && !s.optional) console.warn(`[report] ${s.recipient} ${s.name} not sent: ${s.reason}`)
         }
@@ -1100,8 +1128,11 @@ export async function runMonthlyReport(
         if (useLedger) await beginBillingRun(reportMonth)
         try {
           const memberDocs: IssuedDoc[] = []
+          await progress.update(state => { state.phase = 'people' })
           const m = await sendMemberStatements(ctx, plan.members, entriesByMember, companyNames, memberDocs)
+          await progress.update(state => { state.phase = 'companies'; state.failed = m.failed })
           const c = await sendCompanyDocuments(ctx, plan.companies, summariesByCompany, memberDocs, issuedDocs)
+          await progress.update(state => { state.failed = m.failed + c.failed })
           issuedDocs.unshift(...memberDocs)
           memberStatements = { sent: m.sent + c.sent, failed: m.failed + c.failed }
           if (useLedger) await completeBillingRun(reportMonth)
@@ -1137,7 +1168,11 @@ export async function runMonthlyReport(
         missingFiles: (m => m.pdf + m.xlsx)(countMissingFiles(issuedDocs)),
         archiveNotSent: !!archiveZip && !archiveTarget,
       })
-      await sendEmail(
+      await progress.update(state => {
+        state.phase = 'report'
+        state.archive.planned = !!archiveZip && !!archiveTarget
+      })
+      const reportMessageId = await sendEmail(
         pdfBuffer,
         xlsxBuffer,
         summaries,
@@ -1150,9 +1185,12 @@ export async function runMonthlyReport(
         idempotencyKey,
         { insights, rollupXlsx },
       )
+      await progress.update(state => { state.report = { planned: true, sent: true, messageId: reportMessageId } })
       if (archiveZip && archiveTarget) {
         try {
-          await sendCeoArchive(archiveTarget, archiveZip, issuedDocs.length, monthLabel, reportMonth, format, idempotencyKey)
+          await progress.update(state => { state.phase = 'archive' })
+          const archiveMessageId = await sendCeoArchive(archiveTarget, archiveZip, issuedDocs.length, monthLabel, reportMonth, format, idempotencyKey)
+          await progress.update(state => { state.archive = { planned: true, sent: true, messageId: archiveMessageId } })
         } catch (err) {
           // The report itself went out; copies stay re-downloadable from Dokumente.
           console.error('[report] CEO archive not sent:', err instanceof Error ? err.message : err)
@@ -1160,10 +1198,12 @@ export async function runMonthlyReport(
       }
 
       // Archive BEFORE pruning; prune only deletes rows confirmed in the archive.
+      await progress.update(state => { state.phase = 'finishing' })
       await archiveTransactions(transactions, reportMonth)
       await pruneOldTransactions()
       await deactivateInactiveMembers()
 
+      await progress.update(state => { state.phase = 'done' })
       await completeReportRun(reportMonth)
       return {
         status: 'sent',
@@ -1178,6 +1218,7 @@ export async function runMonthlyReport(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
+    await progress.update(state => { state.phase = 'failed' })
     await failReportRun(reportMonth, message)
     throw err
   }
