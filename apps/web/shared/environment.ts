@@ -66,6 +66,19 @@ export function filterRecipients(
   return { to: keep(all.to), cc: keep(all.cc), bcc: keep(all.bcc), blocked }
 }
 
+/**
+ * True when the allowlist names this exact address (not just its domain). Outside
+ * production such a recipient is a real test inbox and receives the email itself,
+ * even when MAIL_SINK redirects the domain-allowed test addresses.
+ */
+export function isExactlyAllowed(addr: string, allowlist: string | undefined): boolean {
+  const email = (/<([^>]+)>/.exec(addr)?.[1] ?? addr).trim().toLowerCase()
+  return (allowlist ?? '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .some(a => a.includes('@') && a === email)
+}
+
 /** Subject prefix that makes a non-production email unmistakable. */
 export function subjectFor(subject: string, vercelEnv: string | undefined): string {
   return isProductionDeployment(vercelEnv) ? subject : `[STAGING] ${subject}`
