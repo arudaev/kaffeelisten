@@ -873,7 +873,7 @@ export async function archiveTransactions(
   // upsert with ignoreDuplicates so re-sending the same month's report
   // never fails — rows already archived are simply skipped.
   //
-  // The archive is permanent (never pruned; DELETE revoked in migration 039), so each row carries the price paid
+  // The archive is permanent (never pruned; DELETE revoked in migration 042), so each row carries the price paid
   // and the item's identity as they were at reporting time (migration 031). A
   // month stays reproducible after an item is renamed, repriced or deactivated.
   const { error: archErr } = await supabase
