@@ -132,13 +132,28 @@ Level51 have names plus unnamed rows (→ `both`).
   follow-up migration narrows the anon grant to those columns; today anon can
   still read billing contact details in production.
 
+## Sending progress
+
+*Senden* opens a live view instead of a spinner. The run writes its plan and
+phase to `report_runs.progress`; the dialog polls
+`GET /api/admin/report-progress?month=` every 1.5 s and shows invoices (with PDF
+and Excel), statements and information copies (email only) sent against planned,
+the administration report and the CEO archive, failures, and how many emails
+Resend reports as delivered. Delivery comes from the Resend webhook
+(`api/resend-webhook.ts` → `email_delivery_events`, append-only). The dialog can be
+closed; the run continues, and reopening it shows the run still in progress.
+
+Every text in the dialog sits in its own element: browser page translation
+replaced bare text nodes, and React crashed with *removeChild … not a child of
+this node* when the dialog changed (`test/report-send-dialog.test.tsx`).
+
 ## Migrations and deploy order
 
-This release: `030, 031, 033, 034, 035, 036, 037, 038, 039`, all `deploy: pre`.
+This release: `030, 031, 033, 034, 035, 036, 037, 038, 039, 040`, all `deploy: pre`.
 They apply automatically when the PR merges (`Database - production`), alongside
 the Vercel production build.
 
-Follow-up PR, after this release is live and iPads have reloaded: `040` — revoke
+Follow-up PR, after this release is live and iPads have reloaded: `041` — revoke
 DELETE on `transactions_archive` and narrow anon's `companies` grant to the
 public columns (`deploy: post`).
 
