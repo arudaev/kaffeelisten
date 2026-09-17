@@ -30,6 +30,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Months without consumption show a dash instead of a payable checkbox in *Mitarbeitende*.
 
 #### Fixed
+- **PDFs failed to render on Vercel** (500 on PDF download and PDF preview): the Chromium download pointed at a release file that no longer exists. It now fetches the per-architecture pack.
 - **Reported months are no longer deleted from the archive** after two to three months.
 - Two colleagues with the same name no longer share one line on documents.
 - The paid overview no longer double-counts entries present in both the live table and the archive.
