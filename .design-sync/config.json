@@ -3,11 +3,15 @@
   "shape": "package",
   "pkg": "@kaffeelisten/web",
   "globalName": "Kaffeelisten",
-  "buildCmd": "node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css",
+  "buildCmd": "node_modules/.bin/tsc -p .design-sync/tsconfig.dts.json && node_modules/.bin/tailwindcss -c .design-sync/tailwind.config.cjs -i .design-sync/tailwind.css -o .design-sync/.cache/ds-tailwind.css",
   "entry": ".design-sync/ds-entry.tsx",
   "srcDir": "apps/web/src",
   "cssEntry": ".design-sync/.cache/ds-tailwind.css",
-  "guidelinesGlob": ["docs/design-foundation.md", "docs/design-system.md", "docs/domain.md"],
+  "guidelinesGlob": [
+    "docs/design-foundation.md",
+    "docs/design-system.md",
+    "docs/domain.md"
+  ],
   "readmeHeader": ".design-sync/conventions.md",
   "componentSrcMap": {
     "BigButton": "apps/web/src/components/BigButton.tsx",
@@ -39,28 +43,83 @@
     "DayGridPicker": "apps/web/src/components/admin/DayGridPicker.tsx",
     "TemplateField": "apps/web/src/components/admin/TemplateField.tsx",
     "PalettePreviewCard": "apps/web/src/components/admin/PalettePreviewCard.tsx",
-    "MemoryRouter": null
+    "DeathStarMark": "apps/web/src/components/DeathStarMark.tsx",
+    "Tabs": "apps/web/src/components/admin/Tabs.tsx",
+    "FilterBar": "apps/web/src/components/admin/FilterBar.tsx",
+    "MemoryRouter": null,
+    "KaffeelistenProvider": null
   },
-  "provider": { "component": "MemoryRouter" },
+  "provider": {
+    "component": "KaffeelistenProvider"
+  },
   "dtsPropsFor": {
-    "SegmentedControl": "options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; ariaLabel?: string; size?: 'sm' | 'md'"
+    "SegmentedControl": "options: { value: string; label: string }[]; value: string; onChange: (value: string) => void; ariaLabel?: string; size?: 'sm' | 'md'",
+    "Tabs": "tabs: { id: string; label: string; badge?: React.ReactNode }[]; active: string; onChange: (id: string) => void; ariaLabel: string; children: React.ReactNode"
   },
   "overrides": {
-    "FlowShell": { "cardMode": "single", "viewport": "960x720" },
-    "SuccessScreen": { "cardMode": "single", "viewport": "760x640" },
-    "PinKeypad": { "cardMode": "single", "viewport": "600x760" },
-    "Modal": { "cardMode": "single", "viewport": "640x620" },
-    "Sidebar": { "cardMode": "single", "viewport": "880x680" },
-    "Topbar": { "cardMode": "single", "viewport": "960x150", "primaryStory": "Dashboard" },
-    "MonthSelector": { "cardMode": "single", "viewport": "820x140" },
-    "Tile": { "cardMode": "column" },
-    "AdminField": { "cardMode": "column" },
-    "AdminSelect": { "cardMode": "column" },
-    "Toast": { "cardMode": "single", "viewport": "520x200", "primaryStory": "Success" },
-    "EmptyState": { "cardMode": "column" },
-    "DayGridPicker": { "cardMode": "column" },
-    "TemplateField": { "cardMode": "column" },
-    "PinInput": { "cardMode": "column" },
-    "PalettePreviewCard": { "cardMode": "column" }
+    "FlowShell": {
+      "cardMode": "single",
+      "viewport": "960x720"
+    },
+    "SuccessScreen": {
+      "cardMode": "single",
+      "viewport": "760x640"
+    },
+    "PinKeypad": {
+      "cardMode": "single",
+      "viewport": "600x760"
+    },
+    "Modal": {
+      "cardMode": "single",
+      "viewport": "640x620"
+    },
+    "Sidebar": {
+      "cardMode": "single",
+      "viewport": "880x680"
+    },
+    "Topbar": {
+      "cardMode": "single",
+      "viewport": "960x150",
+      "primaryStory": "Dashboard"
+    },
+    "MonthSelector": {
+      "cardMode": "single",
+      "viewport": "820x140"
+    },
+    "Tile": {
+      "cardMode": "column"
+    },
+    "AdminField": {
+      "cardMode": "column"
+    },
+    "AdminSelect": {
+      "cardMode": "column"
+    },
+    "Toast": {
+      "cardMode": "single",
+      "viewport": "520x200",
+      "primaryStory": "Success"
+    },
+    "EmptyState": {
+      "cardMode": "column"
+    },
+    "DayGridPicker": {
+      "cardMode": "column"
+    },
+    "TemplateField": {
+      "cardMode": "column"
+    },
+    "PinInput": {
+      "cardMode": "column"
+    },
+    "PalettePreviewCard": {
+      "cardMode": "column"
+    },
+    "Tabs": {
+      "cardMode": "column"
+    },
+    "FilterBar": {
+      "cardMode": "column"
+    }
   }
 }
