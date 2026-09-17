@@ -118,6 +118,10 @@ above. Staging holds nothing worth keeping.
 - **Mail guard and sink** (`apps/web/api/_lib/mail.ts`): outside production only
   allowlisted recipients are kept; with `MAIL_SINK` set they are all delivered to
   that one inbox, with the intended recipients in the subject.
+- **Receiving real mail on a preview:** the guard is why a preview send shows
+  status 200 in Resend but nothing arrives. To test with your own inbox, add that
+  exact address to `MAIL_ALLOWLIST` on Preview **and** remove `MAIL_SINK` there,
+  then redeploy. Undo it afterwards; staging data must not reach real people.
 - **Schema behind the code** (`apps/web/api/_lib/errors.ts`): a missing column or
   table returns 503 *Die Datenbank ist nicht auf dem Stand dieser Version* instead
   of a bare *Serverfehler*.
@@ -141,7 +145,17 @@ Names only. Values live in Vercel, GitHub and the gitignored
 | `RESEND_API_KEY` | shared | shared (guarded) | shared (guarded) |
 | `MAIL_ALLOWLIST` | not set | `example.com` | `example.com` |
 | `MAIL_SINK` | not set | `delivered@resend.dev` | `delivered@resend.dev` |
+| `RESEND_WEBHOOK_SECRET` | secret of the production webhook | secret of the preview webhook | not needed |
 | `CHROMIUM_PATH` | not set | not set | local Chrome, for PDF rendering |
+
+**Resend webhook** (delivery status in the send dialog): in Resend → Webhooks add
+one endpoint per environment, `https://kaffeelisten.de/api/resend-webhook` and the
+preview URL, with the events `email.delivered`, `email.delivery_delayed`,
+`email.bounced`, `email.complained`, `email.failed`. Put each signing secret into
+`RESEND_WEBHOOK_SECRET` for that Vercel environment. Without it the dialog still
+shows sending progress; deliveries stay *wartet auf Rückmeldung*. Preview
+deployments behind Vercel deployment protection need a protection bypass for the
+webhook, or use a stable staging domain.
 
 GitHub: repository secret `SUPABASE_ACCESS_TOKEN`, repository variable
 `STAGING_PROJECT_REF`, and an Environment `production` holding its own
