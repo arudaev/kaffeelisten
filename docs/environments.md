@@ -158,7 +158,7 @@ deployments behind Vercel deployment protection need a protection bypass for the
 webhook, or use a stable staging domain.
 
 GitHub: repository secret `SUPABASE_ACCESS_TOKEN`, repository variable
-`STAGING_PROJECT_REF`, and an Environment `production` holding its own
+`STAGING_PROJECT_REF` (a variable, or a secret — both work), and an Environment `production` holding its own
 `SUPABASE_ACCESS_TOKEN` secret (add a required reviewer there if production
 migrations should wait for approval).
 
