@@ -150,6 +150,15 @@ Names only. Values live in Vercel, GitHub and the gitignored
 | `RESEND_WEBHOOK_SECRET` | secret of the production webhook | secret of the preview webhook | not needed |
 | `CHROMIUM_PATH` | not set | not set | local Chrome, for PDF rendering |
 
+**Resend plan and limits.** The monthly run sends all of a month's emails in one
+go — up to ~300 on that day for ITC1. The free tier stops at 100 per day and
+3 000 per month, and staging tests count against the same account. Production
+needs Resend Pro (50 000/month, no daily limit). A separate Resend account or team
+for staging keeps test runs from using production's quota. The API allows 10
+requests per second; the run sends one email at a time and retries a rate-limited
+send with backoff (`api/_lib/mail.ts`), while a daily or monthly quota error fails
+that document immediately and shows under *Fehlgeschlagen*.
+
 **Resend webhook** (delivery status in the send dialog): in Resend → Webhooks add
 one endpoint per environment, `https://kaffeelisten.de/api/resend-webhook` and the
 preview URL, with the events `email.delivered`, `email.delivery_delayed`,
