@@ -118,10 +118,12 @@ above. Staging holds nothing worth keeping.
 - **Mail guard and sink** (`apps/web/api/_lib/mail.ts`): outside production only
   allowlisted recipients are kept; with `MAIL_SINK` set they are all delivered to
   that one inbox, with the intended recipients in the subject.
-- **Receiving real mail on a preview:** the guard is why a preview send shows
-  status 200 in Resend but nothing arrives. To test with your own inbox, add that
-  exact address to `MAIL_ALLOWLIST` on Preview **and** remove `MAIL_SINK` there,
-  then redeploy. Undo it afterwards; staging data must not reach real people.
+- **Receiving real mail on a preview:** list the exact test inboxes in
+  `MAIL_ALLOWLIST` next to `example.com` (for example
+  `example.com,you@gmail.com`) on Preview and redeploy. Exactly listed addresses
+  receive the email itself; `example.com` addresses keep going to `MAIL_SINK`;
+  every other address is blocked, and a gmail domain is never allowed as a whole.
+  Staging data then reaches those inboxes, so list only your own.
 - **Schema behind the code** (`apps/web/api/_lib/errors.ts`): a missing column or
   table returns 503 *Die Datenbank ist nicht auf dem Stand dieser Version* instead
   of a bare *Serverfehler*.

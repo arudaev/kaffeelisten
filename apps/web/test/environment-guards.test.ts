@@ -99,6 +99,27 @@ describe('makeMailer', () => {
     expect(sent[0].cc).toBeUndefined()
   })
 
+  it('delivers to addresses allowlisted exactly, while domain-allowed test addresses still go to MAIL_SINK', async () => {
+    const { makeMailer } = await import('../api/_lib/mail')
+    const env = { VERCEL_ENV: 'preview', MAIL_SINK: 'delivered@resend.dev', MAIL_ALLOWLIST: 'example.com,tester@gmail.com' }
+    const mailer = makeMailer('key', env)
+    await mailer.emails.send({ from: 'a@kaffeelisten.de', to: ['tester@gmail.com', 'anna@example.com'], cc: ['Tester <TESTER@gmail.com>', 'boss@itc1.de'], subject: 'Bericht', html: '<p/>' })
+    expect(sent[0]).toMatchObject({
+      to: ['tester@gmail.com', 'delivered@resend.dev'],
+      cc: ['Tester <TESTER@gmail.com>'],
+      subject: '[STAGING] Bericht (an: anna@example.com)',
+    })
+
+    sent.length = 0
+    await mailer.emails.send({ from: 'a@kaffeelisten.de', to: ['tester@gmail.com'], subject: 'Rechnung', html: '<p/>' })
+    expect(sent[0]).toMatchObject({ to: ['tester@gmail.com'], subject: '[STAGING] Rechnung' })
+    // A gmail address is never let through by its domain alone.
+    sent.length = 0
+    const r = await mailer.emails.send({ from: 'a@kaffeelisten.de', to: ['someone@gmail.com'], subject: 'x', html: '<p/>' })
+    expect(sent).toEqual([])
+    expect(r.data?.id).toBe('blocked-by-mail-guard')
+  })
+
   it('ignores MAIL_SINK in production', async () => {
     const { makeMailer } = await import('../api/_lib/mail')
     const mailer = makeMailer('key', { VERCEL_ENV: 'production', MAIL_SINK: 'delivered@resend.dev' })

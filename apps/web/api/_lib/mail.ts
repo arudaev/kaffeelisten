@@ -1,7 +1,7 @@
 // Shared mail helpers.
 
 import { Resend } from 'resend'
-import { filterRecipients, isProductionDeployment, subjectFor } from '../../shared/environment'
+import { filterRecipients, isExactlyAllowed, isProductionDeployment, subjectFor } from '../../shared/environment'
 import { BLOCKED_MESSAGE_ID } from '../../shared/reportProgress'
 
 /**
@@ -36,19 +36,25 @@ export function makeMailer(apiKey: string, env: NodeJS.ProcessEnv = process.env)
     if (r.to.length === 0) {
       return { data: { id: BLOCKED_MESSAGE_ID }, error: null, headers: null } as SendResult
     }
-    // MAIL_SINK (non-production only): deliver every allowed message to one test
-    // inbox such as Resend's delivered@resend.dev instead of the example.com
-    // addresses, which would bounce and hurt the sending domain's reputation.
+    // MAIL_SINK (non-production only): mail for domain-allowed test addresses
+    // (example.com) goes to one test inbox such as Resend's delivered@resend.dev,
+    // because those addresses would bounce and hurt the sending domain's
+    // reputation. Addresses the allowlist names exactly are real test inboxes and
+    // receive the email themselves.
     const sink = !isProductionDeployment(env.VERCEL_ENV) ? env.MAIL_SINK?.trim() : undefined
-    const intended = [...r.to, ...r.cc, ...r.bcc].join(', ')
+    const direct = (xs: string[]) => (sink ? xs.filter(x => isExactlyAllowed(x, env.MAIL_ALLOWLIST)) : xs)
+    const sunk = sink ? [...r.to, ...r.cc, ...r.bcc].filter(x => !isExactlyAllowed(x, env.MAIL_ALLOWLIST)) : []
+    const to = [...direct(r.to), ...(sunk.length ? [sink!] : [])]
+    const cc = direct(r.cc)
+    const bcc = direct(r.bcc)
     const subject = payload.subject === undefined
       ? undefined
-      : subjectFor(sink ? `${payload.subject} (an: ${intended})` : payload.subject, env.VERCEL_ENV)
+      : subjectFor(sunk.length ? `${payload.subject} (an: ${sunk.join(', ')})` : payload.subject, env.VERCEL_ENV)
     const guarded = {
       ...payload,
-      to: sink ? [sink] : r.to,
-      cc: !sink && r.cc.length ? r.cc : undefined,
-      bcc: !sink && r.bcc.length ? r.bcc : undefined,
+      to: to.length ? to : [sink!],
+      cc: cc.length ? cc : undefined,
+      bcc: bcc.length ? bcc : undefined,
       ...(subject !== undefined ? { subject } : {}),
     } as SendArgs[0]
     return send(guarded, options)
