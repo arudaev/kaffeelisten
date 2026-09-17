@@ -1,0 +1,15 @@
+{
+  "extends": "../apps/web/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "../ds-types",
+    "rootDir": "../apps/web/src",
+    "incremental": false,
+    "composite": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["../apps/web/src/components/**/*.tsx", "../apps/web/src/vite-env.d.ts"]
+}
