@@ -32,6 +32,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Months without consumption show a dash instead of a payable checkbox in *Mitarbeitende*.
 
 #### Fixed
+- **The logo in the monthly report email** is now a hosted image (`/email-logo.png`) instead of an inline attachment, which some mail programs and Resend's preview showed as broken.
 - **Invoices no longer end with an empty page.** The PDF printed the email's grey frame and footer, which spilled onto a blank last page whenever the content nearly filled one. Pages now break cleanly, keep the payment box together and show *Seite x von y*.
 - **The admin panel went blank after pressing *Senden*** when the browser was translating the page. The emails had gone out; only the page crashed.
 - **PDFs failed to render on Vercel** (500 on PDF download and PDF preview): the Chromium download pointed at a release file that no longer exists. It now fetches the per-architecture pack.

@@ -206,6 +206,14 @@ describe('statement mode, mixed campus', () => {
     for (const m of archives) expect(m.to).not.toContain('admin@itc1.de')
   })
 
+  it('shows the logo as a hosted image, not an inline attachment', async () => {
+    await runMonthlyReport('2026-08', { force: true })
+    const report = mailTo('admin@itc1.de')[0]
+    expect(report.html).toContain('src="https://kaffeelisten.de/email-logo.png"')
+    expect(report.html).not.toContain('cid:')
+    expect(names(report)).not.toContain('kaffeelisten-logo.png')
+  })
+
   it('gives the CEO an archive with the delivery list, report and roll-up, and no document files', async () => {
     await runMonthlyReport('2026-08', { force: true })
     const zip = await ceoZip()
