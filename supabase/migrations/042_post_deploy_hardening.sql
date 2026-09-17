@@ -1,8 +1,8 @@
--- Migration 041: post-deploy hardening for Phase 3.
+-- Migration 042: post-deploy hardening for Phase 3.
 --
 -- deploy: post
 --
--- Apply only after PR #41 (migrations 030-040 and the code that stops pruning the
+-- Apply only after PR #41 (migrations 030-041 and the code that stops pruning the
 -- archive) is live in production AND the iPads have loaded the new bundle.
 -- Applied earlier: the old report code's archive delete fails with "permission
 -- denied" after the reports were sent, and old iPad bundles that select * from
@@ -29,7 +29,7 @@ revoke delete on public.transactions_archive from service_role;
 revoke delete on public.transactions_archive from anon, authenticated;
 
 comment on table public.transactions_archive is
-  'Permanent record of reported transactions. Never pruned; DELETE revoked from every API role (migration 041).';
+  'Permanent record of reported transactions. Never pruned; DELETE revoked from every API role (migration 042).';
 
 -- ── 2. The public key reads only what the company picker needs ───────────────
 -- Until now anon held table-level SELECT on companies, which exposed

@@ -45,7 +45,7 @@ const REQUIRED: Record<string, Priv[]> = {
 
 // Privileges service_role must NOT hold per table.
 const FORBIDDEN: Record<string, Priv[]> = {
-  // The archive is the permanent record of reported months (migration 041).
+  // The archive is the permanent record of reported months (migration 042).
   // Deleting from it once destroyed all history after ~2-3 months.
   transactions_archive: ['delete'],
   // A payment record is never removed on its own (migration 035).

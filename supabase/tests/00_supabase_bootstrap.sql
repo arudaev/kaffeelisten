@@ -22,7 +22,7 @@ grant usage on schema public to anon, authenticated, service_role;
 -- Supabase grants ALL on public tables, functions and sequences to the API roles
 -- by default and relies on RLS to restrict them. This is the grant that makes a
 -- missing GRANT in a migration harmless and a missing REVOKE dangerous — the
--- archive DELETE revoked by migration 041 exists only because of it.
+-- archive DELETE revoked by migration 042 exists only because of it.
 alter default privileges in schema public grant all on tables    to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
