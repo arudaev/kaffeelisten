@@ -29,7 +29,7 @@ always has its PDF and Excel. The CEO's ZIP holds copies of every invoice file.
 | Company | Person receives | Company contact receives |
 | --- | --- | --- |
 | Each person pays (`individual`) | **Aufstellung** / **Rechnung** | **Aufstellung** (overview). Copies of its employees' documents only if opted in. No contact → nothing, and that is fine. |
-| Company pays (`company_paid`) | **Information** — own consumption, no payment details | **Aufstellung** / **Sammelrechnung**. No contact → nothing, and the admin report warns. |
+| Company pays (`company_paid`) | **Information** — own consumption, no payment details | **Aufstellung** / **Rechnung** over the full amount by item, naming no employee. The **Verzehrliste** (who consumed what) only if the company asked for it. No contact → nothing, and the admin report warns. |
 | Shared account (`checkout_mode` company or both) | — (no person) | Included in the company document as *Sammelkonto (Firma)* |
 
 | ITC1 | Receives |
@@ -51,8 +51,23 @@ ITC1 found emails listing every coffee unreadable.
 | | Email body | PDF (invoices only) | Excel (invoices only) |
 | --- | --- | --- | --- |
 | Person | Greeting, one line per item and price (`12× Espresso`), total, payment box (invoice only) | The same as a formal document; invoice fields when invoicing | `Meine Einträge`: every entry with date and time |
-| Company | Total, at most 15 people with their totals and a short item summary, "weitere im PDF" | Per-person totals plus **Anlage – Verzehr je Person**: each person's item lines and subtotal | `Pro Person`, `Pro Person × Artikel`, `Alle Einträge` |
+| Company that pays | Full amount by item, no names; VAT and payment box on an invoice | The invoice: the same, as a formal document | `Artikel`, `Alle Einträge` (no names) |
+| Verzehrliste (opt-in) | Invoice mode: a note that it is attached. Statement mode: its own section under the amount | Per-person totals, then each person's item lines — marked as no invoice | `Pro Person`, `Pro Person × Artikel`, `Alle Einträge` |
+| Company whose people pay | Overview: every person with total and item summary (email only) | — | — |
 | Administration | Key figures, restocking list, warnings, per-company table | Monthly report | All entries; campus roll-up with month-over-month comparison |
+
+**Company invoices name no one (ITC1, 2026-09-17).** A paying company gets one
+invoice with the full amount. What each employee consumed is a separate
+*Verzehrliste*, switched on per company under *Unternehmen → Firma erhält
+zusätzlich die Verzehrliste je Person* (`companies.employee_list_enabled`,
+migration `041`, off by default). It travels as its own PDF and Excel next to
+the invoice and never becomes part of it.
+
+**PDF page breaks.** Documents are printed from the email HTML. In print the
+email's grey frame and footer bar are dropped and the layout tables flow as
+blocks, so content continues across pages instead of leaving an empty last page.
+Pages get 12 mm/14 mm margins and *Seite x von y*; totals and the payment box
+stay together (`api/_lib/reportHtml.ts` `PRINT_CSS`, `api/_lib/pdf.ts`).
 
 Lines are grouped by item **and unit price** (`api/_lib/lines.ts`), so a price
 change mid-month shows as two lines, each quantity × a price actually charged.
@@ -149,11 +164,11 @@ this node* when the dialog changed (`test/report-send-dialog.test.tsx`).
 
 ## Migrations and deploy order
 
-This release: `030, 031, 033, 034, 035, 036, 037, 038, 039, 040`, all `deploy: pre`.
+This release: `030, 031, 033, 034, 035, 036, 037, 038, 039, 040, 041`, all `deploy: pre`.
 They apply automatically when the PR merges (`Database - production`), alongside
 the Vercel production build.
 
-Follow-up PR, after this release is live and iPads have reloaded: `041` — revoke
+Follow-up PR, after this release is live and iPads have reloaded: `042` — revoke
 DELETE on `transactions_archive` and narrow anon's `companies` grant to the
 public columns (`deploy: post`).
 
