@@ -11,9 +11,17 @@ Almost every component is a self-contained React component styled with Tailwind 
 classes — just render it. The shipped `styles.css` carries all styling (it `@import`s the
 compiled Tailwind layer and a remote Inter `@font-face`); nothing else needs wiring.
 
-**One exception:** `Sidebar` renders a react-router `<Link>`, so it must be mounted inside
-a Router (`<BrowserRouter>` / `<MemoryRouter>` from `react-router-dom`). Every other
-component works with no provider, theme context, or router.
+**Wrap designs in `<KaffeelistenProvider>`** (optional `palette`: `'bayerwald'` (amber,
+default) | `'b4y3rw4ld'` (ITC1 blue) | `'wald'` | `'deathstar'`). It supplies the Router that
+`Sidebar`'s `<Link>` needs and the theme context `Logo` reads — `Logo` (and so `Sidebar`)
+throws without it. It is nestable: an inner provider only switches the palette. Every other
+component needs no provider.
+
+```tsx
+<KaffeelistenProvider>
+  <Sidebar active="dashboard" onNavigate={() => {}} onSendReport={() => {}} onLogout={() => {}} open onClose={() => {}} />
+</KaffeelistenProvider>
+```
 
 **Theming.** The palette is driven by semantic CSS variables (`--accent`, `--fg`,
 `--surface`, `--bg`, `--border`, …) defined for light mode on `:root` and overridden under
@@ -76,14 +84,17 @@ classes, and each component's `<Name>.prompt.md` + `<Name>.d.ts` for its API bef
 
 - **Brand marks:** `Logo` (amber rounded-square cappuccino mark; follows the accent via
   `currentColor` — wrap in a `text-accent` element), `CappuccinoMark` (line-art cup that
-  inherits `currentColor`). Size both with `w-*`/`h-*` (or inline `style`).
+  inherits `currentColor`), `DeathStarMark` (line-art mark of the Imperium palette, same idiom). Size them with `w-*`/`h-*` (or inline `style`).
 - **Member flow (zero-login, iPad-first):** `FlowShell` (step shell with progress dots, back,
   footer slot), `Tile` (company/member selection row), `ItemCard` (consumable with quantity
   stepper), `Stepper`, `BigButton` (primary/secondary/ghost), `SuccessScreen`, `Icon`.
-- **Admin panel:** `Sidebar` (needs a Router — see Setup), `Topbar` + `MonthSelector`,
+- **Admin panel:** `Sidebar` (needs `KaffeelistenProvider` — see Setup), `Topbar` + `MonthSelector`,
   `SummaryCard` (KPI), `DataTable` (`columns`/`rows`, `render` per column), `Badge`
   (active/inactive/warn/error), `Modal`, `PinKeypad`, `AdminButton`
-  (primary/secondary/ghost/destructive), `AdminIcon`.
+  (primary/secondary/ghost/destructive), `AdminIcon`, `Tabs` (tablist + panel for page sections;
+  `tabs`/`active`/`onChange`/`ariaLabel`, optional per-tab `badge` such as an unsaved dot),
+  `FilterBar` (one row above a table: `search`, compact `AdminSelect variant="filter"` children,
+  `trailing` count/actions, optional `onReset` link).
 - **Admin form primitives** (build all admin forms from these — never raw `<input>`/`<select>`):
   `AdminField` (labelled text/number/email input; `form` + compact `filter` variants, optional
   leading icon, `hint`/`error`, `required` asterisk), `AdminSelect` (labelled select, same

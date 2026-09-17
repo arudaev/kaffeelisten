@@ -44,16 +44,20 @@ Read this before re-syncing.
 
 ## Component set
 
-29 components (was 22; +7 added 2026-07-02):
-- **2 brand marks:** `Logo`, `CappuccinoMark` — inline themable SVGs (member/`general` group).
+32 components (2026-09-17: +`DeathStarMark`, `Tabs`, `FilterBar`; was 29, and 22 before 2026-07-02):
+- **3 brand marks:** `Logo`, `CappuccinoMark`, `DeathStarMark` — inline themable SVGs (member/`general` group).
 - **7 member-flow:** `BigButton`, `Tile`, `ItemCard`, `Stepper`, `Icon`, `FlowShell`, `SuccessScreen`.
-- **20 admin:** `AdminButton`, `AdminIcon`, `Badge`, `DataTable`, `Modal`, `PinKeypad`, `SummaryCard`,
+- **22 admin:** `Tabs`, `FilterBar`, `AdminButton`, `AdminIcon`, `Badge`, `DataTable`, `Modal`, `PinKeypad`, `SummaryCard`,
   `Sidebar`, `Topbar`, `MonthSelector`, and the form primitives `AdminField`, `AdminSelect`, `Toggle`,
   `Toast`, `EmptyState`, `SegmentedControl`, `PinInput`, `DayGridPicker`, `TemplateField`,
   `PalettePreviewCard`. Keep building admin form UI from the primitives rather than raw
   `<input>`/`<select>`.
 
-The 7 new components came from the palette/appearance/PIN work (see git around cc33b57). Two carry
+**Deliberately NOT synced:** `DocumentPreview` and `ExportDialog` (they fetch `/api/admin/*`, so
+they are app features, not DS primitives). `Tabs` is generic like `SegmentedControl`, so its
+`.d.ts` is hand-written via `cfg.dtsPropsFor.Tabs`.
+
+The 7 components added 2026-07-02 came from the palette/appearance/PIN work (see git around cc33b57). Two carry
 non-trivial preview data: `PalettePreviewCard` needs a `Palette` object (id/name/lightAccent/darkAccent
 — literals mirror `apps/web/src/lib/palettes.ts` `PRESET_PALETTES`), and `TemplateField` needs
 `placeholders` keys from `apps/web/src/lib/reportPlaceholders.ts` (`'monat'|'jahr'|'name'|'gesamt'`).
@@ -118,7 +122,18 @@ annotation it reads from the **shipped** `_ds_bundle.css`. To make those survive
   claude.ai/design redesign proposal (kept in the DS project as `redesign/` + `Redesign.html`);
   same props/API, new visuals. See `docs/redesign/README.md`.
 
-## Provider — Sidebar needs a Router (`cfg.provider`)
+## Provider — `KaffeelistenProvider` (Router + ThemeContext) (`cfg.provider`, 2026-09-17)
+
+Since the Imperium palette work, `Logo` calls `useTheme()` (throws "useTheme must be used within
+ThemeProvider"), and `Sidebar` renders `Logo`. The app's real `ThemeProvider` (`src/lib/theme.tsx`)
+imports the Supabase client, so it can't ship in the bundle. `ds-entry.tsx` therefore defines
+`KaffeelistenProvider`: `MemoryRouter` (skipped when already inside a Router, so it nests) +
+`ThemeContext.Provider` with a static preset palette (`palette` prop, default `bayerwald`).
+`cfg.provider.component = "KaffeelistenProvider"`; both it and `MemoryRouter` are `null` in
+`componentSrcMap`. The conventions header tells the design agent to wrap designs in it. If the
+`ThemeContextValue` shape changes, update the provider's value object.
+
+### Historical: Sidebar Router (superseded by the section above)
 
 `Sidebar` imports `Link` from `react-router-dom`, so its preview renders blank ("Cannot destructure
 'basename' of useContext(...) as it is null") without a Router. react-router-dom is **inlined into the
@@ -128,6 +143,8 @@ bundle**, so a preview-side `<MemoryRouter>` wouldn't share context. Fix: `ds-en
 keeps it out of the component set. If a future component adds another router hook, this already covers it.
 
 ## Known render warns (triaged — not regressions)
+
+- **`[RENDER_THIN]` on `DeathStarMark`** — same line-art-SVG misfire as `CappuccinoMark`; paints fine.
 
 - **`[RENDER_THIN]` on `Logo` and `CappuccinoMark`** — both are pure line-art SVGs with no text, so the
   "no text + thin paint" heuristic misfires. They DO paint (12–15 KB PNGs, correct amber/token colors —
@@ -172,3 +189,34 @@ keeps it out of the component set. If a future component adds another router hoo
 - **Conventions header** — `.design-sync/conventions.md`'s class vocabulary must track the token system.
   It was rewritten 2026-07-02 (amber-*/stone-* → semantic `bg-accent`/`text-fg`/… classes). Re-validate
   named classes against the compiled CSS on every sync (`grep` them in `ds-bundle/_ds_bundle.css`).
+
+## Real prop contracts via generated declarations (2026-09-17)
+
+Until this sync every uploaded `<Name>.d.ts` was `[key: string]: unknown` — the converter's ts-morph
+pass reads only `.d.ts` files, and this app ships none (it logged `[DTS] parsed 1 .d.ts files`).
+Fix: `cfg.buildCmd` now starts with `tsc -p .design-sync/tsconfig.dts.json`, which emits
+declarations for `apps/web/src/components/**` into **`ds-types/`** at the repo root (gitignored).
+It must NOT be a dot-directory: the converter's `**/*.d.ts` glob skips dot-dirs, so
+`.design-sync/.cache/types` was silently ignored. Check after building: `[DTS] parsed ~40 .d.ts`
+and `grep -l "\[key: string\]: unknown" ds-bundle/components/*/*/*.d.ts` prints nothing.
+Known contract rough edges: some bodies reference type names that aren't declared in the emitted
+file (`PageId`, `Column<T>`, `DataGroup<T>`, `SortState`) and `DataTableProps<T>` is used without
+its type argument — readable for the agent, not compilable. Fix per component with
+`cfg.dtsPropsFor` if a design agent misuses one.
+
+## Tooling pins (2026-09-17)
+
+- `.ds-sync/node_modules` had a mismatched esbuild ("Host version 0.28.1 does not match binary
+  version 0.21.5"): `rm -rf .ds-sync/node_modules/esbuild .ds-sync/node_modules/@esbuild` and reinstall.
+- Playwright must match a cached chromium in `%LOCALAPPDATA%\ms-playwright` (1200/1208/1234/1237):
+  `playwright@1.62.0` pins headless-shell 1234. `1.61.x` wants 1228 and fails with
+  "Executable doesn't exist".
+
+## Re-sync risks (added 2026-09-17)
+
+- `KaffeelistenProvider` mirrors `ThemeContextValue` by hand — a new required field in the theme
+  context breaks `Logo`/`Sidebar` cards (and designs) with a runtime error.
+- `ds-types/` is regenerated by `cfg.buildCmd`; running the driver without it first ships stale
+  contracts (or empty ones on a fresh clone).
+- New app components since this sync are not picked up automatically: compare
+  `apps/web/src/components/**` against `ds-entry.tsx` + `componentSrcMap` on every re-sync.

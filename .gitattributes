@@ -1,0 +1,7 @@
+# SQL function bodies are stored verbatim by Postgres. Keep LF everywhere so a
+# migration applied from Windows produces the same function source as CI and
+# production, and shell scripts run in CI.
+*.sql text eol=lf
+*.sh text eol=lf
+*.mjs text eol=lf
+*.yml text eol=lf

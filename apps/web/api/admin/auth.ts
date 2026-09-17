@@ -17,7 +17,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomInt } from 'node:crypto'
-import { Resend } from 'resend'
 import {
   makeAdminClient,
   verifyAdminPin,
@@ -29,7 +28,8 @@ import {
   issueSessionCookie,
   clearSessionCookie,
 } from '../_lib/adminAuth'
-import { replyTo } from '../_lib/mail'
+import { makeMailer, replyTo } from '../_lib/mail'
+import { classifyServerError } from '../_lib/errors'
 
 const RESET_TTL_MINUTES = 15
 
@@ -83,7 +83,7 @@ async function verify(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[auth:verify]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
 
@@ -129,7 +129,7 @@ async function change(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[auth:change]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
 
@@ -192,7 +192,7 @@ async function reset(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[auth:reset]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
 
@@ -255,7 +255,7 @@ async function requestReset(req: VercelRequest, res: VercelResponse) {
       const resendKey = process.env.RESEND_API_KEY
       if (resendKey) {
         try {
-          const resend = new Resend(resendKey)
+          const resend = makeMailer(resendKey)
           await resend.emails.send({
             from: 'Kaffeelisten <bericht@kaffeelisten.de>',
             to: [match],
@@ -282,7 +282,7 @@ async function requestReset(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[auth:request-reset]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
 

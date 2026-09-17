@@ -10,6 +10,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
+import { classifyServerError } from '../_lib/errors'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = req.method ?? 'GET'
@@ -57,6 +58,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[admin/billing]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }
