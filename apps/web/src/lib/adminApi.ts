@@ -8,6 +8,8 @@
 // Auth is a signed HttpOnly session cookie set at login; the browser sends it
 // automatically on same-origin requests, so no PIN is stored or sent here.
 
+import type { ReportProgress } from '../../shared/reportProgress'
+
 export type BillingMode = 'individual' | 'company_paid'
 export type CheckoutMode = 'member' | 'company' | 'both'
 
@@ -218,6 +220,10 @@ export const adminApi = {
     request<{ documents: BillingDocument[]; months: string[] }>(`/api/admin/billing${qs({ month })}`),
   setBillingPaid: (id: string, paid: boolean) =>
     request('/api/admin/billing', { method: 'PATCH', body: { id, paid } }),
+
+  // ── Live progress of the monthly send (migration 040) ──
+  getReportProgress: (month: string) =>
+    request<ReportProgress>(`/api/admin/report-progress${qs({ month })}`),
 
   // ── Delivered documents of every kind (migration 037) ──
   getDeliveries: (month?: string) =>
