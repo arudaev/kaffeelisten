@@ -37,6 +37,10 @@ const REQUIRED: Record<string, Priv[]> = {
   company_payments: ['select', 'insert', 'update'],
   // Delivery ledger (migration 037) — the monthly run appends, the admin reads.
   document_deliveries: ['select', 'insert'],
+  // Run progress (migration 040) — the monthly run writes progress on its run row.
+  report_runs: ['select', 'insert', 'update'],
+  // Delivery events (migration 040) — the Resend webhook appends, the admin reads.
+  email_delivery_events: ['select', 'insert'],
 }
 
 // Privileges service_role must NOT hold per table.
@@ -45,6 +49,7 @@ const FORBIDDEN: Record<string, Priv[]> = {
   company_payments: ['delete'],
   // Append-only: a re-send adds a row, it never rewrites or removes one.
   document_deliveries: ['update', 'delete'],
+  email_delivery_events: ['update', 'delete'],
 }
 
 // Privileges that exist in production only through Supabase's bootstrap
@@ -54,6 +59,7 @@ const FORBIDDEN: Record<string, Priv[]> = {
 const MUST_REVOKE_EXPLICITLY: Record<string, Priv[]> = {
   company_payments: ['delete'],
   document_deliveries: ['update', 'delete'],
+  email_delivery_events: ['update', 'delete'],
 }
 
 /**

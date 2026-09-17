@@ -549,6 +549,63 @@ export type Database = {
         }
         Relationships: []
       }
+      email_delivery_events: {
+        Row: {
+          id: number
+          resend_message_id: string
+          event: 'delivered' | 'delayed' | 'bounced' | 'complained' | 'failed'
+          occurred_at: string
+          received_at: string
+        }
+        Insert: {
+          id?: never
+          resend_message_id: string
+          event: 'delivered' | 'delayed' | 'bounced' | 'complained' | 'failed'
+          occurred_at: string
+          received_at?: string
+        }
+        Update: {
+          id?: never
+          resend_message_id?: string
+          event?: 'delivered' | 'delayed' | 'bounced' | 'complained' | 'failed'
+          occurred_at?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
+      report_runs: {
+        Row: {
+          report_month: string
+          status: 'running' | 'completed' | 'failed'
+          attempts: number
+          last_error: string | null
+          started_at: string
+          completed_at: string | null
+          updated_at: string
+          progress: Record<string, unknown> | null
+        }
+        Insert: {
+          report_month: string
+          status?: 'running' | 'completed' | 'failed'
+          attempts?: number
+          last_error?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+          progress?: Record<string, unknown> | null
+        }
+        Update: {
+          report_month?: string
+          status?: 'running' | 'completed' | 'failed'
+          attempts?: number
+          last_error?: string | null
+          started_at?: string
+          completed_at?: string | null
+          updated_at?: string
+          progress?: Record<string, unknown> | null
+        }
+        Relationships: []
+      }
       app_theme: {
         Row: {
           id: number
