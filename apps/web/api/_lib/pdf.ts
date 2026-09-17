@@ -10,14 +10,20 @@ import type { Browser } from 'puppeteer-core'
 export type { Browser }
 
 // The pack version MUST match the installed @sparticuz/chromium-min major
-// (package.json → ^147). Bump this URL whenever chromium-min is upgraded.
-const CHROMIUM_PACK =
-  'https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.tar'
+// (package.json → ^147). Bump CHROMIUM_VERSION whenever chromium-min is upgraded.
+// Releases only publish per-architecture packs (`-pack.x64.tar`, `-pack.arm64.tar`);
+// the unsuffixed `-pack.tar` URL returns 404.
+export const CHROMIUM_VERSION = '147.0.0'
+
+export function chromiumPackUrl(arch: string = process.arch): string {
+  const packArch = arch === 'arm64' ? 'arm64' : 'x64'
+  return `https://github.com/Sparticuz/chromium/releases/download/v${CHROMIUM_VERSION}/chromium-v${CHROMIUM_VERSION}-pack.${packArch}.tar`
+}
 
 export async function launchBrowser(): Promise<Browser> {
   const chromium = (await import('@sparticuz/chromium-min')).default
   const puppeteer = (await import('puppeteer-core')).default
-  const executablePath = process.env.CHROMIUM_PATH ?? (await chromium.executablePath(CHROMIUM_PACK))
+  const executablePath = process.env.CHROMIUM_PATH ?? (await chromium.executablePath(chromiumPackUrl()))
   // Drop --disable-web-security: the HTML is fully self-contained, so relaxing
   // same-origin only widens the attack surface. --no-sandbox stays (required in
   // the serverless runtime; not what defends against injection).
