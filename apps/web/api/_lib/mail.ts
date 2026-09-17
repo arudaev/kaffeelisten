@@ -19,6 +19,32 @@ export function replyTo(): string | undefined {
 type SendArgs = Parameters<Resend['emails']['send']>
 type SendResult = Awaited<ReturnType<Resend['emails']['send']>>
 
+const RATE_LIMIT_DELAYS_MS = [1000, 2000, 4000]
+
+/**
+ * Resend allows 10 requests per second per team. A monthly run sends one email
+ * at a time, but a re-send or a second tab can push past that; a 429 used to
+ * count the document as failed. Retry it with backoff — the idempotency key on
+ * every send makes a retry safe. Quota errors (daily/monthly limit reached) are
+ * not retried: waiting seconds does not help.
+ */
+export async function retryRateLimited(
+  attempt: () => Promise<SendResult>,
+  sleep: (ms: number) => Promise<void> = ms => new Promise(r => setTimeout(r, ms)),
+): Promise<SendResult> {
+  let result = await attempt()
+  for (const delay of RATE_LIMIT_DELAYS_MS) {
+    const err = result.error as { name?: string; statusCode?: number | null } | null
+    // Resend answers 429 for both; only the rate limit clears within seconds.
+    const rateLimited = err?.name === 'rate_limit_exceeded' || (err?.statusCode === 429 && !/quota/.test(err.name ?? ''))
+    if (!rateLimited) return result
+    console.warn(`[mail] rate limited by Resend, retrying in ${delay} ms`)
+    await sleep(delay)
+    result = await attempt()
+  }
+  return result
+}
+
 /**
  * The only way the API creates a Resend client. Outside production (VERCEL_ENV)
  * recipients not on MAIL_ALLOWLIST (default example.com) are dropped and the
@@ -57,7 +83,7 @@ export function makeMailer(apiKey: string, env: NodeJS.ProcessEnv = process.env)
       bcc: bcc.length ? bcc : undefined,
       ...(subject !== undefined ? { subject } : {}),
     } as SendArgs[0]
-    return send(guarded, options)
+    return retryRateLimited(() => send(guarded, options))
   }
   return resend
 }

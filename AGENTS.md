@@ -14,7 +14,7 @@ Originally built for the Kaffeelisten Challenge ITC1 at the B4Y3RW4LD Hackathon 
 - **PWA:** vite-plugin-pwa (Workbox)
 - **Database:** Supabase (PostgreSQL) — separate **production** and **staging** projects, see `docs/environments.md`
 - **Hosting:** Vercel (Pro team `arudaev-projects`, project `kaffeelisten`)
-- **Email:** Resend (free tier, 3 000/mo)
+- **Email:** Resend. The free tier (100/day, 3 000/mo) cannot carry a monthly run of ~300 emails; production needs Pro (no daily limit). See `docs/environments.md`.
 - **Cron:** Vercel Cron Jobs (fires monthly report if admin forgets)
 
 ## Repo layout
