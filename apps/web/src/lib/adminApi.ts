@@ -23,6 +23,7 @@ export interface AdminCompany {
   billing_contact_email?: string | null
   billing_notes?: string | null
   member_document_copies_enabled?: boolean   // migration 033
+  employee_list_enabled?: boolean            // migration 041
   checkout_mode?: CheckoutMode                // migration 034
 }
 
@@ -32,6 +33,7 @@ export type CompanyBillingValues = {
   billing_contact_email: string | null
   billing_notes: string | null
   member_document_copies_enabled: boolean
+  employee_list_enabled: boolean
   checkout_mode: CheckoutMode
 }
 

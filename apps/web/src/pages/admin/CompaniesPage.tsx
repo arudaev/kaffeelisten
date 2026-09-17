@@ -28,6 +28,7 @@ interface CompanyForm {
   billing_contact_email: string
   billing_notes: string
   member_document_copies_enabled: boolean
+  employee_list_enabled: boolean
   checkout_mode: CheckoutMode
 }
 
@@ -38,6 +39,7 @@ const EMPTY_FORM: CompanyForm = {
   billing_contact_email: '',
   billing_notes: '',
   member_document_copies_enabled: false,
+  employee_list_enabled: false,
   checkout_mode: 'member',
 }
 
@@ -120,6 +122,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
       billing_contact_email: c.billing_contact_email ?? '',
       billing_notes: c.billing_notes ?? '',
       member_document_copies_enabled: !!c.member_document_copies_enabled,
+      employee_list_enabled: !!c.employee_list_enabled,
       checkout_mode: c.checkout_mode ?? 'member',
     })
     setModalMode('edit')
@@ -140,6 +143,8 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
       billing_notes: form.billing_notes.trim() || null,
       // Copies only make sense where people are billed individually.
       member_document_copies_enabled: form.billing_mode === 'individual' && form.member_document_copies_enabled,
+      // The per-person list only exists for a company that pays (migration 041).
+      employee_list_enabled: form.billing_mode === 'company_paid' && form.employee_list_enabled,
       checkout_mode: form.billing_mode === 'company_paid' ? form.checkout_mode : 'member' as CheckoutMode,
     }
     try {
@@ -199,6 +204,9 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
           {r.billing_contact_email
             ? <span className="text-xs text-fg-muted">{r.billing_contact_email}</span>
             : r.billing_mode === 'company_paid' && <Badge kind="error">Kein Rechnungskontakt</Badge>}
+          {r.employee_list_enabled && r.billing_mode === 'company_paid' && (
+            <span className="text-xs text-fg-muted">erhält die Verzehrliste je Person</span>
+          )}
           {r.member_document_copies_enabled && r.billing_mode !== 'company_paid' && (
             <span className="text-xs text-fg-muted">erhält Kopien der Einzeldokumente</span>
           )}
@@ -373,6 +381,19 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
             />
           </div>
 
+          {pays && (
+            <div className="flex flex-col gap-1">
+              <Toggle
+                checked={form.employee_list_enabled}
+                onChange={employee_list_enabled => setForm(f => ({ ...f, employee_list_enabled }))}
+                label="Firma erhält zusätzlich die Verzehrliste je Person"
+              />
+              <p className="text-[13px] text-fg-muted leading-relaxed">
+                Die Rechnung nennt nur den Gesamtbetrag je Artikel. Nur wenn die Firma es wünscht, geht die Liste, wer was verzehrt hat, als eigenes Dokument mit.
+              </p>
+            </div>
+          )}
+
           {pays ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-xs font-medium text-fg-muted uppercase tracking-wide mb-1.5">Checkout am iPad</legend>
@@ -391,7 +412,7 @@ export default function CompaniesPage({ onToast, onMenuClick }: Props) {
                   ? 'Niemand muss sich registrieren: Wer die Firma antippt, bucht direkt auf das gemeinsame Firmenkonto. Einzelne Personen werden nicht erfasst.'
                   : form.checkout_mode === 'both'
                     ? 'Am iPad erscheint über den Namen die Kachel „Für die Firma buchen“. Wer keinen eigenen Namen hat, bucht dort auf das gemeinsame Firmenkonto; alle anderen wählen sich wie gewohnt aus.'
-                    : 'Jede Person wählt am iPad ihren Namen. Die Firma sieht in ihrer Abrechnung, wer was getrunken hat.'}
+                    : 'Jede Person wählt am iPad ihren Namen. Wer was getrunken hat, sieht die Firma nur mit eingeschalteter Verzehrliste.'}
               </p>
             </fieldset>
           ) : (

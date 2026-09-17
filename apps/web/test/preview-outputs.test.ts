@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../api/_lib/adminAuth', () => ({ requireAdmin: async () => ({ ok: true }) }))
 vi.mock('../api/_lib/pdf', () => ({
   launchBrowser: async () => ({ close: async () => undefined }),
-  pageToPdf: async (_b: unknown, html: string) => Buffer.from(`%PDF-fake ${html.includes('Anlage') ? 'with-appendix' : 'plain'}`),
+  pageToPdf: async (_b: unknown, html: string) => Buffer.from(`%PDF-fake ${html.includes('Einzeln je Person') ? 'Verzehrliste' : 'plain'}`),
 }))
 vi.mock('../api/_lib/report', async importOriginal => {
   const real = await importOriginal<typeof import('../api/_lib/report')>()
@@ -38,11 +38,15 @@ async function call(body: Record<string, unknown>) {
 }
 
 describe('preview-report outputs', () => {
-  it('renders the company PDF from the document HTML, with the per-person appendix', async () => {
+  it('renders the company invoice PDF without names, and the Verzehrliste as its own preview', async () => {
     const r = await call({ type: 'company', variant: 'invoice', output: 'pdf' })
     expect(r.status).toBe(200)
     expect(r.headers['content-type']).toBe('application/pdf')
-    expect(String(r.body)).toContain('with-appendix')
+    expect(String(r.body)).not.toContain('Verzehrliste')
+
+    const list = await call({ type: 'employee_list', variant: 'invoice', output: 'pdf' })
+    expect(list.status).toBe(200)
+    expect(String(list.body)).toContain('Verzehrliste')
   })
 
   it('returns the Excel file as a download', async () => {
@@ -73,7 +77,7 @@ describe('preview-report outputs', () => {
   })
 
   it('returns the Excel sheets as tables for the in-browser preview', async () => {
-    const r = await call({ type: 'company', variant: 'invoice', output: 'sheets' })
+    const r = await call({ type: 'employee_list', variant: 'invoice', output: 'sheets' })
     const sheets = (r.body as { sheets: { name: string; rows: string[][] }[] }).sheets
     expect(sheets.map(s => s.name)).toEqual(['Pro Person', 'Pro Person × Artikel', 'Alle Einträge'])
     expect(sheets[1].rows[0]).toEqual(['Person', 'Artikel', 'Menge', 'Einzelpreis', 'Betrag'])

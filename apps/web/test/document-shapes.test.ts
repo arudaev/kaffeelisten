@@ -2,17 +2,18 @@ import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
 import { aggregateLines, summariseItems } from '../api/_lib/lines'
 import {
-  EMAIL_PERSON_LIMIT,
   buildCompanyDocumentHtml,
+  buildEmployeeListHtml,
   buildMemberStatementHtml,
   type EnrichedTransaction,
   type InvoiceRender,
   type MemberSummary,
 } from '../api/_lib/reportHtml'
-import { generateCompanyExcel } from '../api/_lib/excel'
+import { generateCompanyItemsExcel, generateEmployeeListExcel } from '../api/_lib/excel'
 
-// ITC1 feedback (2026-09-16): emails must stay short, the company PDF must show
-// what each person consumed, and the Excel keeps every single entry.
+// ITC1 feedback (2026-09-16): emails must stay short and the Excel keeps every
+// single entry. 2026-09-17: a paying company's invoice is the full amount only;
+// who consumed what is a separate Verzehrliste, sent only on request.
 
 let seq = 0
 const invoice: InvoiceRender = {
@@ -83,50 +84,82 @@ describe('member document', () => {
 })
 
 describe('company document', () => {
-  const people = Array.from({ length: EMAIL_PERSON_LIMIT + 5 }, (_, i) =>
+  const people = Array.from({ length: 20 }, (_, i) =>
     member(`m${i}`, `Person ${String(i).padStart(2, '0')}`, [tx({ quantity: i + 1 }), tx({ item_id: 'cap', item_name: 'Cappuccino', price_cents: 70 })]),
   )
+  const total = people.reduce((s, p) => s + p.subtotal_cents, 0)
+  const euro = (cents: number) => `€ ${(cents / 100).toFixed(2).replace('.', ',')}`
 
-  it('invoice email lists at most the limit and points to the PDF for the rest', () => {
-    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'email', invoice })
-    const listed = people.filter(p => html.includes(`>${p.member_name}<`))
-    expect(listed).toHaveLength(EMAIL_PERSON_LIMIT)
-    expect(html).toContain('und 5 weitere Personen')
-    expect(html).not.toContain('Anlage')
+  it('a paying company\'s invoice is the full amount by item and names no employee', () => {
+    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { invoice })
+    expect(people.filter(p => html.includes(p.member_name))).toEqual([])
+    expect(html).toContain('>Espresso<')
+    expect(html).toContain('>Cappuccino<')
+    expect(html).toContain(euro(total))
+    expect(html).toContain('IBAN')
+    expect(html).not.toContain('Verzehrliste')
   })
 
-  it('statement email has no attachment to point to, so it lists everyone and mentions no PDF', () => {
-    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'email' })
+  it('points to the Verzehrliste only when the company asked for it', () => {
+    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { invoice, employeeList: true })
+    expect(html).toContain('Verzehrliste je Person liegt als eigenes Dokument bei')
+    expect(people.filter(p => html.includes(p.member_name))).toEqual([])
+  })
+
+  it('a paying company\'s statement also names no one, unless the list was requested', () => {
+    const plain = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', {})
+    expect(people.filter(p => plain.includes(p.member_name))).toEqual([])
+    expect(plain).not.toContain('PDF')
+    const withList = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { employeeList: true })
+    expect(people.filter(p => withList.includes(`>${p.member_name}<`))).toHaveLength(people.length)
+  })
+
+  it('a company whose people pay for themselves gets an overview per person', () => {
+    const html = buildCompanyDocumentHtml('EFCO', 'Eva', people, 'August 2026', { layout: 'people' })
     expect(people.filter(p => html.includes(`>${p.member_name}<`))).toHaveLength(people.length)
-    expect(html).not.toContain('weitere')
-    expect(html).not.toContain('PDF')
+    expect(html).toContain('Jede Person erh&auml;lt ihre eigene Abrechnung')
   })
 
-  it('invoice PDF lists every person with their own item lines, summing to the company total', () => {
-    const html = buildCompanyDocumentHtml('PartSpace', 'Finance', people, 'August 2026', { variant: 'document', invoice })
-    expect(html).toContain('Anlage &ndash; Verzehr je Person')
+  it('the Verzehrliste lists every person with their own item lines and is no invoice', () => {
+    const html = buildEmployeeListHtml('PartSpace', people, 'August 2026', { invoiceNumber: 'K-000001' })
     for (const p of people) {
-      expect(html.split(`>${p.member_name}<`).length - 1).toBeGreaterThanOrEqual(2) // summary row + appendix heading
+      expect(html.split(`>${p.member_name}<`).length - 1).toBeGreaterThanOrEqual(2) // summary row + detail heading
     }
-    const total = people.reduce((s, p) => s + p.subtotal_cents, 0)
-    expect(html).toContain(`€ ${(total / 100).toFixed(2).replace('.', ',')}`)
+    expect(html).toContain(euro(total))
+    expect(html).toContain('Rechnung Nr. K-000001 und ist selbst keine Rechnung')
+    expect(html).not.toContain('IBAN')
   })
 
   it('labels the shared house account instead of a fictional person', () => {
     const house = member('h', '4process', [tx({ member_kind: 'house' })])
-    const html = buildCompanyDocumentHtml('4process', null, [house], 'August 2026', { variant: 'document', invoice })
-    expect(html).toContain('Sammelkonto (Firma)')
+    expect(buildEmployeeListHtml('4process', [house], 'August 2026')).toContain('Sammelkonto (Firma)')
   })
 })
 
 describe('company Excel', () => {
-  it('per-person × item sheet sums to the company total', async () => {
-    const people = [
-      member('a', 'Anna', [tx(), tx(), tx({ item_id: 'cap', item_name: 'Cappuccino', price_cents: 70 })]),
-      member('b', 'Ben', [tx({ quantity: 3 })]),
-    ]
+  const people = [
+    member('a', 'Anna', [tx(), tx(), tx({ item_id: 'cap', item_name: 'Cappuccino', price_cents: 70 })]),
+    member('b', 'Ben', [tx({ quantity: 3 })]),
+  ]
+
+  it('the invoice Excel has items and every entry, without names', async () => {
     const wb = new ExcelJS.Workbook()
-    await wb.xlsx.load(await generateCompanyExcel(people))
+    await wb.xlsx.load(await generateCompanyItemsExcel(people))
+    expect(wb.worksheets.map(w => w.name)).toEqual(['Artikel', 'Alle Einträge'])
+    const items = wb.getWorksheet('Artikel')!
+    const rows = items.getRows(2, items.actualRowCount - 2)!.map(r => (r.values as unknown[]).slice(1))
+    expect(rows).toEqual([
+      ['Espresso', 5, 0.5, 2.5],
+      ['Cappuccino', 1, 0.7, 0.7],
+    ])
+    const text = JSON.stringify(wb.worksheets.map(w => w.getSheetValues()))
+    expect(text).not.toContain('Anna')
+    expect(text).not.toContain('Ben')
+  })
+
+  it('the Verzehrliste Excel: per-person × item sheet sums to the company total', async () => {
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(await generateEmployeeListExcel(people))
     expect(wb.worksheets.map(w => w.name)).toEqual(['Pro Person', 'Pro Person × Artikel', 'Alle Einträge'])
     const ws = wb.getWorksheet('Pro Person × Artikel')!
     const rows = ws.getRows(2, ws.actualRowCount - 2)!.map(r => (r.values as unknown[]).slice(1))

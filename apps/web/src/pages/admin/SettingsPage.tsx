@@ -456,15 +456,22 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
     setEmailError('')
   }
 
-  const openPreview = (type: 'admin' | 'company' | 'member', variant: 'report' | 'invoice' | 'info', title: string) => {
+  const openPreview = (
+    type: 'admin' | 'company' | 'member' | 'employee_list',
+    variant: 'report' | 'invoice' | 'info',
+    title: string,
+    layout?: 'items' | 'people',
+  ) => {
     const f = form
     setPreview({
       title,
-      // Only invoices and the administration report have PDF and Excel attachments.
+      // Only invoices (with the Verzehrliste that travels with one) and the
+      // administration report have PDF and Excel attachments.
       withAttachments: variant === 'invoice' || type === 'admin',
       request: {
         type,
         variant,
+        ...(layout ? { layout } : {}),
         format: {
           report_subject: text(f.reportSubject), report_intro: text(f.reportIntro),
           report_include_pdf: f.includePdf, report_include_excel: f.includeExcel,
@@ -606,11 +613,23 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                         <span className="text-sm font-semibold text-fg self-center">Firmenkontakt</span>
                         {form.companyDocs
-                          ? cell('Aufstellung', 'Summe und Verzehr je Person – nur E-Mail. Kopien der Rechnungen der Mitarbeitenden nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Aufstellung an Firma'))
+                          ? cell('Übersicht', 'Wer wie viel verzehrt hat, zur Information – nur E-Mail. Kopien der Rechnungen der Mitarbeitenden nur, wenn beim Unternehmen aktiviert.', () => openPreview('company', 'report', 'Übersicht an Firma', 'people'))
                           : cell('Nichts', 'Firmen-Dokumente sind aus.', undefined, true)}
                         {form.companyDocs
-                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Sammelrechnung über den Gesamtbetrag. Anhänge: PDF (aufgeschlüsselt je Person) und Excel.' : 'Summe und Verzehr je Person – nur E-Mail.', () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma'))
+                          ? cell(invoicing ? 'Rechnung' : 'Aufstellung', invoicing ? 'Gesamtbetrag je Artikel, ohne Namen. Anhänge: PDF und Excel.' : 'Gesamtbetrag je Artikel, ohne Namen – nur E-Mail.', () => openPreview('company', invoicing ? 'invoice' : 'report', invoicing ? 'Rechnung an Firma' : 'Aufstellung an Firma', 'items'))
                           : cell('Nichts – Firma wird nicht abgerechnet', 'Zahlende Firmen erhalten so keine Abrechnung.', undefined, false, true)}
+
+                        <span className="text-sm font-semibold text-fg self-center">Verzehr&shy;liste</span>
+                        {cell('Nichts', 'Jede Person erhält ihr eigenes Dokument.', undefined, true)}
+                        {form.companyDocs
+                          ? cell(
+                              'Auf Wunsch der Firma',
+                              invoicing
+                                ? 'Verzehr je Person als eigenes Dokument neben der Rechnung, nur für Unternehmen, bei denen es eingeschaltet ist. Anhänge: PDF und Excel.'
+                                : 'Verzehr je Person als eigener Abschnitt unter der Aufstellung, nur für Unternehmen, bei denen es eingeschaltet ist.',
+                              () => openPreview('employee_list', invoicing ? 'invoice' : 'report', 'Verzehrliste an Firma'),
+                            )
+                          : cell('Nichts', 'Firmen-Dokumente sind aus.', undefined, true)}
 
                         <span className="text-sm font-semibold text-fg self-center">Verwaltung</span>
                         <div className="col-span-2">

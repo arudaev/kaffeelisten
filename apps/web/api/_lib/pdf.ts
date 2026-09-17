@@ -6,6 +6,7 @@
 // report.ts generatePdf.
 
 import type { Browser } from 'puppeteer-core'
+import { DOC_PAGE_MARKER } from './reportHtml'
 
 export type { Browser }
 
@@ -47,10 +48,22 @@ export async function pageToPdf(
       else req.abort()
     })
     await page.setContent(html, { waitUntil: 'load' })
+    // Per-recipient documents (invoices, statements, the Verzehrliste) print with
+    // page margins and a page count; other PDFs keep their own layout.
+    const isDocument = html.includes(DOC_PAGE_MARKER)
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: opts.margin ?? { top: '0', right: '0', bottom: '0', left: '0' },
+      margin: opts.margin ?? (isDocument ? { top: '12mm', right: '0', bottom: '14mm', left: '0' } : { top: '0', right: '0', bottom: '0', left: '0' }),
+      ...(isDocument
+        ? {
+            displayHeaderFooter: true,
+            headerTemplate: '<span></span>',
+            footerTemplate:
+              '<div style="width:100%;padding:0 18mm;font-family:Arial,Helvetica,sans-serif;font-size:8px;color:#A8A29E;text-align:right;">' +
+              'Seite <span class="pageNumber"></span> von <span class="totalPages"></span></div>',
+          }
+        : {}),
     })
     return Buffer.from(pdf)
   } finally {
