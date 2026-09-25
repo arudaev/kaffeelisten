@@ -34,6 +34,44 @@ jobs:
       - name: Test
         run: npm test
 
+  database:
+    name: Migrations and SQL guards
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Fetch main for migration comparison
+        run: git fetch --no-tags --depth=1 origin main
+
+      - name: Lint migrations
+        run: node scripts/lint-migrations.mjs origin/main
+
+      # Migrations only, no seeds: proves production can start from the schema alone.
+      - name: Apply migrations and run SQL guards
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+        run: bash scripts/test-migrations.sh
+
   build:
     name: Build
     runs-on: ubuntu-latest

@@ -4,11 +4,10 @@
 // never blocks the underlying member CRUD write — the admin can always resend.
 
 import { randomBytes } from 'node:crypto'
-import { Resend } from 'resend'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
 import { buildEmailConfirmationHtml } from './reportHtml'
-import { replyTo } from './mail'
+import { makeMailer, replyTo } from './mail'
 
 const CONFIRM_TTL_MINUTES = 14 * 24 * 60 // 14 days
 const FROM = 'Kaffeelisten <bericht@kaffeelisten.de>'
@@ -55,7 +54,7 @@ export async function sendMemberConfirmation(
   const reply = replyTo()
 
   try {
-    const resend = new Resend(resendKey)
+    const resend = makeMailer(resendKey)
     const { error } = await resend.emails.send({
       from: FROM,
       to: [email],

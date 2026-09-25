@@ -17,6 +17,7 @@ const completeRow: IssuerRow = {
   invoice_number_prefix: 'K-',
   invoice_payment_terms: 'Zahlung ohne Abzug innerhalb 14 Tagen',
   invoice_vat_rate: 19,
+  invoice_mode_authorized: true,
 }
 
 describe('splitVat', () => {
@@ -66,6 +67,18 @@ describe('resolveIssuer', () => {
   it('returns null on nullish input', () => {
     expect(resolveIssuer(null)).toBeNull()
     expect(resolveIssuer(undefined)).toBeNull()
+  })
+
+  it('returns null for a complete, switched-on issuer that has not been authorised', () => {
+    // The legal gate (migration 036): invoices in ITC1's name need its written
+    // authority. Filling in the issuer block and flipping the toggle is not enough.
+    expect(resolveIssuer({ ...completeRow, invoice_mode_authorized: false })).toBeNull()
+  })
+
+  it('treats a missing authorisation flag as not authorised', () => {
+    // A row read before migration 036 has no such column at all.
+    const { invoice_mode_authorized: _omit, ...legacyRow } = completeRow
+    expect(resolveIssuer(legacyRow as IssuerRow)).toBeNull()
   })
 
   it('resolves a complete row (prefix defaults to empty string)', () => {

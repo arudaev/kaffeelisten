@@ -48,7 +48,14 @@ report-preview.html
 # design-sync (staged scripts, build output, machine state)
 .ds-sync/
 ds-bundle/
+ds-types/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
 Kaffeerechnung-Vorlage.pdf
+apps/web/dev-api.mts
+apps/web/vite.config.local.ts
+apps/web/dev-fake/
+
+# Staging-only seeds with real names (repo is public)
+supabase/seeds/*.local.sql
