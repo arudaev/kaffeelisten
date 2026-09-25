@@ -18,6 +18,9 @@ type AdminIconName =
   | 'building'
   | 'users'
   | 'menu'
+  | 'document'
+  | 'warning'
+  | 'archive'
 
 interface AdminIconProps {
   name: AdminIconName
@@ -134,6 +137,29 @@ const paths: Record<AdminIconName, React.ReactNode> = {
       <path d="M4 6h16" />
       <path d="M4 12h16" />
       <path d="M4 18h16" />
+    </>
+  ),
+  document: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6" />
+      <path d="M9 17h4" />
+    </>
+  ),
+  // Deactivate (reversible). The trash can used before suggested permanent deletion.
+  archive: (
+    <>
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+      <path d="M10 12h4" />
+    </>
+  ),
+  warning: (
+    <>
+      <path d="M12 4L2.5 20h19z" />
+      <path d="M12 10v4" />
+      <path d="M12 17h.01" />
     </>
   ),
   coffee: (

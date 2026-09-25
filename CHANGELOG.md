@@ -9,6 +9,40 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/phase-3-billing
+
+#### Added
+- **Documents for everyone involved, in both billing modes.** Whoever pays gets the invoice or statement; the other side gets an overview. People whose company pays now receive an information copy without payment details. Company documents cover a company's shared account as *Sammelkonto*. Requires migrations `030`–`041` (no `032`).
+- **Attachments only on invoices.** An invoice goes to whoever pays, with the payment details (IBAN, reference) in the email and in the attached PDF, plus an Excel file with every entry. Everything else (statements, information copies, the other party's overview) is a plain email. Emails list one line per item (`12× Espresso`) instead of every coffee.
+- **Monthly report for ITC1's administration** with the change against the previous month, the most-consumed items for restocking, warnings (a paying company without a contact, failed deliveries, missing attachments), and the campus roll-up attached.
+- **Dokumentenarchiv for the CEO only:** exact copies of every invoice PDF and Excel sent that month, a delivery list of all documents, the report and the campus roll-up.
+- **Dokumente page:** every delivered document with company and amount, plus preview and re-send. Invoices also show their attachments and offer PDF and Excel download; everything else is marked *nur E-Mail*. Re-sending never allocates a new invoice number.
+- **Shared company accounts at the iPad.** *Nur Firmenkonto* skips the name step (4process). *Personen + Firmenkonto* adds a *Für die Firma buchen* tile above the names (ITC1, PBI, Level51).
+- **Export** from every list as CSV, Excel or PDF, over any date range including archived months.
+- **Company payments:** companies that pay are ticked once per month in *Mitarbeitende*, with their people in bold underneath.
+- **Settings in five tabs** (Abrechnung, Versand, Zahlungen, iPad, System), each saved on its own, with a *Wer bekommt was?* matrix that already shows invoices while invoice mode is switched on but not yet active. Invoice cells and the administration report preview the email, the PDF attachment and the Excel attachment (sheets as tables, plus download); email-only cells preview the email.
+- **A paying company's invoice is the full amount only.** It lists items, not employees. Who consumed what is a separate *Verzehrliste* (PDF and Excel) that a company receives only if it asked for it: *Unternehmen → Firma erhält zusätzlich die Verzehrliste je Person* (migration `041`, off by default). The settings matrix previews it.
+- **Live progress while sending.** The send dialog shows how many invoices (with PDF and Excel), statements and information copies are out of how many, whether the administration report and the CEO archive have gone, failures, and how many emails Resend reports as delivered or undeliverable. It can be closed while the run continues. Delivery status needs the Resend webhook (`RESEND_WEBHOOK_SECRET`, migration `040`).
+- **Staging environment.** Pull-request previews and local runs use a separate staging database. Mail outside production goes only to a test inbox, and a preview wired to production data refuses to start.
+
+#### Changed
+- Every entry stores the price paid; later price changes no longer alter past months.
+- Invoice mode needs a second, recorded authorisation (`invoice_mode_authorized` with a note) before any invoice is issued.
+- Copies of employees' documents for their employer are opt-in per company, off by default.
+- Months without consumption show a dash instead of a payable checkbox in *Mitarbeitende*.
+
+#### Fixed
+- **Emails rate-limited by Resend are retried** with backoff instead of being counted as failed.
+- **The logo in the monthly report email** is now a hosted image (`/email-logo.png`) instead of an inline attachment, which some mail programs and Resend's preview showed as broken.
+- **Invoices no longer end with an empty page.** The PDF printed the email's grey frame and footer, which spilled onto a blank last page whenever the content nearly filled one. Pages now break cleanly, keep the payment box together and show *Seite x von y*.
+- **The admin panel went blank after pressing *Senden*** when the browser was translating the page. The emails had gone out; only the page crashed.
+- **PDFs failed to render on Vercel** (500 on PDF download and PDF preview): the Chromium download pointed at a release file that no longer exists. It now fetches the per-architecture pack.
+- **Reported months are no longer deleted from the archive** after two to three months.
+- Two colleagues with the same name no longer share one line on documents.
+- The paid overview no longer double-counts entries present in both the live table and the archive.
+- A database built from the migrations let the public key call server-only functions such as `set_admin_pin`. Migration `038` makes production's locked-down privileges explicit.
+- The admin panel reports a missing migration clearly instead of loading empty tables.
+
 ### fix/linkedin-og-preview
 
 #### Fixed

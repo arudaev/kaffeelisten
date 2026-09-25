@@ -6,18 +6,25 @@
 // report.ts generatePdf.
 
 import type { Browser } from 'puppeteer-core'
+import { DOC_PAGE_MARKER } from './reportHtml'
 
 export type { Browser }
 
 // The pack version MUST match the installed @sparticuz/chromium-min major
-// (package.json → ^147). Bump this URL whenever chromium-min is upgraded.
-const CHROMIUM_PACK =
-  'https://github.com/Sparticuz/chromium/releases/download/v147.0.0/chromium-v147.0.0-pack.tar'
+// (package.json → ^147). Bump CHROMIUM_VERSION whenever chromium-min is upgraded.
+// Releases only publish per-architecture packs (`-pack.x64.tar`, `-pack.arm64.tar`);
+// the unsuffixed `-pack.tar` URL returns 404.
+export const CHROMIUM_VERSION = '147.0.0'
+
+export function chromiumPackUrl(arch: string = process.arch): string {
+  const packArch = arch === 'arm64' ? 'arm64' : 'x64'
+  return `https://github.com/Sparticuz/chromium/releases/download/v${CHROMIUM_VERSION}/chromium-v${CHROMIUM_VERSION}-pack.${packArch}.tar`
+}
 
 export async function launchBrowser(): Promise<Browser> {
   const chromium = (await import('@sparticuz/chromium-min')).default
   const puppeteer = (await import('puppeteer-core')).default
-  const executablePath = process.env.CHROMIUM_PATH ?? (await chromium.executablePath(CHROMIUM_PACK))
+  const executablePath = process.env.CHROMIUM_PATH ?? (await chromium.executablePath(chromiumPackUrl()))
   // Drop --disable-web-security: the HTML is fully self-contained, so relaxing
   // same-origin only widens the attack surface. --no-sandbox stays (required in
   // the serverless runtime; not what defends against injection).
@@ -41,10 +48,22 @@ export async function pageToPdf(
       else req.abort()
     })
     await page.setContent(html, { waitUntil: 'load' })
+    // Per-recipient documents (invoices, statements, the Verzehrliste) print with
+    // page margins and a page count; other PDFs keep their own layout.
+    const isDocument = html.includes(DOC_PAGE_MARKER)
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: opts.margin ?? { top: '0', right: '0', bottom: '0', left: '0' },
+      margin: opts.margin ?? (isDocument ? { top: '12mm', right: '0', bottom: '14mm', left: '0' } : { top: '0', right: '0', bottom: '0', left: '0' }),
+      ...(isDocument
+        ? {
+            displayHeaderFooter: true,
+            headerTemplate: '<span></span>',
+            footerTemplate:
+              '<div style="width:100%;padding:0 18mm;font-family:Arial,Helvetica,sans-serif;font-size:8px;color:#A8A29E;text-align:right;">' +
+              'Seite <span class="pageNumber"></span> von <span class="totalPages"></span></div>',
+          }
+        : {}),
     })
     return Buffer.from(pdf)
   } finally {

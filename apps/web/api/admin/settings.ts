@@ -8,6 +8,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, requireAdmin, isDbPinSet } from '../_lib/adminAuth'
 import type { Database } from '../../src/lib/database.types'
+import { classifyServerError } from '../_lib/errors'
 
 type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
 
@@ -23,6 +24,7 @@ const ISSUER_NAME_MAX = 200
 const ISSUER_ADDR_MAX = 500
 const PREFIX_MAX = 20
 const TERMS_MAX = 300
+const AUTHORITY_NOTE_MAX = 500
 
 interface SettingsBody {
   report_recipients?: unknown
@@ -50,6 +52,9 @@ interface SettingsBody {
   invoice_number_prefix?: unknown
   invoice_payment_terms?: unknown
   invoice_vat_rate?: unknown
+  company_paid_member_reports_enabled?: unknown
+  invoice_mode_authorized?: unknown
+  invoice_authority_note?: unknown
 }
 
 /** Normalize an optional text field to a trimmed string, null, or an error. */
@@ -110,6 +115,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (body.member_paid_grid_enabled !== undefined) {
         update.member_paid_grid_enabled = Boolean(body.member_paid_grid_enabled)
+      }
+
+      if (body.company_paid_member_reports_enabled !== undefined) {
+        update.company_paid_member_reports_enabled = Boolean(body.company_paid_member_reports_enabled)
       }
 
       // ── Scheduling ──
@@ -214,6 +223,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (body.issue_invoices !== undefined) {
         update.issue_invoices = Boolean(body.issue_invoices)
       }
+      if (body.invoice_authority_note !== undefined) {
+        const parsed = optText(body.invoice_authority_note, AUTHORITY_NOTE_MAX)
+        if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+        update.invoice_authority_note = parsed.value
+      }
+      if (body.invoice_mode_authorized !== undefined) {
+        update.invoice_mode_authorized = Boolean(body.invoice_mode_authorized)
+      }
+
+      // Guard: the legal authorisation to issue invoices in ITC1's name
+      // (migration 036) cannot be recorded without saying who granted it and
+      // when. Checked against the effective values, so clearing the note while
+      // authorisation stays on is refused too.
+      if (update.invoice_mode_authorized !== undefined || update.invoice_authority_note !== undefined) {
+        const { data: cur, error: curErr } = await supabase
+          .from('app_settings')
+          .select('invoice_mode_authorized, invoice_authority_note')
+          .eq('id', 1).single()
+        if (curErr) throw new Error(curErr.message)
+        const effAuthorized = update.invoice_mode_authorized ?? cur.invoice_mode_authorized
+        const effNote = 'invoice_authority_note' in update ? update.invoice_authority_note : cur.invoice_authority_note
+        if (effAuthorized && !effNote) {
+          return res.status(400).json({
+            error: 'Die Freigabe des Rechnungsmodus braucht einen Vermerk: wer die schriftliche Vollmacht von ITC1 erteilt hat und wann.',
+          })
+        }
+      }
 
       // Guard: invoice mode may only be ON when the mandatory issuer fields are
       // set (in this request or already stored). Prevents issuing a document with
@@ -255,7 +291,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Return the current non-secret settings (for both GET and after a PUT).
     const { data, error } = await supabase
       .from('app_settings')
-      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, member_paid_grid_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, pin_length, pin_updated_at')
+      .select('report_recipients, ceo_email, cc_ceo_on_reports, member_statements_enabled, company_documents_enabled, member_paid_grid_enabled, auto_report_enabled, auto_report_day, report_accent, report_subject, report_intro, report_include_pdf, report_include_excel, member_subject, member_intro, max_items_per_order, issue_invoices, issuer_legal_name, issuer_address, issuer_vat_id, issuer_iban, issuer_bic, invoice_number_prefix, invoice_payment_terms, invoice_vat_rate, company_paid_member_reports_enabled, invoice_mode_authorized, invoice_authority_note, pin_length, pin_updated_at')
       .eq('id', 1)
       .single()
     if (error) throw new Error(error.message)
@@ -296,6 +332,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       invoice_number_prefix: data.invoice_number_prefix,
       invoice_payment_terms: data.invoice_payment_terms,
       invoice_vat_rate: data.invoice_vat_rate,
+      company_paid_member_reports_enabled: data.company_paid_member_reports_enabled,
+      invoice_mode_authorized: data.invoice_mode_authorized,
+      invoice_authority_note: data.invoice_authority_note,
       pin_length: data.pin_length,
       pin_updated_at: data.pin_updated_at,
       pin_is_set: await isDbPinSet(supabase),
@@ -303,6 +342,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[settings]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

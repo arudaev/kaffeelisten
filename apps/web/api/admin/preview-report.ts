@@ -2,11 +2,20 @@
 //   type    'admin'   → the admin/CEO aggregate report (all companies)
 //           'company' → a single company's document (report or invoice)
 //           'member'  → a single member's document (statement or invoice)
-//   variant 'report' | 'invoice'  (ignored for 'admin')
+//           'employee_list' → the opt-in Verzehrliste of a paying company
+//   variant 'report' | 'invoice' | 'info'  (ignored for 'admin')
+//   layout  'items' (default, the company pays) | 'people' (its people pay)
 // Renders the email exactly as it would be sent, using the current settings and
 // this month's real data (or a small sample when empty). For invoice variants an
 // unfilled issuer block is shown with ITC1 placeholder values so the admin can
-// still preview it. PIN-protected. Returns { subject, html }.
+// still preview it. PIN-protected.
+//
+//   output 'html' (default) → { subject, html, documentHtml }
+//          'pdf'            → the attached PDF, rendered on demand (application/pdf)
+//          'xlsx'           → the attached Excel file
+//          'sheets'         → { sheets: [{ name, rows, totalRows }] }, the Excel as
+//                             tables for an in-browser preview (first rows only)
+// Only 'pdf' starts Chromium, so browsing previews stays cheap.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireAdmin } from '../_lib/adminAuth'
@@ -22,6 +31,7 @@ import {
 import {
   buildCompanyEmailHtml,
   buildCompanyDocumentHtml,
+  buildEmployeeListHtml,
   buildMemberStatementHtml,
   renderTemplate,
   formatEuro,
@@ -34,6 +44,15 @@ import {
   PLACEHOLDER_ISSUER,
   type IssuerConfig,
 } from '../_lib/billing'
+import { classifyServerError } from '../_lib/errors'
+import ExcelJS from 'exceljs'
+import { launchBrowser, pageToPdf } from '../_lib/pdf'
+import { generateExcel } from '../_lib/report'
+import { buildReportHtml } from '../_lib/reportHtml'
+import { generateCompanyItemsExcel, generateEmployeeListExcel, generateMemberExcel } from '../_lib/excel'
+import { computeAdminInsights } from '../_lib/adminInsights'
+import { computeCampusRollup } from '../_lib/excel'
+import { previousMonth } from '../_lib/schedule'
 
 // A tiny stand-in dataset so the preview is meaningful even before any real
 // transactions exist for the current month.
@@ -114,6 +133,68 @@ function previewIssuer(saved: IssuerConfig | null, o: unknown): IssuerConfig {
   }
 }
 
+interface PreviewDoc {
+  subject: string
+  html: string
+  // What is rendered into the attached PDF (differs from the email for companies).
+  pdfHtml: string
+  buildExcel: () => Promise<Buffer>
+  fileStem: string
+}
+
+export const SHEET_PREVIEW_ROWS = 25
+
+/** A cell as Excel would display it: money with two decimals, counts as integers. */
+function previewCell(cell: ExcelJS.Cell): string {
+  const v = cell.value
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'number') {
+    const money = /0\.00/.test(cell.numFmt ?? '')
+    return v.toLocaleString('de-DE', money ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 2 })
+  }
+  if (v instanceof Date) return v.toLocaleDateString('de-DE')
+  return String(v)
+}
+
+/** The workbook as plain tables: every sheet, its first rows, and how many rows it has. */
+export async function sheetsPreview(buf: Buffer): Promise<{ name: string; rows: string[][]; totalRows: number }[]> {
+  const wb = new ExcelJS.Workbook()
+  // exceljs types expect the pre-Node-22 Buffer shape; the runtime accepts any Buffer.
+  await wb.xlsx.load(buf as unknown as ArrayBuffer)
+  return wb.worksheets.map(ws => {
+    const rows: string[][] = []
+    ws.eachRow({ includeEmpty: false }, row => {
+      if (rows.length >= SHEET_PREVIEW_ROWS) return
+      const cells: string[] = []
+      for (let c = 1; c <= ws.columnCount; c++) cells.push(previewCell(row.getCell(c)))
+      rows.push(cells)
+    })
+    return { name: ws.name, rows, totalRows: ws.actualRowCount }
+  })
+}
+
+async function sendPreview(res: VercelResponse, doc: PreviewDoc, output: string) {
+  if (output === 'pdf') {
+    const browser = await launchBrowser()
+    try {
+      const pdf = await pageToPdf(browser, doc.pdfHtml)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `inline; filename="${doc.fileStem}.pdf"`)
+      return res.status(200).send(pdf)
+    } finally {
+      await browser.close().catch(() => undefined)
+    }
+  }
+  if (output === 'xlsx' || output === 'sheets') {
+    const xlsx = await doc.buildExcel()
+    if (output === 'sheets') return res.status(200).json({ sheets: await sheetsPreview(xlsx) })
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename="${doc.fileStem}.xlsx"`)
+    return res.status(200).send(xlsx)
+  }
+  return res.status(200).json({ subject: doc.subject, html: doc.html, documentHtml: doc.pdfHtml })
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -123,12 +204,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = await requireAdmin(req.headers)
     if (!auth.ok) return res.status(auth.status).json({ error: auth.error })
 
-    const body = (req.body ?? {}) as { type?: string; variant?: string; format?: unknown; issuer?: unknown }
+    const body = (req.body ?? {}) as { type?: string; variant?: string; layout?: string; format?: unknown; issuer?: unknown; output?: string }
+    const output = String(body.output ?? req.query.output ?? 'html')
+    if (!['html', 'pdf', 'xlsx', 'sheets'].includes(output)) return res.status(400).json({ error: 'Unbekannte Ausgabe.' })
     const type = String(req.query.type ?? body.type ?? 'admin')
-    if (type !== 'admin' && type !== 'company' && type !== 'member') {
+    if (type !== 'admin' && type !== 'company' && type !== 'member' && type !== 'employee_list') {
       return res.status(400).json({ error: 'Unbekannter Berichtstyp.' })
     }
-    const asInvoice = String(body.variant ?? req.query.variant ?? 'report') === 'invoice'
+    const variant = String(body.variant ?? req.query.variant ?? 'report')
+    const asInvoice = variant === 'invoice'
+    // A member of a company that pays receives an information copy (documentMatrix.ts).
+    const asInfo = variant === 'info' && type === 'member'
+    // Only invoices (and the Verzehrliste that travels with one) and the
+    // administration report have attachments to preview.
+    if (output !== 'html' && type !== 'admin' && !asInvoice) {
+      return res.status(400).json({ error: 'Dieses Dokument wird nur als E-Mail versendet – es hat keinen PDF- oder Excel-Anhang.' })
+    }
 
     const settings = await fetchReportSettings()
     const format = coerceFormat(settings.format, body.format)
@@ -145,12 +236,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Admin/CEO aggregate report ──
     if (type === 'admin') {
+      // Show the same key figures and restocking list the real email carries.
+      const [y, m] = reportMonth.split('-').map(Number)
+      const prev = previousMonth(y, m)
+      const previous = await fetchAndEnrich(prev).then(r => r.transactions).catch(() => [])
+      const insights = computeAdminInsights({
+        rollup: computeCampusRollup(reportMonth, prev, transactions, previous),
+        skipped: [], failedDeliveries: 0, missingFiles: 0, archiveNotSent: false,
+      })
       const html = buildCompanyEmailHtml(summaries, transactions, monthLabel, {
         accent: format.accent,
         intro: format.reportIntro ? renderTemplate(format.reportIntro, { monat: monthLabel, jahr: yearStr }) : undefined,
         logoSrc,
+        insights,
       })
-      return res.status(200).json({ subject: resolveReportSubject(format, monthLabel, reportMonth), html })
+      return sendPreview(res, {
+        subject: resolveReportSubject(format, monthLabel, reportMonth),
+        html,
+        pdfHtml: buildReportHtml(summaries, transactions, monthLabel, reportMonth),
+        buildExcel: () => generateExcel(summaries, transactions),
+        fileStem: `Vorschau-Monatsbericht-${reportMonth}`,
+      }, output)
+    }
+
+    // ── Verzehrliste: the opt-in per-person list of a paying company (migration 041) ──
+    if (type === 'employee_list') {
+      const company = summaries[0]
+      const members: MemberSummary[] = company.members
+      const invoiceNumber = asInvoice ? formatDocumentNumber(previewIssuer(settings.issuer, body.issuer).numberPrefix, 1) : null
+      const html = buildEmployeeListHtml(company.company_name, members, monthLabel, { accent: format.accent, invoiceNumber })
+      return sendPreview(res, {
+        subject: asInvoice
+          ? `Kaffeelisten – Rechnung ${company.company_name} ${monthLabel} (Anhang Verzehrliste)`
+          : `Kaffeelisten – Aufstellung ${company.company_name} ${monthLabel}`,
+        html,
+        pdfHtml: html,
+        buildExcel: () => generateEmployeeListExcel(members),
+        fileStem: `Vorschau-Verzehrliste-${reportMonth}`,
+      }, output)
     }
 
     // ── Single company document ──
@@ -164,11 +287,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const split = splitVat(company.total_cents, issuer.vatRate)
         invoice = toInvoiceRender(issuer, formatDocumentNumber(issuer.numberPrefix, 1), split)
       }
-      const html = buildCompanyDocumentHtml(company.company_name, 'Anna Bauer', members, monthLabel, { accent: format.accent, intro, invoice })
+      // 'people': the overview for a company whose people pay for themselves.
+      const layout = !asInvoice && body.layout === 'people' ? ('people' as const) : ('items' as const)
+      const html = buildCompanyDocumentHtml(company.company_name, 'Anna Bauer', members, monthLabel, { accent: format.accent, intro, invoice, layout })
+      const documentHtml = html
       const subject = asInvoice
         ? `Kaffeelisten – Rechnung ${company.company_name} ${monthLabel}`
         : `Kaffeelisten – Aufstellung ${company.company_name} ${monthLabel}`
-      return res.status(200).json({ subject, html })
+      return sendPreview(res, {
+        subject, html, pdfHtml: documentHtml,
+        buildExcel: () => generateCompanyItemsExcel(members),
+        fileStem: `Vorschau-${asInvoice ? 'Rechnung' : 'Aufstellung'}-Firma-${reportMonth}`,
+      }, output)
     }
 
     // ── Single member document ──
@@ -188,16 +318,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? renderTemplate(format.memberSubject, vars)
       : asInvoice
         ? `Kaffeelisten – Rechnung ${monthLabel}`
-        : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
+        : asInfo
+          ? `Kaffeelisten – Deine Übersicht ${monthLabel}`
+          : `Kaffeelisten – Deine Aufstellung ${monthLabel}`
     const html = buildMemberStatementHtml(memberName, entries, monthLabel, {
       accent: format.accent,
       intro: format.memberIntro ? renderTemplate(format.memberIntro, vars) : undefined,
       invoice,
+      infoOnly: asInfo ? { payerName: firstTx.company_name } : undefined,
     })
-    return res.status(200).json({ subject, html })
+    return sendPreview(res, {
+      subject, html, pdfHtml: html,
+      buildExcel: () => generateMemberExcel(entries),
+      fileStem: `Vorschau-${asInvoice ? 'Rechnung' : asInfo ? 'Information' : 'Aufstellung'}-Person-${reportMonth}`,
+    }, output)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[preview-report]', message)
-    return res.status(500).json({ error: 'Serverfehler' })
+    { const e = classifyServerError(err); return res.status(e.status).json({ error: e.error }) }
   }
 }

@@ -2,7 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport } from './_lib/report'
 import { requireAdmin } from './_lib/adminAuth'
 
-export const config = { maxDuration: 60 }
+// 300 s: per-recipient PDF + Excel for every person and company does not fit 60 s.
+// Keep in step with REPORT_MAX_DURATION_MS in _lib/report.ts (Vercel needs a literal).
+export const config = { maxDuration: 300 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -24,6 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ok: true,
       status: result.status,
       memberStatements: result.memberStatements ?? null,
+      // Who could not be sent a document and why, and how many went without a
+      // file — so the admin sees a partial result instead of a bare "success".
+      skipped: result.skipped ?? [],
+      missingFiles: result.missingFiles ?? { pdf: 0, xlsx: 0 },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

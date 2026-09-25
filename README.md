@@ -211,12 +211,15 @@ the report when that day is the actual last day of the month.
 
 ## Deployment
 
-The production app is designed for Vercel with `apps/web` as the project root.
+The app runs on Vercel (`apps/web` as project root) with two Supabase projects:
+**production** for `kaffeelisten.de` and **staging** for every pull-request preview,
+`vercel dev` and local runs. Previews never touch production data, and mail
+outside production goes to a test inbox.
 
-1. Create/configure Supabase.
-2. Apply migrations.
-3. Add the environment variables in Vercel.
-4. Deploy `apps/web`.
+Schema changes are migrations in `supabase/migrations/`. A pull request applies
+them to staging automatically; merging to `main` applies them to production
+through the `Database - production` workflow. Setup, variables, rules for
+pre- and post-deploy migrations, and drift checks: [docs/environments.md](docs/environments.md).
 
 The app is a PWA, so the live URL can be installed on an iPad and used as the
 wall-mounted member terminal.
@@ -225,6 +228,8 @@ wall-mounted member terminal.
 
 - [Product requirements](docs/prd.md)
 - [Domain model](docs/domain.md)
+- [Environments and migrations](docs/environments.md)
+- [Phase 3: billing documents and company accounts](docs/phase-3-billing.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
 - [Hackathon pitch deck](https://arudaev.github.io/kaffeelisten/)

@@ -21,12 +21,15 @@ interface AdminSelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>,
 }
 
 const selectBase =
-  'w-full border outline-none transition-colors text-fg cursor-pointer ' +
+  'border outline-none transition-colors text-fg cursor-pointer ' +
   'focus:border-accent focus:ring-1 focus:ring-accent'
 
+// A form select fills its column. A filter select sizes to its content so several
+// fit in one toolbar row — with w-full each took a whole line, stacking the
+// filters above every table.
 const variantClasses: Record<Variant, string> = {
-  form: 'h-11 px-3 bg-surface-2 rounded text-base focus:bg-surface',
-  filter: 'h-9 px-3 bg-surface rounded-md text-sm',
+  form: 'w-full h-11 px-3 bg-surface-2 rounded text-base focus:bg-surface',
+  filter: 'w-auto max-w-full h-9 pl-3 pr-8 bg-surface rounded-md text-sm',
 }
 
 export default function AdminSelect({
