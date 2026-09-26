@@ -1,0 +1,41 @@
+ZAHLN integration information request
+
+Please send anything you already have that covers the points below. Drafts,
+screenshots, rough diagrams, prototypes, notes, and redacted documents are all
+fine. You do not need to create formal documents specifically for us.
+
+If something is not documented, a short written answer is enough. Please tell us
+what works now, what is still a prototype or plan, who owns the topic, and any
+expected date you already have.
+
+- [ ] Any current product material: pitch deck, product overview, demo or
+      screenshots, feature list, roadmap, and information about the THA pilot.
+
+- [ ] Any description of what currently works: user and company onboarding, QR
+      or deep-link connection, wallet or payment flow, refunds, and whether you
+      support per-purchase or monthly payment for individuals or companies.
+
+- [ ] Any technical material: architecture or data-flow overview, API or OpenAPI
+      documentation, sandbox information, authentication, webhooks, payment
+      statuses, reconciliation, or example request and response formats.
+
+- [ ] Any legal or payment-compliance information: exact product and company
+      name, correct domain, contracting entity, regulated bank or payment
+      institution, your role in the payment flow, and a simple money-flow
+      explanation.
+
+- [ ] Any privacy or security material: data handled, hosting location,
+      subprocessors, AVV or DPA, retention approach, security overview, or the
+      person responsible for these topics.
+
+- [ ] Your preferred way to connect ZAHLN with Kaffeelisten and ITC1, including
+      who would handle user or company verification, payments, invoices, failed
+      payments, refunds, support, and production operation.
+
+- [ ] Any practical pilot or commercial information already available: proposed
+      scope, readiness, timeline, limits, pricing or fees, support contact, and
+      what you would need from ITC1 or Kaffeelisten.
+
+If any material is confidential or IP-sensitive, a redacted version or a note
+that an NDA is required is sufficient. Please do not send production secrets,
+real credentials, or customer data.
