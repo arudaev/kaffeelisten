@@ -92,9 +92,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The runtime client throws when these are missing, but `vite build` never
-      # evaluates it — so without this check CI goes green while shipping a
-      # bundle that fails on first load in the browser.
+      # The job declares these as its environment, but they did not exist as
+      # secrets, so it was building with empty strings. `vite build` never
+      # evaluates the runtime guard in supabase.ts, so the job went green on a
+      # bundle that would throw on first load if it were served. CI does not
+      # deploy — Vercel does — so nothing broken shipped from here; what was
+      # broken is that the check was not building what production builds.
       - name: Check the Supabase build config is present
         run: |
           missing=()
@@ -102,8 +105,11 @@ jobs:
           [ -n "$VITE_SUPABASE_ANON_KEY" ] || missing+=(VITE_SUPABASE_ANON_KEY)
           if [ ${#missing[@]} -ne 0 ]; then
             echo "::error::Missing repository secrets: ${missing[*]}."
-            echo "::error::CI would otherwise build a bundle that throws on load."
-            echo "::error::Set them to the STAGING project's values (Settings, Secrets and variables, Actions)."
+            echo "::error::This job declares them as its environment; without them it builds"
+            echo "::error::with empty strings and does not exercise the real configuration."
+            echo "::error::Set them to the STAGING project's values: Settings, Secrets and"
+            echo "::error::variables, Actions. Never the production project - previews and CI"
+            echo "::error::must not point at production (docs/environments.md)."
             exit 1
           fi
 
