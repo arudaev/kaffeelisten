@@ -92,5 +92,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The runtime client throws when these are missing, but `vite build` never
+      # evaluates it — so without this check CI goes green while shipping a
+      # bundle that fails on first load in the browser.
+      - name: Check the Supabase build config is present
+        run: |
+          missing=()
+          [ -n "$VITE_SUPABASE_URL" ] || missing+=(VITE_SUPABASE_URL)
+          [ -n "$VITE_SUPABASE_ANON_KEY" ] || missing+=(VITE_SUPABASE_ANON_KEY)
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}."
+            echo "::error::CI would otherwise build a bundle that throws on load."
+            echo "::error::Set them to the STAGING project's values (Settings, Secrets and variables, Actions)."
+            exit 1
+          fi
+
       - name: Build
         run: npm run build
