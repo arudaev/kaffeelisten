@@ -1,7 +1,7 @@
 // The settings preview shows the attachments a recipient gets, not just the email:
 // the PDF and a table view of the Excel file (owner request, 2026-09-16).
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../api/_lib/adminAuth', () => ({ requireAdmin: async () => ({ ok: true }) }))
 vi.mock('../api/_lib/pdf', () => ({
@@ -38,6 +38,16 @@ async function call(body: Record<string, unknown>) {
 }
 
 describe('preview-report outputs', () => {
+  // The handler falls back to sampleData(), which derives reportMonth from
+  // new Date() — so the download filename follows the wall clock. Pin it, or
+  // the assertions below only hold during the month they were written in.
+  // Only Date is faked: faking timers wholesale would stall the async handler.
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-15T09:00:00Z'))
+  })
+  afterAll(() => vi.useRealTimers())
+
   it('renders the company invoice PDF without names, and the Verzehrliste as its own preview', async () => {
     const r = await call({ type: 'company', variant: 'invoice', output: 'pdf' })
     expect(r.status).toBe(200)
