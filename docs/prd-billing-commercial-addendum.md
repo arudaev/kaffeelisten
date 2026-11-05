@@ -272,45 +272,18 @@ artifact is the existing monthly Excel/report; its retention is the §12 questio
 
 ---
 
-## 8. Platform Cost & Free-Tier Feasibility
+## 8-9. Platform cost and infrastructure ownership — moved
 
-> **Update 2026-09-16 (Phase 3, `docs/phase-3-billing.md`).** ITC1 asked for PDF and Excel
-> attachments on every document, so per-recipient PDFs are generated after all: one
-> Chromium per run, four in parallel, each PDF rendered once and reused for the email and
-> both archives. Still **no files are stored** — re-downloads re-render from the database.
-> A staging run of 19 documents took ~30 s. **Resend's free tier allows 100 emails per day**;
-> a full ITC1 month (~90 documents + report + CEO archive) is close to that cap, and staging
-> runs share the same key and quota. Use a separate Resend key for staging or move to a paid
-> plan before the first full production run.
-
-Because delivery is the **email body** (no per-user PDF/ZIP), the previous scaling risk — batch-generating
-50–80 Chromium PDFs per run — is **removed**. What remains is ordinary email volume, which the existing
-pipeline already handles.
-
-| Concern | Detail | Status |
-|---|---|---|
-| **Resend** (free: 100/day, 3,000/mo) | 50–80 member/company emails in one run stays under the daily cap (the member-statement path already throttles 120 ms between sends) and far under the monthly cap. | Fits free tier; confirm total count if member + company + ITC1 archive send the same evening. |
-| **Supabase** (free: 500 MB DB, 1 GB storage) | No per-user files stored; only `billing_documents` ledger rows + the one monthly Excel. Negligible growth. | Fits free tier. |
-| **PDF generation** | Only the existing single monthly company-report PDF/Excel is generated, as today. | No change. |
-| **Vercel / domain** | Vercel Hobby is non-commercial; a paid production service for ITC1 isn't hobby use. | Ties to the ownership decision (§9) — cleanest if ITC1 owns the paid accounts. |
-
-Net: the invoice feature adds **no meaningful platform cost** over the current report feature. If ITC1's
-tax adviser later insists on per-user PDF invoices, revisit batch generation (a Railway/worker) and this
-cost analysis at that point.
-
----
-
-## 9. Ownership of the Production Infrastructure (open decision)
-
-Pivotal, still open — decide with ITC1 + advisers. It drives both the visa posture and the GDPR/issuer story.
-
-1. **Recommended — ITC1 owns the prod accounts** (Supabase, Vercel, Resend, domain). ITC1 becomes the
-   data **controller** *and* the invoice **issuer**; the developers are open-source authors + occasional
-   volunteers. Cleanest for the residence permit, for GDPR, and for the Vercel non-commercial-use problem.
-2. **Alternative — developers keep hosting under a signed AVV.** Workable but weaker: commercial-use ToS
-   and controller/processor duties land on the developers, and their name/domain/infra stay in the path.
-
----
+> These sections were commercial rather than engineering and have moved to the private
+> handbook (`kaffeelisten/playbook`):
+>
+> - **§8 Platform cost and free-tier feasibility** → `02-business/05-cost-analysis-july.md`
+> - **§9 Ownership of the production infrastructure** → `04-legal/05-commercial-history.md`
+>
+> Both July conclusions were later overridden. The free tiers do not carry production:
+> Supabase free pauses after 7 days idle and takes no backups, and Vercel's free tier forbids
+> commercial use, so the recommended setup is ~EUR 45/month. Ownership was settled on
+> 5 November 2026 — the developers own and operate the accounts and ITC1 funds them.
 
 ## 10. Implementation Notes
 
@@ -335,79 +308,20 @@ decision is settled — not quoted up front as a large bespoke build (see §11 f
 
 ---
 
-## 11. Compensation & Legal Posture (developer payment)
+## 11-12. Compensation, legal posture and approvals — moved
 
-> This is the **(B)** side of §1.1 — the part that carries residence-permit risk. It is deliberately
-> kept separate from the invoicing feature and from any notion of selling a commercial product.
-
-Both developers are international students on a German **§ 16b** student residence permit. That permit
-covers **employment** (140 full / 280 half days per year); **self-employed / freelance activity is not
-covered** and needs separate Ausländerbehörde permission (§ 21 AufenthG). Markers of self-employment /
-*Gewerbe* — **recurring income, an ongoing paid-maintenance obligation, invoicing for one's own
-services, and marketing a product for sale** — must therefore be avoided. Unauthorised self-employment
-is unlawful (fine up to EUR 5,000) and can jeopardise the permit; a resulting tax problem is itself a
-permit risk.
-
-### 11.1 Recommended structure
-
-- **A single one-time handover payment** for the *existing* project — the developers' recommendation is
-  **~EUR 3,000–5,000 total for both** (~EUR 1,500–2,500 each), pending the tax adviser's confirmation of
-  amount and treatment.
-- **No** 50/30/20 milestones (staggered payments look recurring).
-- **No** promised maintenance term. Any later help is genuine occasional goodwill, not a contracted service.
-- Prefer shipping the invoice feature as an **unpaid open-source improvement**. If ITC1 ever wants to pay
-  for substantial new bespoke build work, resolve the Ausländerbehörde/§ 21 question **first** — that
-  paid build, not the handover, is the risky act.
-
-### 11.2 Why this amount
-
-- The figure is intentionally **well below** the hypothetical from-scratch rebuild cost. Pricing under
-  market reinforces the truthful character needed for the permit: handing over a hackathon/hobby project,
-  not running a software business.
-- The product is a real, deployed, iterated tool (hackathon weekend 8–9 May 2026 + ~2 months of part-time
-  productization), but modest in elapsed effort — so this is a handover fee, not a professional-services quote.
-
-### 11.3 Tax
-
-- Even a one-time payment is taxable and **must be declared**. The €256/yr *Freigrenze* (§ 22 Nr. 3 EStG,
-  per person) is far below any realistic amount here, so this income is reportable.
-- How it is **classified** (one-off private sale vs. self-employment income) is the real question for a
-  Steuerberater / Lohnsteuerhilfeverein. Do **not** treat "don't declare it" as an option.
-
----
-
-## 12. Required Inputs, Approvals & Open Questions
-
-### From ITC1
-- Issuer details for the app's issuer block (legal name, address, USt-IdNr, IBAN/BIC, number format,
-  payment terms) — from the template PDF.
-- Tax-adviser decisions: label ("Rechnung" vs "Aufstellung"), required wording, VAT handling, number
-  format, retention period, correction/void process.
-- Per-company billing mode; billing contact name+email for every `company_paid` company.
-- Confirmation of report recipients and any CEO CC.
-- The ownership decision (§9).
-
-### From the developers
-- Qualified advice replacing the earlier (life-coach) input: a **Steuerberater Erstberatung** (fee capped
-  ~EUR 190) or **Lohnsteuerhilfeverein** (~EUR 50–150/yr) on classifying/declaring the one-time payment.
-- A written query to the **Ausländerbehörde** and/or **university international office** (free) on
-  compatibility of the one-time handover with the § 16b permit, and what a paid build would require.
-
-### The missing legal instrument
-- A **GDPR Auftragsverarbeitungsvertrag (AVV, Art. 28)** between ITC1 (controller) and the developers
-  (processor) — currently there is no contract at all, and adding invoice/financial data raises the stakes.
-- A minimal **handover / licence agreement** covering the one-time payment and the absence of ongoing
-  obligation.
-
-| Question / risk | Owner | Blocking? |
-|---|---|---|
-| Are documents labelled invoices or statements? Wording? VAT text? Number format? | ITC1 / tax adviser | Yes |
-| Is an email-body invoice acceptable (no PDF), and how long must the monthly Excel archive be retained? | ITC1 / tax adviser | Yes |
-| Who owns the production Vercel/Supabase/Resend accounts? | ITC1 / developers | Yes, before deployment |
-| Is the one-time handover compatible with the § 16b permit? How is it declared? | Ausländerbehörde / Steuerberater | Yes, before payment |
-| Is an AVV signed before the app processes ITC1 member data commercially? | ITC1 / developers | Yes |
-
----
+> These sections were commercial and legal rather than engineering and have moved to the
+> private handbook (`kaffeelisten/playbook`), in `04-legal/05-commercial-history.md`:
+>
+> - **§11 Compensation and legal posture** — the one-time handover payment, the
+>   section 16b residence-permit constraints and the tax treatment.
+> - **§12 Required inputs, approvals and open questions** — what is still needed from ITC1
+>   and from the developers, and the outstanding legal instruments.
+>
+> The one still-blocking engineering constraint is unchanged and repeated here so it cannot
+> be lost: **ITC1 is always the invoice issuer.** The developers and their domain must never
+> appear as issuer, member money flows to ITC1's IBAN, and the application never touches
+> payments. Invoice mode stays gated until ITC1 gives written authority.
 
 ## 13. Acceptance Criteria
 
