@@ -10,7 +10,7 @@ Originally built by **HuggyWuggies** for the
 developed toward a production deployment for the ITC1 campus.
 
 **Live app:** [kaffeelisten.de](https://kaffeelisten.de)  
-**Hackathon pitch deck:** [arudaev.github.io/kaffeelisten](https://arudaev.github.io/kaffeelisten/)
+**Hackathon pitch deck:** [kaffeelisten.github.io/kaffeelisten](https://kaffeelisten.github.io/kaffeelisten/)
 
 ## What It Does
 
@@ -232,7 +232,7 @@ wall-mounted member terminal.
 - [Phase 3: billing documents and company accounts](docs/phase-3-billing.md)
 - [Design foundation](docs/design-foundation.md)
 - [Design system](docs/design-system.md)
-- [Hackathon pitch deck](https://arudaev.github.io/kaffeelisten/)
+- [Hackathon pitch deck](https://kaffeelisten.github.io/kaffeelisten/)
 - [Hackathon-era docs (archived)](docs/archive/)
 
 ## License
