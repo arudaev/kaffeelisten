@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/apex-independent-urls
+
+#### Changed
+- **Emails now point at the instance that sent them.** The logo in the report email and the confirmation link fallback were hardcoded to `https://kaffeelisten.de`. They now come from `PUBLIC_BASE_URL`, so a campus instance on its own address links to itself. Unset, the behaviour is exactly as before — but it must be set before the apex moves to the landing page, or the logo breaks in every monthly report.
+
+
 ### feat/phase-3-billing
 
 #### Added
