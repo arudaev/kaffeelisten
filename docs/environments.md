@@ -155,6 +155,36 @@ holds nothing worth keeping — but the project is shared now, so **do not delet
 the project** and do not `drop schema public cascade`: that would take Voyager's
 guestbook with it.
 
+## Running the demo locally
+
+The demo's behaviour is a server flag, so `npm run dev` shows a campus instance
+unless you ask for it. Add these two lines to the gitignored
+`apps/web/.env.local` and restart the API shim:
+
+```
+DEMO_MODE=1
+DEMO_ADMIN_PIN=123456
+```
+
+Then `npm run dev` is the demo: read-only API, the hand-drawn hints, the
+published PIN and no client branding. **Take them out again afterwards** — with
+`DEMO_MODE` set, every admin write from your local app is refused, which is
+confusing if you have forgotten why.
+
+### If `/api/admin/*` 404s locally
+
+`apps/web/dev-api.mts` is **gitignored** — a personal shim, not shipped — so each
+checkout has its own copy and they drift. An older copy resolves only exact files
+(`api/<path>.ts`), which stopped working for the whole admin area the moment the
+ten admin routes moved behind `api/admin/[...path].ts`: every `/api/admin/*` call
+404s under `npm run dev` while production serves it fine.
+
+The fix is to teach `resolveHandlerFile` Vercel's catch-all convention: when no
+exact file matches, walk up the path looking for a `[...param].ts` in the
+directory, and hand the captured segments to the handler as `req.query.<param>`
+(an array) — which is exactly what Vercel does. Without that, nothing in the
+admin area can be verified locally.
+
 ## Safety nets in the code
 
 - **Wrong database** (`apps/web/shared/environment.ts`): a build or function that

@@ -13,6 +13,7 @@ import PinInput from '../components/admin/PinInput'
 import { useAppConfig } from '../lib/appConfig'
 import AdminField from '../components/admin/AdminField'
 import AdminButton from '../components/admin/AdminButton'
+import CoachMarks, { type CoachMark } from '../components/CoachMarks'
 
 type View = 'pin' | 'email' | 'code'
 
@@ -159,7 +160,36 @@ export default function AdminLogin() {
   }
 
   if (view === 'pin') {
+    // The login screen is where a visitor is most likely to stall: they have a
+    // keypad and no reason to believe they are allowed through it. One mark
+    // points at the published PIN, one at the way back out.
+    const loginMarks: CoachMark[] = [
+      {
+        // curve is drawn head-down-right; mirrored it comes in from the right
+        // and points back at the published PIN.
+        shape: 'curve',
+        text: 'PIN steht hier — ein Klick genügt',
+        at: { top: '214px', left: 'calc(50% + 78px)' },
+        width: 110,
+        flip: true,
+        caption: 'right',
+        minWidth: 980,
+      },
+      {
+        // hook head-up-right (180°), tucked under the wordmark it points at.
+        shape: 'hook',
+        text: 'Zurück zur App',
+        at: { top: '88px', left: 'calc(50% - 146px)' },
+        width: 60,
+        rotate: 180,
+        caption: 'left',
+        minWidth: 980,
+      },
+    ]
+
     return (
+      <>
+        {demo && <CoachMarks marks={loginMarks} />}
       <PinKeypad
         onSubmit={handleSubmit}
         error={error}
@@ -171,6 +201,7 @@ export default function AdminLogin() {
         demoPin={demo && demoPin ? demoPin : undefined}
         demoPending={configLoading}
       />
+      </>
     )
   }
 

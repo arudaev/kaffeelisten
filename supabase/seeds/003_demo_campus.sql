@@ -37,7 +37,7 @@ delete from items;
 delete from companies;
 
 
--- == 1. Companies: 12 Gewerbepark tenants + 6 Gruenderzentrum startups ========
+-- == 1. Companies: 12 Gewerbepark tenants ====================================
 -- The mode columns are deliberately varied, so every admin feature has a company
 -- that exercises it: individual vs company-paid billing, member/company/both
 -- checkout, document copies and the employee list both on and off.
@@ -57,13 +57,7 @@ values
   ('00000000-0000-0000-0003-000000000009', 'Ziegelwerk Digital GmbH',         true,  'individual',   'member',  'Finanzen',              'finanzen@ziegelwerk-digital.example',null,                                         true,  true),
   ('00000000-0000-0000-0003-000000000010', 'Falkenstein Messtechnik GmbH',    true,  'company_paid', 'both',    'Kaufmännische Leitung', 'kl@falkenstein-mt.example',          'Rechnung bitte quartalsweise bündeln.',      true,  false),
   ('00000000-0000-0000-0003-000000000011', 'Birkenallee Logistik GmbH',       true,  'individual',   'member',  null,                    null,                                 null,                                         false, false),
-  ('00000000-0000-0000-0003-000000000012', 'Steinbruch Studios GmbH',         false, 'individual',   'member',  null,                    null,                                 'Mietverhältnis beendet, Archiv behalten.',   false, false),
-  ('00000000-0000-0000-0003-000000000013', 'Tonkrug Labs UG',                 true,  'individual',   'member',  null,                    null,                                 null,                                         true,  false),
-  ('00000000-0000-0000-0003-000000000014', 'Papierboot Analytics UG',         true,  'individual',   'both',    'Gründerteam',           'hallo@papierboot.example',           null,                                         true,  true),
-  ('00000000-0000-0000-0003-000000000015', 'Zimtstern Robotics UG',           true,  'company_paid', 'company', 'Gründerteam',           'office@zimtstern-robotics.example',  null,                                         false, false),
-  ('00000000-0000-0000-0003-000000000016', 'Lauschkanal Audio UG',            true,  'individual',   'member',  null,                    null,                                 null,                                         false, false),
-  ('00000000-0000-0000-0003-000000000017', 'Weidenkorb Energie UG',           true,  'individual',   'member',  null,                    null,                                 null,                                         true,  false),
-  ('00000000-0000-0000-0003-000000000018', 'Hafermond GbR',                   true,  'individual',   'member',  null,                    null,                                 null,                                         false, false);
+  ('00000000-0000-0000-0003-000000000012', 'Steinbruch Studios GmbH',         false, 'individual',   'member',  null,                    null,                                 'Mietverhältnis beendet, Archiv behalten.',   false, false);
 
 
 -- == 2. Items: the catalogue the iPad shows ===================================
@@ -88,17 +82,18 @@ insert into items (id, name, unit_label, price_cents, category, active) values
 
 -- == 3. Members ===============================================================
 -- Invented people, deterministic via setseed so the demo is reproducible.
--- Established tenants get 8-12, startups 2-5. About two thirds have confirmed
--- their work email, so the Members page shows both states.
+-- About two thirds have confirmed their work email, so the Members page shows
+-- both states, and the largest tenants each have one leaver.
 do $$
 declare
-  v_sizes int[]  := array[12, 9, 10, 11, 8, 9, 10, 8, 11, 9, 8, 6,  4, 3, 5, 2, 4, 3];
+  -- Twelve tenants, 4-8 people each: a campus you can read at a glance. The demo
+  -- exists to be understood in a minute, not to prove the table scrolls, and
+  -- every list on screen should fit without paging.
+  v_sizes int[]  := array[8, 6, 7, 7, 5, 6, 7, 5, 6, 5, 5, 4];
   v_slugs text[] := array[
     'nordwald-systeme', 'auwiesen-elektronik', 'kastanienhof', 'hirschgrund',
     'lindenkai', 'pfahlbau-sensorik', 'moosbach-vt', 'silberdistel-optik',
-    'ziegelwerk-digital', 'falkenstein-mt', 'birkenallee-logistik', 'steinbruch-studios',
-    'tonkrug-labs', 'papierboot', 'zimtstern-robotics', 'lauschkanal',
-    'weidenkorb-energie', 'hafermond'
+    'ziegelwerk-digital', 'falkenstein-mt', 'birkenallee-logistik', 'steinbruch-studios'
   ];
   v_f text[] := array[
     'Andrea','Anna','Christine','Claudia','Eva','Hannah','Julia','Katharina','Laura','Lea',
@@ -130,7 +125,7 @@ begin
      '00000000-0000-0000-0003-000000000001',
      'Fares M.', 'fares.m@nordwald-systeme.example', true, now() - interval '29 days', 'person');
 
-  for v_c in 1..18 loop
+  for v_c in 1..12 loop
     v_cid := ('00000000-0000-0000-0003-' || lpad(v_c::text, 12, '0'))::uuid;
     -- The first company already has the two above, so its generated names start
     -- counting after them and it ends up the same size as planned.
@@ -154,7 +149,7 @@ begin
         -- the counter keeps the address unique when the random draw repeats a name
         lower(v_fn) || '.' || lower(v_ln) || v_n::text || '@' || v_slugs[v_c] || '.example',
         -- one leaver per large tenant, so the Members page has an inactive row
-        case when v_i = v_make and v_sizes[v_c] >= 9 then false else true end,
+        case when v_i = v_make and v_sizes[v_c] >= 7 then false else true end,
         case when random() < 0.66 then now() - (random() * 120)::int * interval '1 day' else null end,
         'person'
       );
@@ -251,7 +246,7 @@ begin
     for v_mem in select id, company_id from members where kind = 'person' order by id loop
       v_day := v_month;
       while v_day < (v_month + interval '1 month')::date loop
-        if extract(isodow from v_day) <= 5 and random() < 0.5 then
+        if extract(isodow from v_day) <= 5 and random() < 0.3 then
           v_iidx := 1 + floor(random() * 4)::int;
           v_h    := 7 + floor(random() * 4)::int;
           v_min  := floor(random() * 60)::int;
@@ -264,7 +259,7 @@ begin
                  v_key, i.price_cents, i.name, i.unit_label, i.category
             from items i where i.id = v_items[v_iidx];
 
-          if random() < 0.38 then
+          if random() < 0.25 then
             v_iidx := 5 + floor(random() * 8)::int;
             v_h    := 10 + floor(random() * 7)::int;
             v_min  := floor(random() * 60)::int;

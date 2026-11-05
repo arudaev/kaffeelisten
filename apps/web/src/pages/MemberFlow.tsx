@@ -17,6 +17,8 @@ import CappuccinoMark from '../components/CappuccinoMark'
 import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 import { useAppConfig } from '../lib/appConfig'
+import CoachMarks, { type CoachMark } from '../components/CoachMarks'
+import { setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
 
 // Only the columns anon may read. Billing contact details are admin-only; keep this
 // shape in sync with the column grant (migrations 038 and its follow-up).
@@ -153,6 +155,7 @@ function getDisplayName(fullName: string, otherNames: string[]): string {
 
 export default function MemberFlow() {
   const { demo } = useAppConfig()
+  const hints = useHintsEnabled()
   const { palette } = useTheme()
   const [step, setStep] = useState<Step>('start')
   const [companies, setCompanies] = useState<Company[]>([])
@@ -400,8 +403,33 @@ export default function MemberFlow() {
   }
 
   if (step === 'start') {
+    // Two things a first-time visitor cannot guess: that the big button is the
+    // whole flow, and that the admin area is behind a word in the footer.
+    const startMarks: CoachMark[] = [
+      {
+        shape: 'curve',
+        text: 'Hier beginnt die Bestellung',
+        at: { top: '46%', left: 'calc(50% - 260px)' },
+        width: 150,
+        rotate: 8,
+        caption: 'left',
+        minWidth: 940,
+      },
+      {
+        // hook is drawn head-down-left already, so it needs no rotation: it
+        // comes in over the footer and points at the word below it.
+        shape: 'hook',
+        text: 'Admin-Bereich — die PIN steht dort',
+        at: { bottom: '44px', left: 'calc(50% + 14px)' },
+        width: 64,
+        caption: 'right',
+        minWidth: 940,
+      },
+    ]
+
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
+        {demo && <CoachMarks marks={startMarks} />}
         {palette.mark === 'deathstar' ? (
           <DeathStarMark className="w-28 sm:w-40 h-auto text-fg-muted" />
         ) : (
@@ -424,13 +452,39 @@ export default function MemberFlow() {
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
         {/* The campus name and the hackathon it was built at belong to a campus
-            instance. The demo is a product demo, so it says so instead. */}
+            instance. On the demo that slot becomes the switch for the hints —
+            whoever has read them wants them gone, and this is where their eye
+            already is when they look away from the button. */}
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
-          {demo ? 'Demo' : 'ITC1 Deggendorf'} ·{' '}
+          {demo ? (
+            <button
+              type="button"
+              onClick={() => setHintsEnabled(!hints)}
+              className="uppercase tracking-[0.06em] hover:text-fg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+            >
+              {hints ? 'Hinweise ausblenden' : 'Hinweise einblenden'}
+            </button>
+          ) : (
+            'ITC1 Deggendorf'
+          )}{' '}
+          ·{' '}
           <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
             {demo ? 'Administration' : 'B4Y3RW4LD'}
           </Link>{' '}
           ·{' '}
+          {demo && (
+            <>
+              <a
+                href="https://github.com/kaffeelisten"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-fg-muted transition-colors"
+              >
+                GitHub
+              </a>{' '}
+              ·{' '}
+            </>
+          )}
           <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
             Datenschutz
           </Link>

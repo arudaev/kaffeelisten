@@ -15,6 +15,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The demo lets you in, and keeps letting the next person in.** `DEMO_MODE` deployments authenticate the admin area against the `DEMO_ADMIN_PIN` that the login screen publishes, instead of the PIN hash in the database — so the PIN shown is the PIN that works, and it survives the data resets that wipe settings. Changing or resetting it is refused by the server (`410`), because one visitor rotating the PIN would lock out everyone after them. Settings says so in place of the *PIN ändern* button.
 - **An invented demo campus** (`supabase/seeds/003_demo_campus.sql`): 18 made-up companies, ~130 made-up people on `.example` addresses, a live current month and two closed months behind it, with payment state already filled in. No real company and no real person appears, and the months are derived from the current date, so the demo never goes stale.
 
+#### Added
+- **Hand-drawn hints on the demo.** Pencil arrows with handwritten captions point at the two things a first-time visitor cannot guess: that the big button is the whole flow, and that the admin area is behind a word in the footer. On the login screen they point at the published PIN and at the way back out. The footer slot that used to read *ITC1 Deggendorf* is now the switch that hides them, and the choice is remembered. Captions are real text, so the browser's own translate reaches them and they invert in dark mode. Drawn from the arrow in `PROJECTS/15-Flipper` by `scripts/art/coach-marks.py`.
+
+#### Changed
+- **The demo campus is smaller**: 12 companies and 71 people rather than 18 and 132, with thinner closed months (1,154 archived rows, down from 3,926). A demo is read at a glance, not scrolled.
+
+#### Fixed
+- **The demo no longer offers *Bericht senden*** on the Übersicht. The sidebar already hid its copy; this one would have hit an endpoint that answers 410.
+
 #### Fixed
 - **Mitarbeitende loaded nothing while the database was full of people.** The page fetched the roster and the paid grid in one `Promise.all`, so when `/api/admin/payments` failed the rejection took members, companies and items down with it and the screen said *Noch keine Mitarbeitenden*. The grid is now settled on its own and degrades to empty — the roster is the page, the ticks are an extra on it.
 - **Kaffee is the first tab again.** Category order followed whatever order the database happened to return rows in, so the item step could open on *Getränke*. It is now an explicit order, coffee first.

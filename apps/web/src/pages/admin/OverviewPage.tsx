@@ -10,6 +10,7 @@ import { adminApi, type AdminCompany, type DocumentDelivery } from '../../lib/ad
 import { monthFigures, type EntryRow } from '../../lib/entries'
 import { monthLabel, percentChange, shiftMonth, todayBerlin } from '../../lib/dates'
 import { formatEuro as euro } from '../../lib/money'
+import { useAppConfig } from '../../lib/appConfig'
 import { summariseDeliveries } from '../../lib/deliveries'
 
 function change(current: number, previous: number, against: string): string | undefined {
@@ -41,6 +42,7 @@ interface Props {
 }
 
 export default function OverviewPage({ rows, loading, month, months, onMonthChange, companies, onNavigate, onSendReport, onMenuClick }: Props) {
+  const { demo } = useAppConfig()
   const previous = shiftMonth(month, 1)
   // The month in progress is compared with the same days of the previous month;
   // a finished month with the whole previous month.
@@ -108,9 +110,13 @@ export default function OverviewPage({ rows, loading, month, months, onMonthChan
         right={
           <>
             <MonthPicker value={month} months={months} onChange={onMonthChange} />
-            <AdminButton variant="primary" icon={<AdminIcon name="send" size={16} />} onClick={onSendReport}>
-              <span className="hidden sm:inline">Bericht senden</span>
-            </AdminButton>
+            {/* The demo cannot send: /api/send-report answers 410 and the mailer
+                is switched off. The sidebar already hides its copy of this. */}
+            {!demo && (
+              <AdminButton variant="primary" icon={<AdminIcon name="send" size={16} />} onClick={onSendReport}>
+                <span className="hidden sm:inline">Bericht senden</span>
+              </AdminButton>
+            )}
           </>
         }
       />

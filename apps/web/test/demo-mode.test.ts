@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DEMO_DISABLED_ADMIN_ROUTES, DEMO_DISABLED_AUTH_ACTIONS, isDemoDeployment } from '../shared/environment'
 
+// Importing api/admin/[...path] pulls in every admin handler, and with them
+// puppeteer-core, exceljs and the mail stack. Cold, with 46 files competing for
+// the pool, that first import has been measured past the 5 s default — which
+// shows up as a flaky "refuses /api/admin/documents with 410". The assertions
+// are instant; only the import is slow, so the timeout is generous.
+const IMPORT_HEAVY = 30_000
+
 describe('isDemoDeployment', () => {
   it.each(['1', 'true', 'TRUE', 'yes', ' 1 '])('treats %j as on', v => {
     expect(isDemoDeployment(v)).toBe(true)
@@ -80,7 +87,7 @@ describe('the admin router in demo mode', () => {
     const res = makeRes()
     await handler({ query: { path: [route] }, url: `/api/admin/${route}` } as never, res as never)
     expect(res.statusCode).toBe(410)
-  })
+  }, IMPORT_HEAVY)
 
   it.each(['data', 'theme', 'settings', 'export', 'preview-report', 'auth'])(
     'still serves /api/admin/%s, which the demo needs',
@@ -90,6 +97,7 @@ describe('the admin router in demo mode', () => {
       await handler({ query: { path: [route] }, url: `/api/admin/${route}` } as never, res as never)
       expect(res.statusCode).not.toBe(410)
     },
+    IMPORT_HEAVY,
   )
 
   it('serves every route when DEMO_MODE is off', async () => {
@@ -101,7 +109,7 @@ describe('the admin router in demo mode', () => {
       await handler({ query: { path: [route] }, url: `/api/admin/${route}` } as never, res as never)
       expect(res.statusCode).not.toBe(410)
     }
-  })
+  }, IMPORT_HEAVY)
 })
 
 describe('demoAdminPin', () => {
@@ -300,7 +308,7 @@ describe('the admin router, read-only in demo mode', () => {
   it.each(['data', 'payments', 'billing', 'settings', 'theme'])('refuses PATCH/PUT on %s with 410', async route => {
     const res = await call(route, route === 'settings' || route === 'theme' ? 'PUT' : 'PATCH')
     expect(res.statusCode).toBe(410)
-  })
+  }, IMPORT_HEAVY)
 
   it.each(['data', 'payments', 'billing', 'settings', 'theme', 'export', 'report-progress'])(
     'still serves GET %s, so the demo can be explored',
@@ -308,12 +316,13 @@ describe('the admin router, read-only in demo mode', () => {
       const res = await call(route, 'GET')
       expect(res.statusCode).not.toBe(410)
     },
+    IMPORT_HEAVY,
   )
 
   it('refuses the member confirmation mail, which is a POST', async () => {
     const res = await call('data', 'POST')
     expect(res.statusCode).toBe(410)
-  })
+  }, IMPORT_HEAVY)
 
   it('serves every mutation when DEMO_MODE is off', async () => {
     delete process.env.DEMO_MODE
@@ -322,5 +331,5 @@ describe('the admin router, read-only in demo mode', () => {
       const res = await call(route, 'PATCH')
       expect(res.statusCode).not.toBe(410)
     }
-  })
+  }, IMPORT_HEAVY)
 })
