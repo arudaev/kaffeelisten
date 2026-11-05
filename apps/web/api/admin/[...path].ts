@@ -15,6 +15,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
+import { DEMO_DISABLED_ADMIN_ROUTES, isDemoDeployment } from '../../shared/environment'
+
 import auth from '../_lib/admin/auth'
 import billing from '../_lib/admin/billing'
 import data from '../_lib/admin/data'
@@ -64,6 +66,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!route) {
     // Never echo the requested path back — it is attacker-controlled input.
     return res.status(404).json({ error: 'Unknown admin endpoint' })
+  }
+
+  // The demo switches whole features off at the server, so hiding them in the
+  // interface is a convenience rather than the control. 410 rather than 404:
+  // the endpoint exists in the product, it is gone from this deployment.
+  if (isDemoDeployment(process.env.DEMO_MODE) && (DEMO_DISABLED_ADMIN_ROUTES as readonly string[]).includes(key!)) {
+    return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
   }
 
   return route(req, res)

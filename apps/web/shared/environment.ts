@@ -8,6 +8,35 @@
  */
 export const PRODUCTION_SUPABASE_REF = 'fdnfdscpefxqvtggbbbr'
 
+/**
+ * Is this the public demo?
+ *
+ * The demo at demo.kaffeelisten.de runs the same code as a campus instance on
+ * invented data, open to anyone. Because anyone can reach it, whole features are
+ * switched off rather than merely hidden: it must not be able to send mail to a
+ * real person, run a month end, or touch invoicing.
+ *
+ * Set DEMO_MODE=1 on that deployment and nowhere else. A campus instance and
+ * production never set it.
+ *
+ * Takes the raw value rather than reading process.env, because this module is
+ * also compiled into the browser bundle, where process does not exist.
+ */
+export function isDemoDeployment(demoMode: string | undefined): boolean {
+  const v = demoMode?.trim().toLowerCase()
+  return v === '1' || v === 'true' || v === 'yes'
+}
+
+/**
+ * Admin endpoints the demo refuses, by their path segment under /api/admin.
+ *
+ * Invoicing, documents and payments are meaningless without a real company and
+ * are legally gated for ITC1; report progress only reports on a run the demo
+ * never performs. Off here means 410 from the server, not merely hidden in the
+ * interface - a public deployment should not rely on its own UI for that.
+ */
+export const DEMO_DISABLED_ADMIN_ROUTES = ['billing', 'documents', 'payments', 'report-progress'] as const
+
 /** Vercel's VERCEL_ENV: 'production' | 'preview' | 'development'; undefined off Vercel. */
 export function isProductionDeployment(vercelEnv: string | undefined): boolean {
   return vercelEnv === 'production'

@@ -7,6 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient } from './_lib/adminAuth'
+import { isDemoDeployment } from '../shared/environment'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
@@ -24,11 +25,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'public, max-age=60')
     return res.status(200).json({
       maxItemsPerOrder: data?.max_items_per_order ?? null,
+      // The client hides what the demo switches off, rather than rendering
+      // controls whose endpoints answer 410.
+      demo: isDemoDeployment(process.env.DEMO_MODE),
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[config]', message)
     // Fail open: an unavailable config must not break logging. Null = unlimited.
-    return res.status(200).json({ maxItemsPerOrder: null })
+    return res.status(200).json({ maxItemsPerOrder: null, demo: isDemoDeployment(process.env.DEMO_MODE) })
   }
 }

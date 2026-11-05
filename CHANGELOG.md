@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/demo-mode
+
+#### Added
+- **A demo mode for the public demo deployment.** With `DEMO_MODE=1` the deployment cannot send email to anyone, cannot run a month end, and refuses invoicing, documents, payments and the Resend webhook with a clear message. Everything a visitor needs to explore the product — the member flow, the admin lists, the report preview, themes and export — is untouched. The switches are enforced by the server, so nothing depends on the interface hiding a button.
+
+
 ### refactor/admin-catch-all
 
 #### Changed
