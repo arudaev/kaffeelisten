@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/demo-client
+
+#### Added
+- **The demo looks like the demo.** On a deployment with `DEMO_MODE`, the admin area leaves out the pages it does not have (Dokumente) and the action it cannot perform (*Bericht senden*), and the login screen shows its own PIN with a single button to go straight in — a demo that hides its credential is a demo nobody gets into. A campus instance is completely unchanged: the PIN is never served, and every page is present.
+
+
 ### feat/demo-mode
 
 #### Added

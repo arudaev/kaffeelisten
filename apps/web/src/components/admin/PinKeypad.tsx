@@ -12,9 +12,15 @@ interface PinKeypadProps {
   onForgot?: () => void
   /** When provided, the "Kaffeelisten" wordmark becomes a link back to the landing page. */
   onHome?: () => void
+  /**
+   * The public demo's PIN. When set, it is shown and offered as one click.
+   * A demo that hides its own credential is a demo nobody gets into; on a
+   * campus instance this is never provided and the keypad is unchanged.
+   */
+  demoPin?: string
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome, demoPin }: PinKeypadProps) {
   const [pin, setPin] = useState('')
   const MAX = length
 
@@ -104,6 +110,21 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, not
           )
         })}
       </div>
+
+      {demoPin && (
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <p className="text-[13px] text-fg-muted">
+            Demo &mdash; PIN <span className="font-mono font-semibold text-fg tracking-[0.18em]">{demoPin}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => onSubmit(demoPin)}
+            className="h-10 px-5 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            Demo &ouml;ffnen
+          </button>
+        </div>
+      )}
 
       {notice && (
         <p className="-mt-4 max-w-[280px] text-center text-sm font-medium text-accent leading-relaxed" role="status">

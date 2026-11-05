@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PinKeypad from '../components/admin/PinKeypad'
 import PinInput from '../components/admin/PinInput'
+import { useAppConfig } from '../lib/appConfig'
 import AdminField from '../components/admin/AdminField'
 import AdminButton from '../components/admin/AdminButton'
 
@@ -27,6 +28,8 @@ export default function AdminLogin() {
   const [notice, setNotice] = useState('')
   const attemptsRef = useRef(0)
   const [lockedOut, setLockedOut] = useState(false)
+
+  const { demo, demoPin } = useAppConfig()
 
   // Recovery flow
   const [email, setEmail] = useState('')
@@ -158,6 +161,7 @@ export default function AdminLogin() {
         length={pinLength}
         onForgot={openRecovery}
         onHome={() => navigate('/')}
+        demoPin={demo && demoPin ? demoPin : undefined}
       />
     )
   }
