@@ -139,7 +139,7 @@ chore(deps): bump vite to 5.3
 2. **Branch** — create a branch with the right prefix before any code change.
 3. **Small commits** — one logical change per commit; commit as soon as a unit of work is done.
 4. **Update CHANGELOG** — before the final commit on every `feat/*`, `fix/*`, or `hotfix/*` branch, add an entry to `CHANGELOG.md` under `[Unreleased]`. List every user-visible addition, fix, or breaking change introduced on that branch. Do not document internal refactors or CI tweaks unless they affect behaviour.
-5. **Check CI** — after pushing, use the GitHub PAT (see `apps/web/.env.local`) to poll `GET /repos/arudaev/kaffeelisten/actions/runs` and inspect failures before declaring the task done.
+5. **Check CI** — after pushing, use the authenticated `gh` CLI (`gh run list`, `gh run view --log-failed`) and inspect failures before declaring the task done. Do **not** use the `GITHUB_TOKEN` in `apps/web/.env.local`: it is expired and returns HTTP 401.
 6. **No direct `main` pushes** — open a PR; the CI gate must pass.
 7. **No generated secrets in commits** — `apps/web/.env.local` is gitignored; secrets live there only.
 8. **Before every commit** run `npm run typecheck`, `npm run typecheck:api`, `npm run lint`, `npm test`, `npm run build` and, when SQL changed, `scripts/test-migrations.sh`.
@@ -157,7 +157,7 @@ When a teammate's agent session starts on a fresh clone:
 1. Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the real values (share via a secure channel — never commit them).
 2. The agent reads `apps/web/.env.local` via the shell automatically — no extra setup needed.
 3. Keys the agent actively uses:
-   - `GITHUB_TOKEN` — checking and re-triggering GitHub Actions workflow runs.
+   - `GITHUB_TOKEN` — **expired (HTTP 401); do not use.** Inspect workflow runs with the authenticated `gh` CLI instead.
    - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — frontend Supabase client (also needed for `vite build` in CI via repo secrets).
    - `SUPABASE_SERVICE_ROLE_KEY` — only needed if running migration scripts or the report API locally.
    - `VERCEL_TOKEN` — Vercel CLI (`vercel env`, `vercel dev`, deploy inspection) with `--scope arudaev-projects`.
