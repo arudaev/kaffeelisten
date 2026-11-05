@@ -18,9 +18,14 @@ interface PinKeypadProps {
    * campus instance this is never provided and the keypad is unchanged.
    */
   demoPin?: string
+  /**
+   * True while the runtime config that decides `demoPin` is still loading, so
+   * the panel's space is held rather than pushing the keypad down when it lands.
+   */
+  demoPending?: boolean
 }
 
-export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome, demoPin }: PinKeypadProps) {
+export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, notice, length = 6, onForgot, onHome, demoPin, demoPending = false }: PinKeypadProps) {
   const [pin, setPin] = useState('')
   const MAX = length
 
@@ -111,8 +116,8 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, not
         })}
       </div>
 
-      {demoPin && (
-        <div className="flex flex-col items-center gap-2 mt-4">
+      {demoPin ? (
+        <div className="flex flex-col items-center gap-2 mt-4 h-[74px]">
           <p className="text-[13px] text-fg-muted">
             Demo &mdash; PIN <span className="font-mono font-semibold text-fg tracking-[0.18em]">{demoPin}</span>
           </p>
@@ -124,7 +129,11 @@ export default function PinKeypad({ onSubmit, error = false, onErrorAnimEnd, not
             Demo &ouml;ffnen
           </button>
         </div>
-      )}
+      ) : demoPending ? (
+        // Same height as the panel above: whichever way the config resolves,
+        // nothing below this point moves.
+        <div className="mt-4 h-[74px]" aria-hidden="true" />
+      ) : null}
 
       {notice && (
         <p className="-mt-4 max-w-[280px] text-center text-sm font-medium text-accent leading-relaxed" role="status">

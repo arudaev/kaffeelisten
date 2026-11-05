@@ -8,17 +8,60 @@ procedure.
 
 | | Production | Staging |
 | --- | --- | --- |
-| Supabase project | `kaffeelisten` (`fdnfdscpefxqvtggbbbr`), eu-west-1 | `kaffeelisten-staging` (`szknrarfnocbkqqjqtse`), eu-west-1 |
+| Supabase project | `kaffeelisten` (`fdnfdscpefxqvtggbbbr`), eu-west-1 | `voyager-56k` (`opqyzcdwboxlugllgzxf`), eu-north-1 — **shared**, see below |
 | Used by | Vercel **Production** (`kaffeelisten.de`) | Vercel **Preview** (every PR), Vercel **Development**, local runs |
-| Data | Real ITC1 data | Disposable. Real company names and example.com people from `supabase/seeds/staging_roster.local.sql` (gitignored) |
+| Data | Real ITC1 data | Disposable. An invented campus from `supabase/seeds/003_demo_campus.sql` (committed; no real company or person), or a private roster from `supabase/seeds/staging_roster.local.sql` (gitignored) |
 | Mail | Delivered | Guarded: only `MAIL_ALLOWLIST` recipients (default `example.com`), all redirected to `MAIL_SINK` (`delivered@resend.dev`), subject prefixed `[STAGING]` |
 | Migrations | Only via the `Database - production` workflow | Automatically on PRs (`Database - staging`), or `node scripts/db/migrate.mjs` |
 
-Both projects are on the Supabase **Free** plan. A free project pauses after 7
-days without activity; resume it in the Supabase dashboard. Supabase Branching
-(a database per PR) needs the Pro plan. Once the project moves to the
-ITC1-paid organisation it can replace the staging project; the code already
-reads the variable names the Supabase–Vercel integration uses.
+Both projects are on the Supabase **Free** plan. Supabase Branching (a database
+per PR) needs the Pro plan. Once the project moves to the ITC1-paid organisation
+it can host staging on its own again; the code already reads the variable names
+the Supabase–Vercel integration uses.
+
+### Why staging shares the Voyager project
+
+The free plan allows **two active projects per account**, and the account runs
+more than two. Both Kaffeelisten projects were paused on 5 Nov 2026 — which is
+what took the preview deployment's database, admin login and seeded data down at
+once, since every one of them goes through Postgres.
+
+Rather than keep a slot hostage to a database that only has to answer PR
+previews, the Kaffeelisten schema now lives **alongside** the `voyager-56k`
+project's own tables in the same `public` schema. Nothing collides: Voyager owns
+`guestbook`, `guestbook_blocklist` and `counters`; Kaffeelisten owns everything
+else. `kaffeelisten-staging` (`szknrarfnocbkqqjqtse`) is now redundant and may be
+deleted.
+
+**One ordering rule comes with this, and it bites silently.** Migration 038
+hardens the API roles with a blanket
+
+```sql
+revoke all on all functions in schema public from public, anon, authenticated;
+```
+
+which also strips the grants on Voyager's `submit_guestbook()` and
+`increment_visitor()`, and migration 038 additionally revokes `anon`'s default
+privileges on new tables in `public`. So **after applying Kaffeelisten migrations
+to the shared project, restore Voyager's grants**:
+
+```sql
+grant select on public.guestbook to anon, authenticated;
+grant execute on function public.submit_guestbook(text, text) to anon, authenticated;
+grant execute on function public.increment_visitor() to anon, authenticated;
+```
+
+That block is also the tail of Voyager's own `supabase/0001_anchor.sql`, which is
+idempotent, so re-running that file does the same job. Verify afterwards — the
+failure mode is a guestbook that silently returns nothing, not an error:
+
+```sql
+select has_table_privilege('anon','public.guestbook','select'),
+       has_function_privilege('anon','public.submit_guestbook(text,text)','execute'),
+       has_function_privilege('anon','public.increment_visitor()','execute');
+```
+
+Production is untouched by all of this and stays on its own project.
 
 ## Rules
 
@@ -81,7 +124,7 @@ whether the Vercel build or the migration finishes first.
 ### Checking for drift
 
 ```bash
-node scripts/db/drift.mjs --a szknrarfnocbkqqjqtse --b fdnfdscpefxqvtggbbbr
+node scripts/db/drift.mjs --a opqyzcdwboxlugllgzxf --b fdnfdscpefxqvtggbbbr
 ```
 
 Read-only. Compares columns, constraints, indexes, function bodies, policies,
@@ -100,15 +143,17 @@ when convenient.
 
 ```bash
 # Apply pending migrations (safe to repeat)
-node scripts/db/migrate.mjs --project-ref szknrarfnocbkqqjqtse
+node scripts/db/migrate.mjs --project-ref opqyzcdwboxlugllgzxf
 
 # Reset tenant data to the local roster (refuses production)
-node scripts/db/seed-staging.mjs --project-ref szknrarfnocbkqqjqtse
+node scripts/db/seed-staging.mjs --project-ref opqyzcdwboxlugllgzxf supabase/seeds/003_demo_campus.sql
 ```
 
 A staging database that picked up migrations from an abandoned PR is rebuilt by
-deleting and recreating the staging project, then running the two commands
-above. Staging holds nothing worth keeping.
+dropping the Kaffeelisten tables and re-running the two commands above. Staging
+holds nothing worth keeping — but the project is shared now, so **do not delete
+the project** and do not `drop schema public cascade`: that would take Voyager's
+guestbook with it.
 
 ## Safety nets in the code
 

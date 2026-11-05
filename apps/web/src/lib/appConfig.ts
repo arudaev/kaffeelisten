@@ -23,6 +23,17 @@ const FALLBACK: AppConfig = { maxItemsPerOrder: null, demo: false, demoPin: null
 
 let pending: Promise<AppConfig> | null = null
 
+/**
+ * The resolved config, kept so a component mounting after the fetch has landed
+ * renders the real values on its FIRST frame.
+ *
+ * Without this the demo's login screen painted the plain keypad and only then
+ * dropped in the "Demo — PIN …" panel, which read as a glitch on the one screen
+ * every visitor sees first. main.tsx starts the fetch before React mounts, so by
+ * the time /admin renders this is usually already filled in.
+ */
+let resolved: AppConfig | null = null
+
 /** Fetch once and share the result; /api/config is immutable for a page load. */
 export function loadAppConfig(): Promise<AppConfig> {
   if (!pending) {
@@ -36,6 +47,10 @@ export function loadAppConfig(): Promise<AppConfig> {
         demoPin: typeof d.demoPin === 'string' && d.demoPin ? d.demoPin : null,
       }))
       .catch(() => FALLBACK)
+      .then(c => {
+        resolved = c
+        return c
+      })
   }
   return pending
 }
@@ -43,11 +58,19 @@ export function loadAppConfig(): Promise<AppConfig> {
 /** Reset the cache. Tests only. */
 export function resetAppConfigCache(): void {
   pending = null
+  resolved = null
 }
 
-export function useAppConfig(): AppConfig {
-  const [config, setConfig] = useState<AppConfig>(FALLBACK)
+/**
+ * The runtime config, plus whether it is still being fetched.
+ *
+ * `loading` exists so a screen whose layout depends on the config can hold the
+ * space instead of letting content appear late — see AdminLogin/PinKeypad.
+ */
+export function useAppConfig(): AppConfig & { loading: boolean } {
+  const [config, setConfig] = useState<AppConfig | null>(resolved)
   useEffect(() => {
+    if (config) return
     let alive = true
     loadAppConfig().then(c => {
       if (alive) setConfig(c)
@@ -55,6 +78,6 @@ export function useAppConfig(): AppConfig {
     return () => {
       alive = false
     }
-  }, [])
-  return config
+  }, [config])
+  return { ...(config ?? FALLBACK), loading: config === null }
 }

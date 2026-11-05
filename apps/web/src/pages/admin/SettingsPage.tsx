@@ -31,6 +31,7 @@ import { COMPANY_PLACEHOLDERS, MEMBER_PLACEHOLDERS } from '../../lib/reportPlace
 import { allPalettes, findPalette, customPalettes, CUSTOM_SLOTS } from '../../lib/palettes'
 import { useTheme } from '../../lib/theme-context'
 import type { ThemeMode } from '../../lib/theme-context'
+import { useAppConfig } from '../../lib/appConfig'
 
 interface Props {
   onToast: (msg: string) => void
@@ -281,6 +282,7 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
   const [saved, setSaved] = useState<Form>(EMPTY_FORM)
   const [bootstrapRecipients, setBootstrapRecipients] = useState<string[]>([])
   const [pin, setPin] = useState({ length: 6, updatedAt: null as string | null, isSet: false })
+  const { demo } = useAppConfig()
 
   const { setPalette, setMode, palette: currentPalette } = useTheme()
   const [theme, setTheme] = useState<Theme>({ mode: 'system', palette: currentPalette.id, custom: {} })
@@ -870,21 +872,34 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
 
                   {saveBar('system')}
 
+                  {/* The demo's PIN is published on its login screen and fixed:
+                      letting one visitor rotate it would lock out the next. The
+                      endpoint refuses it too (DEMO_DISABLED_AUTH_ACTIONS). */}
                   <Section
                     title="Admin-PIN"
-                    description={pin.isSet
+                    description={demo
+                      ? `${pin.length}-stellig · in der Demo fest vorgegeben`
+                      : pin.isSet
                       ? `${pin.length}-stellig${pin.updatedAt ? ` · zuletzt geändert am ${formatDay(pin.updatedAt)}` : ''}`
                       : `${pin.length}-stellig · Standard-PIN aktiv – bitte ändern`}
-                    aside={!pin.isSet ? <Badge kind="warn">Standard</Badge> : undefined}
+                    aside={demo ? <Badge kind="inactive">Demo</Badge> : !pin.isSet ? <Badge kind="warn">Standard</Badge> : undefined}
                   >
-                    <div>
-                      <AdminButton variant="secondary" onClick={() => { setCurPin(''); setNextPin(''); setConfirmPin(''); setChangeError(''); setPinModal(true) }}>
-                        PIN ändern
-                      </AdminButton>
-                    </div>
-                    <p className="text-[13px] text-fg-muted leading-relaxed">
-                      PIN vergessen? Die Zurücksetzung per E-Mail-Code erfolgt auf der Anmeldeseite („PIN vergessen?“). Wird sofort gespeichert.
-                    </p>
+                    {demo ? (
+                      <p className="text-[13px] text-fg-muted leading-relaxed">
+                        In der Demo bleibt die PIN unverändert, damit sie für alle Besucher funktioniert. In einer echten Installation lässt sie sich hier ändern und auf der Anmeldeseite per E-Mail-Code zurücksetzen.
+                      </p>
+                    ) : (
+                      <>
+                        <div>
+                          <AdminButton variant="secondary" onClick={() => { setCurPin(''); setNextPin(''); setConfirmPin(''); setChangeError(''); setPinModal(true) }}>
+                            PIN ändern
+                          </AdminButton>
+                        </div>
+                        <p className="text-[13px] text-fg-muted leading-relaxed">
+                          PIN vergessen? Die Zurücksetzung per E-Mail-Code erfolgt auf der Anmeldeseite („PIN vergessen?“). Wird sofort gespeichert.
+                        </p>
+                      </>
+                    )}
                   </Section>
                 </div>
               )}

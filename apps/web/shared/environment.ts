@@ -37,6 +37,32 @@ export function isDemoDeployment(demoMode: string | undefined): boolean {
  */
 export const DEMO_DISABLED_ADMIN_ROUTES = ['billing', 'documents', 'payments', 'report-progress'] as const
 
+/**
+ * Admin auth actions the demo refuses, by their `action` query value.
+ *
+ * All three change or recover the admin credential, and the demo's credential is
+ * published on its own login screen. `request-reset` would mail a code to a real
+ * address; `reset` and `change` would let one visitor rotate the PIN and lock out
+ * everyone who comes next, including the person being shown the product.
+ *
+ * Off here means 410 from the server, not merely hidden in the interface.
+ */
+export const DEMO_DISABLED_AUTH_ACTIONS = ['request-reset', 'reset', 'change'] as const
+
+/**
+ * The demo's admin PIN, or null when this is not the demo.
+ *
+ * On the demo the PIN is NOT read from the database: a visitor must not be able
+ * to lock out the next one, and the demo has to stay reachable across the data
+ * resets that wipe `app_settings`. Takes raw values because this module is also
+ * compiled into the browser bundle.
+ */
+export function demoAdminPin(demoMode: string | undefined, demoPin: string | undefined): string | null {
+  if (!isDemoDeployment(demoMode)) return null
+  const pin = demoPin?.trim()
+  return pin ? pin : null
+}
+
 /** Vercel's VERCEL_ENV: 'production' | 'preview' | 'development'; undefined off Vercel. */
 export function isProductionDeployment(vercelEnv: string | undefined): boolean {
   return vercelEnv === 'production'

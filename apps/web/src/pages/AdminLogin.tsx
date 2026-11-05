@@ -29,7 +29,7 @@ export default function AdminLogin() {
   const attemptsRef = useRef(0)
   const [lockedOut, setLockedOut] = useState(false)
 
-  const { demo, demoPin } = useAppConfig()
+  const { demo, demoPin, loading: configLoading } = useAppConfig()
 
   // Recovery flow
   const [email, setEmail] = useState('')
@@ -90,6 +90,13 @@ export default function AdminLogin() {
     setNotice('')
     attemptsRef.current += 1
     if (attemptsRef.current >= MAX_ATTEMPTS) {
+      // The demo has no recovery flow: its PIN is printed on this very screen,
+      // the endpoints behind the flow answer 410, and walking a visitor through
+      // "enter your admin email" for an account they do not own is nonsense.
+      if (demo) {
+        setNotice('Zu viele Fehlversuche. Die Demo-PIN steht oben — einfach erneut versuchen.')
+        return
+      }
       setLockedOut(true)
       setView('email')
     }
@@ -159,9 +166,10 @@ export default function AdminLogin() {
         notice={notice}
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
-        onForgot={openRecovery}
+        onForgot={demo ? undefined : openRecovery}
         onHome={() => navigate('/')}
         demoPin={demo && demoPin ? demoPin : undefined}
+        demoPending={configLoading}
       />
     )
   }

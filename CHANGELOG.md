@@ -12,6 +12,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### feat/demo-client
 
 #### Added
+- **The demo lets you in, and keeps letting the next person in.** `DEMO_MODE` deployments authenticate the admin area against the `DEMO_ADMIN_PIN` that the login screen publishes, instead of the PIN hash in the database — so the PIN shown is the PIN that works, and it survives the data resets that wipe settings. Changing or resetting it is refused by the server (`410`), because one visitor rotating the PIN would lock out everyone after them. Settings says so in place of the *PIN ändern* button.
+- **An invented demo campus** (`supabase/seeds/003_demo_campus.sql`): 18 made-up companies, ~130 made-up people on `.example` addresses, a live current month and two closed months behind it, with payment state already filled in. No real company and no real person appears, and the months are derived from the current date, so the demo never goes stale.
+
+#### Fixed
+- **The demo no longer asks a visitor to reset an admin e-mail they do not have.** Five wrong entries used to push the login screen into the e-mail recovery flow — on the demo that flow leads nowhere, so it is gone and the screen points back at the published PIN instead. *PIN vergessen?* is hidden there too.
+- **The demo PIN appears with the login screen** rather than dropping in a moment later. The runtime config fetch now starts before React mounts, and the panel's space is held while it is in flight, so nothing shifts under the cursor.
+
+#### Added
 - **The demo looks like the demo.** On a deployment with `DEMO_MODE`, the admin area leaves out the pages it does not have (Dokumente) and the action it cannot perform (*Bericht senden*), and the login screen shows its own PIN with a single button to go straight in — a demo that hides its credential is a demo nobody gets into. A campus instance is completely unchanged: the PIN is never served, and every page is present.
 
 
