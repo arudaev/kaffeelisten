@@ -14,11 +14,11 @@
 // issuer block reflects today's settings (billing.ts resolveIssuerForReissue).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
-import { DeliveryNotFoundError, regenerateDelivery, resendDelivery } from '../_lib/report'
-import { launchBrowser, pageToPdf } from '../_lib/pdf'
-import { classifyServerError } from '../_lib/errors'
-import { carriesAttachments } from '../_lib/documentMatrix'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
+import { DeliveryNotFoundError, regenerateDelivery, resendDelivery } from '../report'
+import { launchBrowser, pageToPdf } from '../pdf'
+import { classifyServerError } from '../errors'
+import { carriesAttachments } from '../documentMatrix'
 
 export const config = { maxDuration: 60 }
 

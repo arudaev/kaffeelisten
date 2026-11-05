@@ -17,10 +17,10 @@
 // Admin-only. Never exposes secrets.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
-import { amountOf, mergeLiveAndArchive } from '../_lib/pricing'
-import { derivePaidGrid, summarisePaidGrid } from '../_lib/paidGrid'
-import { classifyServerError } from '../_lib/errors'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
+import { amountOf, mergeLiveAndArchive } from '../pricing'
+import { derivePaidGrid, summarisePaidGrid } from '../paidGrid'
+import { classifyServerError } from '../errors'
 
 interface MonthPayment {
   report_month: string
