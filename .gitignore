@@ -59,3 +59,9 @@ apps/web/dev-fake/
 
 # Staging-only seeds with real names (repo is public)
 supabase/seeds/*.local.sql
+
+# Private ITC1 email-chain PDFs — never commit (repo is public)
+docs/emails/
+
+# Local agent session state
+.claude/
