@@ -15,6 +15,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The demo lets you in, and keeps letting the next person in.** `DEMO_MODE` deployments authenticate the admin area against the `DEMO_ADMIN_PIN` that the login screen publishes, instead of the PIN hash in the database — so the PIN shown is the PIN that works, and it survives the data resets that wipe settings. Changing or resetting it is refused by the server (`410`), because one visitor rotating the PIN would lock out everyone after them. Settings says so in place of the *PIN ändern* button.
 - **An invented demo campus** (`supabase/seeds/003_demo_campus.sql`): 18 made-up companies, ~130 made-up people on `.example` addresses, a live current month and two closed months behind it, with payment state already filled in. No real company and no real person appears, and the months are derived from the current date, so the demo never goes stale.
 
+#### Fixed
+- **Mitarbeitende loaded nothing while the database was full of people.** The page fetched the roster and the paid grid in one `Promise.all`, so when `/api/admin/payments` failed the rejection took members, companies and items down with it and the screen said *Noch keine Mitarbeitenden*. The grid is now settled on its own and degrades to empty — the roster is the page, the ticks are an extra on it.
+- **Kaffee is the first tab again.** Category order followed whatever order the database happened to return rows in, so the item step could open on *Getränke*. It is now an explicit order, coffee first.
+
+#### Changed
+- **The demo is explorable but not editable.** Every page, list and export is open; every write is refused by the server and kept in the visitor's own browser instead, so they can rename a company, change the report recipients, re-tick a paid month or switch theme and watch the product react — and the next visitor still arrives at a clean demo. Settings says so plainly and offers *Demo zurücksetzen*. Billing, payments and report progress are readable again as a result; only Dokumente stays out.
+- **The demo carries no client's branding.** No ITC1 logo in the sidebar, no *ITC1 Deggendorf* or *B4Y3RW4LD* on the start screen, and its own privacy notice describing what the demo actually does — invented data, nothing sent, edits local — instead of the campus notice naming ITC1 as controller.
+- **The demo campus opens with Alex R. and Fares M.** at the first company.
+
 #### Changed
 - **Staging shares a Supabase project with another application**, because the free plan allows two active projects per account and both Kaffeelisten projects had been paused — which is what left the preview with no data and no way in. `Database - staging` now restores the co-tenant's API grants after every migration run (`scripts/db/restore-cotenant-grants.mjs`), since migration 038's blanket revoke strips them and the breakage is silent. A no-op once staging has a project to itself.
 

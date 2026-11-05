@@ -114,15 +114,30 @@ declare
     'Roth','Sauer','Schmidt','Schneider','Schreiber','Schulz','Schwarz','Simon','Stein','Vogel',
     'Wagner','Walter','Weber','Wolf','Zimmermann'
   ];
-  v_c int; v_i int; v_fn text; v_ln text; v_cid uuid; v_n int;
+  v_c int; v_i int; v_fn text; v_ln text; v_cid uuid; v_n int; v_make int;
 begin
   perform setseed(0.161803);
 
+  -- The two of us, at the top of the first company. A signature on the demo, and
+  -- the only two names here that belong to anyone: abbreviated, on .example
+  -- addresses like everybody else, and never written anywhere a real roster goes.
+  insert into members (id, company_id, name, work_email, active, email_verified_at, kind)
+  values
+    ('00000000-0000-0000-0004-000000000001',
+     '00000000-0000-0000-0003-000000000001',
+     'Alex R.', 'alex.r@nordwald-systeme.example', true, now() - interval '31 days', 'person'),
+    ('00000000-0000-0000-0004-000000000002',
+     '00000000-0000-0000-0003-000000000001',
+     'Fares M.', 'fares.m@nordwald-systeme.example', true, now() - interval '29 days', 'person');
+
   for v_c in 1..18 loop
     v_cid := ('00000000-0000-0000-0003-' || lpad(v_c::text, 12, '0'))::uuid;
-    v_n := 0;
+    -- The first company already has the two above, so its generated names start
+    -- counting after them and it ends up the same size as planned.
+    v_n := case when v_c = 1 then 2 else 0 end;
+    v_make := v_sizes[v_c] - v_n;
 
-    for v_i in 1..v_sizes[v_c] loop
+    for v_i in 1..v_make loop
       if random() < 0.46 then
         v_fn := v_f[1 + floor(random() * array_length(v_f, 1))::int];
       else
@@ -139,7 +154,7 @@ begin
         -- the counter keeps the address unique when the random draw repeats a name
         lower(v_fn) || '.' || lower(v_ln) || v_n::text || '@' || v_slugs[v_c] || '.example',
         -- one leaver per large tenant, so the Members page has an inactive row
-        case when v_i = v_sizes[v_c] and v_sizes[v_c] >= 9 then false else true end,
+        case when v_i = v_make and v_sizes[v_c] >= 9 then false else true end,
         case when random() < 0.66 then now() - (random() * 120)::int * interval '1 day' else null end,
         'person'
       );

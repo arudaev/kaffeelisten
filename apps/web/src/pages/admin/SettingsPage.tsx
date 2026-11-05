@@ -32,6 +32,7 @@ import { allPalettes, findPalette, customPalettes, CUSTOM_SLOTS } from '../../li
 import { useTheme } from '../../lib/theme-context'
 import type { ThemeMode } from '../../lib/theme-context'
 import { useAppConfig } from '../../lib/appConfig'
+import { applySingleton, demoEditCount, recordSingleton, resetDemoStore } from '../../lib/demoStore'
 
 interface Props {
   onToast: (msg: string) => void
@@ -283,6 +284,10 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
   const [bootstrapRecipients, setBootstrapRecipients] = useState<string[]>([])
   const [pin, setPin] = useState({ length: 6, updatedAt: null as string | null, isSet: false })
   const { demo } = useAppConfig()
+  // Recounted after every local save, so the notice and the reset button agree
+  // with what is actually stored.
+  const [demoEdits, setDemoEdits] = useState(0)
+  useEffect(() => { if (demo) setDemoEdits(demoEditCount()) }, [demo, savingTab])
 
   const { setPalette, setMode, palette: currentPalette } = useTheme()
   const [theme, setTheme] = useState<Theme>({ mode: 'system', palette: currentPalette.id, custom: {} })
@@ -325,13 +330,13 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
       try {
         const [res, tRes] = await Promise.all([fetch('/api/admin/settings'), fetch('/api/admin/theme')])
         if (res.ok) {
-          const data = (await res.json()) as SettingsData
+          const data = applySingleton('settings', (await res.json()) as SettingsData)
           if (!cancelled) applyServer(data)
         } else if (!cancelled) {
           onToast('Einstellungen konnten nicht geladen werden.')
         }
         if (tRes.ok && !cancelled) {
-          const t = (await tRes.json()) as { default_mode: ThemeMode; active_palette: string; custom: Record<string, unknown> }
+          const t = applySingleton('theme', (await tRes.json()) as { default_mode: ThemeMode; active_palette: string; custom: Record<string, unknown> })
           const cm: CustomMap = {}
           for (const p of customPalettes(t.custom)) cm[p.id] = { name: p.name, light: p.lightAccent, dark: p.darkAccent }
           const loaded = { mode: t.default_mode, palette: t.active_palette, custom: cm }
@@ -402,6 +407,21 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
     if (problem) { onToast(problem); return }
     setSavingTab(t)
     try {
+      // On the demo nothing is sent. The server refuses the write anyway; this
+      // is what lets a visitor change a setting, watch the product react and
+      // come back to it after a reload, without touching anyone else's demo.
+      if (demo) {
+        if (t === 'system') {
+          recordSingleton('theme', { default_mode: theme.mode, active_palette: theme.palette, custom: theme.custom })
+          setSavedTheme(theme)
+          onToast('In der Demo gespeichert — nur in diesem Browser.')
+        } else {
+          recordSingleton('settings', tabPayload(t, form) as Record<string, unknown>)
+          setSaved(form)
+          onToast('In der Demo gespeichert — nur in diesem Browser.')
+        }
+        return
+      }
       if (t === 'system') {
         const res = await fetch('/api/admin/theme', {
           method: 'PUT',
@@ -871,6 +891,29 @@ export default function SettingsPage({ onToast, onMenuClick, onNavigate, onSendR
                   </Section>
 
                   {saveBar('system')}
+
+                  {demo && (
+                    <Section
+                      title="Demo"
+                      description="Alles lässt sich ausprobieren. Änderungen bleiben in diesem Browser und werden nicht an den Server gesendet."
+                      aside={<Badge kind="inactive">Nur lokal</Badge>}
+                    >
+                      <p className="text-[13px] text-fg-muted leading-relaxed">
+                        Gespeicherte Änderungen: {demoEdits}. Sie gelten nur hier und verschwinden,
+                        wenn die Websitedaten gelöscht werden. Andere Besucher sehen die Demo
+                        unverändert.
+                      </p>
+                      <div>
+                        <AdminButton
+                          variant="secondary"
+                          onClick={() => { resetDemoStore(); setDemoEdits(0); onToast('Demo zurückgesetzt. Seite neu laden.') }}
+                          disabled={demoEdits === 0}
+                        >
+                          Demo zurücksetzen
+                        </AdminButton>
+                      </div>
+                    </Section>
+                  )}
 
                   {/* The demo's PIN is published on its login screen and fixed:
                       letting one visitor rotate it would lock out the next. The

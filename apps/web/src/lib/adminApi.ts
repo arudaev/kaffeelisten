@@ -9,6 +9,21 @@
 // automatically on same-origin requests, so no PIN is stored or sent here.
 
 import type { ReportProgress } from '../../shared/reportProgress'
+import { isDemoNow } from './appConfig'
+import { applyList, paidOverride, recordCreate, recordPaid, recordUpdate, resetDemoStore } from './demoStore'
+
+/**
+ * On the demo, keep this write in the visitor's browser and report success.
+ *
+ * Returns null anywhere else, so each method reads as "demo path, else the real
+ * request". The server refuses these writes regardless (demoWriteBlocked) — this
+ * is what stops the interface looking broken, not what makes it safe.
+ */
+function demoWrite(record: () => void): Promise<{ ok: true }> | null {
+  if (!isDemoNow()) return null
+  record()
+  return Promise.resolve({ ok: true as const })
+}
 
 export type BillingMode = 'individual' | 'company_paid'
 export type CheckoutMode = 'member' | 'company' | 'both'
@@ -192,35 +207,86 @@ async function download(url: string): Promise<void> {
   URL.revokeObjectURL(href)
 }
 
+/**
+ * Re-tick the grid with whatever the visitor changed in their own browser.
+ *
+ * The summary counts are recomputed from the cells rather than patched, so
+ * "3 von 18 bezahlt" stays true to what is on screen.
+ */
+function applyPaidOverrides(grid: PaidGrid): PaidGrid {
+  if (!isDemoNow()) return grid
+
+  const overlay = (scope: 'member' | 'company', byId: Record<string, Record<string, PaidCell>>) =>
+    Object.fromEntries(
+      Object.entries(byId).map(([id, months]) => [
+        id,
+        Object.fromEntries(
+          Object.entries(months).map(([month, cell]) => {
+            const override = paidOverride(scope, id, month)
+            return [month, override === undefined ? cell : { ...cell, paid: override }]
+          }),
+        ),
+      ]),
+    )
+
+  const rows = overlay('member', grid.rows)
+  const companies = overlay('company', grid.companies)
+
+  const summary = grid.summary.map(s => {
+    const cells = [
+      ...Object.values(rows).map(m => m[s.month]),
+      ...Object.values(companies).map(m => m[s.month]),
+    ].filter(Boolean)
+    return {
+      ...s,
+      paid: cells.filter(c => c.paid).length,
+      outstanding_cents: cells.filter(c => !c.paid).reduce((n, c) => n + c.amount_cents, 0),
+    }
+  })
+
+  return { ...grid, rows, companies, summary }
+}
+
 const data = (query: string, init?: { method?: string; body?: unknown }) => request(`/api/admin/data${query}`, init)
 
 export const adminApi = {
   getDashboard: () => data('?resource=dashboard') as Promise<DashboardData>,
 
   getCompanies: async () =>
-    ((await data('?resource=companies')) as { companies: AdminCompany[] }).companies,
+    applyList('companies', ((await data('?resource=companies')) as { companies: AdminCompany[] }).companies),
   createCompany: (values: { name: string } & Partial<CompanyBillingValues>) =>
+    demoWrite(() => recordCreate('companies', { ...values, active: true })) ??
     data('?resource=companies', { method: 'POST', body: { values: { ...values, active: true } } }),
   updateCompany: (id: string, values: Partial<Pick<AdminCompany, 'name' | 'active'> & CompanyBillingValues>) =>
+    demoWrite(() => recordUpdate('companies', id, values)) ??
     data('?resource=companies', { method: 'PATCH', body: { id, values } }),
 
-  getItems: async () => ((await data('?resource=items')) as { items: AdminItem[] }).items,
-  createItem: (values: Omit<AdminItem, 'id'>) => data('?resource=items', { method: 'POST', body: { values } }),
+  getItems: async () => applyList('items', ((await data('?resource=items')) as { items: AdminItem[] }).items),
+  createItem: (values: Omit<AdminItem, 'id'>) =>
+    demoWrite(() => recordCreate('items', { ...values })) ??
+    data('?resource=items', { method: 'POST', body: { values } }),
   updateItem: (id: string, values: Partial<Omit<AdminItem, 'id'>>) =>
+    demoWrite(() => recordUpdate('items', id, values)) ??
     data('?resource=items', { method: 'PATCH', body: { id, values } }),
 
-  getMembers: async () => ((await data('?resource=members')) as { members: AdminMember[] }).members,
+  getMembers: async () => applyList('members', ((await data('?resource=members')) as { members: AdminMember[] }).members),
   createMember: (values: { name: string; company_id: string; work_email: string; active: boolean }) =>
+    demoWrite(() => recordCreate('members', { ...values, email_verified_at: null })) ??
     data('?resource=members', { method: 'POST', body: { values } }),
   updateMember: (id: string, values: Partial<{ name: string; company_id: string; work_email: string; active: boolean }>) =>
+    demoWrite(() => recordUpdate('members', id, values)) ??
     data('?resource=members', { method: 'PATCH', body: { id, values } }),
+  // Mail is absent from the demo entirely, so this is a no-op there rather than
+  // a stored edit — there is nothing for the visitor to see either way.
   sendMemberConfirmation: (id: string) =>
+    demoWrite(() => {}) ??
     data('?resource=members&action=send-confirmation', { method: 'POST', body: { id } }),
 
   // ── Invoice ledger (billing_documents; invoices only) ──
   getBillingDocuments: (month?: string) =>
     request<{ documents: BillingDocument[]; months: string[] }>(`/api/admin/billing${qs({ month })}`),
   setBillingPaid: (id: string, paid: boolean) =>
+    demoWrite(() => recordUpdate('billing_documents', id, { paid })) ??
     request('/api/admin/billing', { method: 'PATCH', body: { id, paid } }),
 
   // ── Live progress of the monthly send (migration 040) ──
@@ -236,15 +302,20 @@ export const adminApi = {
   resendDelivery: (id: string) =>
     request<{ ok: true; id: string }>('/api/admin/documents', { method: 'POST', body: { id, action: 'resend' } }),
 
+  /** The visitor's own edits, so the demo can offer to discard them. */
+  demoReset: () => resetDemoStore(),
+
   // ── Export, including archived months ──
   exportEntries: (q: ExportQuery) => download(`/api/admin/export${qs({ ...q })}`),
 
   // ── Payment tracking (migrations 027, 035) ──
   getMemberPayments: async (memberId: string) =>
     (await request<{ months: MemberPaymentMonth[] }>(`/api/admin/payments${qs({ member_id: memberId })}`)).months,
-  getPaidGrid: () => request<PaidGrid>('/api/admin/payments'),
+  getPaidGrid: async () => applyPaidOverrides(await request<PaidGrid>('/api/admin/payments')),
   setMemberPaid: (memberId: string, reportMonth: string, paid: boolean) =>
+    demoWrite(() => recordPaid('member', memberId, reportMonth, paid)) ??
     request('/api/admin/payments', { method: 'PATCH', body: { member_id: memberId, report_month: reportMonth, paid } }),
   setCompanyPaid: (companyId: string, reportMonth: string, paid: boolean) =>
+    demoWrite(() => recordPaid('company', companyId, reportMonth, paid)) ??
     request('/api/admin/payments', { method: 'PATCH', body: { company_id: companyId, report_month: reportMonth, paid } }),
 }

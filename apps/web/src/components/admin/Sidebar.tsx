@@ -95,10 +95,17 @@ export default function Sidebar({ active, onNavigate, onSendReport, onLogout, de
           >
             Abmelden
           </button>
-          <div className="flex items-center gap-2">
-            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
-            <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
-          </div>
+          {/* A campus instance carries its campus's mark. The public demo is
+              nobody's campus, and showing ITC1's logo there would present a real
+              client as the subject of a sales demo. */}
+          {demo ? (
+            <span className="text-[11px] text-fg-muted">Kaffeelisten · Demo</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
+              <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
+            </div>
+          )}
         </div>
       </aside>
     </>

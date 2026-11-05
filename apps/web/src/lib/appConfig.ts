@@ -55,6 +55,20 @@ export function loadAppConfig(): Promise<AppConfig> {
   return pending
 }
 
+/**
+ * Is this the demo, right now, without awaiting?
+ *
+ * For call sites that cannot be async — the admin API client decides whether a
+ * write goes to the server or to the visitor's own browser before it has a
+ * promise to await. main.tsx starts the fetch before React mounts and the admin
+ * area is only reachable after a login round-trip, so this is resolved by then.
+ * Unresolved reads as "not a demo", which is the safe way round: a campus
+ * instance must never be mistaken for one.
+ */
+export function isDemoNow(): boolean {
+  return resolved?.demo === true
+}
+
 /** Reset the cache. Tests only. */
 export function resetAppConfigCache(): void {
   pending = null

@@ -233,3 +233,94 @@ describe('the auth router in demo mode', () => {
     }
   })
 })
+
+describe('demoWriteBlocked', () => {
+  it('blocks every mutating method on a demo', async () => {
+    const { demoWriteBlocked } = await import('../shared/environment')
+    for (const method of ['POST', 'PATCH', 'PUT', 'DELETE', 'patch']) {
+      expect(demoWriteBlocked('1', 'data', method)).toBe(true)
+    }
+  })
+
+  it('allows reads, so the whole product stays explorable', async () => {
+    const { demoWriteBlocked } = await import('../shared/environment')
+    for (const method of ['GET', 'HEAD', 'get', undefined]) {
+      expect(demoWriteBlocked('1', 'data', method)).toBe(false)
+    }
+  })
+
+  it('still lets the demo log in and render a report preview', async () => {
+    const { demoWriteBlocked } = await import('../shared/environment')
+    // Without these two the demo would have no front door and no deliverable to
+    // show. auth guards its own dangerous actions separately.
+    expect(demoWriteBlocked('1', 'auth', 'POST')).toBe(false)
+    expect(demoWriteBlocked('1', 'preview-report', 'POST')).toBe(false)
+  })
+
+  it('blocks nothing at all off the demo', async () => {
+    const { demoWriteBlocked } = await import('../shared/environment')
+    for (const mode of [undefined, '0', 'false']) {
+      expect(demoWriteBlocked(mode, 'data', 'PATCH')).toBe(false)
+    }
+  })
+})
+
+describe('the admin router, read-only in demo mode', () => {
+  const saved = process.env.DEMO_MODE
+
+  beforeEach(() => {
+    process.env.DEMO_MODE = '1'
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    if (saved === undefined) delete process.env.DEMO_MODE
+    else process.env.DEMO_MODE = saved
+    vi.resetModules()
+  })
+
+  function makeRes() {
+    return {
+      statusCode: 0,
+      body: undefined as unknown,
+      status(code: number) { this.statusCode = code; return this },
+      json(payload: unknown) { this.body = payload; return this },
+      setHeader() { return this },
+      end() { return this },
+    }
+  }
+
+  const call = async (route: string, method: string) => {
+    const { default: handler } = await import('../api/admin/[...path]')
+    const res = makeRes()
+    await handler({ method, query: { path: [route] }, url: `/api/admin/${route}`, headers: {}, body: {} } as never, res as never)
+    return res
+  }
+
+  it.each(['data', 'payments', 'billing', 'settings', 'theme'])('refuses PATCH/PUT on %s with 410', async route => {
+    const res = await call(route, route === 'settings' || route === 'theme' ? 'PUT' : 'PATCH')
+    expect(res.statusCode).toBe(410)
+  })
+
+  it.each(['data', 'payments', 'billing', 'settings', 'theme', 'export', 'report-progress'])(
+    'still serves GET %s, so the demo can be explored',
+    async route => {
+      const res = await call(route, 'GET')
+      expect(res.statusCode).not.toBe(410)
+    },
+  )
+
+  it('refuses the member confirmation mail, which is a POST', async () => {
+    const res = await call('data', 'POST')
+    expect(res.statusCode).toBe(410)
+  })
+
+  it('serves every mutation when DEMO_MODE is off', async () => {
+    delete process.env.DEMO_MODE
+    vi.resetModules()
+    for (const route of ['data', 'payments', 'billing']) {
+      const res = await call(route, 'PATCH')
+      expect(res.statusCode).not.toBe(410)
+    }
+  })
+})

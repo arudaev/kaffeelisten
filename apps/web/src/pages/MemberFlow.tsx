@@ -16,6 +16,7 @@ import Icon from '../components/Icon'
 import CappuccinoMark from '../components/CappuccinoMark'
 import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
+import { useAppConfig } from '../lib/appConfig'
 
 // Only the columns anon may read. Billing contact details are admin-only; keep this
 // shape in sync with the column grant (migrations 038 and its follow-up).
@@ -40,6 +41,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   snack: 'Snacks',
   food: 'Speisen',
   other: 'Sonstiges',
+}
+
+/**
+ * The order the tabs appear in, and so which one is open when the item step
+ * loads. Coffee first: it is the overwhelming majority of what gets logged, and
+ * the app is called Kaffeelisten.
+ *
+ * Until now the order was whatever Supabase happened to return, so the first tab
+ * could be Getränke on one deployment and Kaffee on another. An unknown category
+ * sorts last rather than disappearing.
+ */
+const CATEGORY_ORDER = ['coffee', 'drink', 'snack', 'food', 'other']
+
+function orderCategories(categories: string[]): string[] {
+  const rank = (c: string) => {
+    const i = CATEGORY_ORDER.indexOf(c)
+    return i === -1 ? CATEGORY_ORDER.length : i
+  }
+  return categories.slice().sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, 'de'))
 }
 
 function formatPrice(priceCents: number): string {
@@ -132,6 +152,7 @@ function getDisplayName(fullName: string, otherNames: string[]): string {
 }
 
 export default function MemberFlow() {
+  const { demo } = useAppConfig()
   const { palette } = useTheme()
   const [step, setStep] = useState<Step>('start')
   const [companies, setCompanies] = useState<Company[]>([])
@@ -190,7 +211,7 @@ export default function MemberFlow() {
       }
       setCompanies((cosResult.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name, 'de')))
       setItems(itsResult.data ?? [])
-      const cats = [...new Set((itsResult.data ?? []).map(i => i.category))]
+      const cats = orderCategories([...new Set((itsResult.data ?? []).map(i => i.category))])
       if (cats.length > 0) setActiveCategory(cats[0])
     }
     fetchInitial()
@@ -239,7 +260,7 @@ export default function MemberFlow() {
     setCart(new Map())
     setError(null)
     setLimitReached(false)
-    const cats = [...new Set(items.map(i => i.category))]
+    const cats = orderCategories([...new Set(items.map(i => i.category))])
     if (cats.length > 0) setActiveCategory(cats[0])
   }, [items])
 
@@ -349,7 +370,7 @@ export default function MemberFlow() {
     setStep('item')
   }
 
-  const availableCategories = [...new Set(items.map(i => i.category))]
+  const availableCategories = orderCategories([...new Set(items.map(i => i.category))])
   const filteredItems = items.filter(i => i.category === activeCategory)
   const totalSteps = skipsPersonStep ? 3 : 4
   const stepIndex = skipsPersonStep
@@ -402,10 +423,12 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
+        {/* The campus name and the hackathon it was built at belong to a campus
+            instance. The demo is a product demo, so it says so instead. */}
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
-          ITC1 Deggendorf ·{' '}
+          {demo ? 'Demo' : 'ITC1 Deggendorf'} ·{' '}
           <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
-            B4Y3RW4LD
+            {demo ? 'Administration' : 'B4Y3RW4LD'}
           </Link>{' '}
           ·{' '}
           <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
