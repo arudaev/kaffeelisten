@@ -10,9 +10,9 @@
 // Dokumente page are left out.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
-import { classifyServerError } from '../_lib/errors'
-import { readStoredProgress, summariseProgress, type ProgressRun } from '../../shared/reportProgress'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
+import { classifyServerError } from '../errors'
+import { readStoredProgress, summariseProgress, type ProgressRun } from '../../../shared/reportProgress'
 
 const MONTH_RE = /^\d{4}-\d{2}$/
 

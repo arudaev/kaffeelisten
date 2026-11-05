@@ -9,8 +9,8 @@
 // issuer IBAN or any secret.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
-import { classifyServerError } from '../_lib/errors'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
+import { classifyServerError } from '../errors'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = req.method ?? 'GET'

@@ -23,7 +23,7 @@ vi.mock('../api/_lib/report', async importOriginal => {
   }
 })
 
-const { default: handler, sheetsPreview } = await import('../api/admin/preview-report')
+const { default: handler, sheetsPreview } = await import('../api/_lib/admin/preview-report')
 
 async function call(body: Record<string, unknown>) {
   const out: { status: number; headers: Record<string, string>; body: unknown } = { status: 0, headers: {}, body: undefined }

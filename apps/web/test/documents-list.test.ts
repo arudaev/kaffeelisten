@@ -11,7 +11,7 @@ vi.mock('../api/_lib/adminAuth', () => ({
   makeAdminClient: () => createFakeClient(state.db),
 }))
 
-const { default: handler } = await import('../api/admin/documents')
+const { default: handler } = await import('../api/_lib/admin/documents')
 
 describe('GET /api/admin/documents', () => {
   it('adds the company name to every delivery', async () => {

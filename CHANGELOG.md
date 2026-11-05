@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### refactor/admin-catch-all
+
+#### Changed
+- **The admin API is one serverless function instead of ten.** Every URL is unchanged — `/api/admin/data`, `/api/admin/theme` and the rest all behave exactly as before — but the handlers now sit behind a single dispatcher. This takes the deployment from 15 functions to 6, under the 12 that a free Vercel team allows, which is what makes a public demo possible at all. It also means fewer cold starts on the month-end run.
+
+
 ### fix/apex-independent-urls
 
 #### Changed

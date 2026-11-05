@@ -27,9 +27,9 @@ import {
   requireAdmin,
   issueSessionCookie,
   clearSessionCookie,
-} from '../_lib/adminAuth'
-import { makeMailer, replyTo } from '../_lib/mail'
-import { classifyServerError } from '../_lib/errors'
+} from '../adminAuth'
+import { makeMailer, replyTo } from '../mail'
+import { classifyServerError } from '../errors'
 
 const RESET_TTL_MINUTES = 15
 

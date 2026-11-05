@@ -8,7 +8,7 @@
 // Admin-only (requireAdmin). Service-role reads.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
 import {
   EXPORT_ROW_LIMIT,
   buildExportRows,
@@ -17,12 +17,12 @@ import {
   parseExportQuery,
   queryWindow,
   type ExportLookups,
-} from '../_lib/export'
-import { generateExportExcel } from '../_lib/excel'
-import { launchBrowser, pageToPdf } from '../_lib/pdf'
-import { buildExportHtml } from '../_lib/reportHtml'
-import { sanitizeFile } from '../_lib/archive'
-import { classifyServerError } from '../_lib/errors'
+} from '../export'
+import { generateExportExcel } from '../excel'
+import { launchBrowser, pageToPdf } from '../pdf'
+import { buildExportHtml } from '../reportHtml'
+import { sanitizeFile } from '../archive'
+import { classifyServerError } from '../errors'
 
 // A PDF export launches Chromium; spreadsheets finish in well under this.
 export const config = { maxDuration: 60 }

@@ -12,7 +12,7 @@ vi.mock('../api/_lib/adminAuth', () => ({
   makeAdminClient: () => createFakeClient(state.db),
 }))
 
-const { default: handler } = await import('../api/admin/export')
+const { default: handler } = await import('../api/_lib/admin/export')
 
 function seed(liveCount = 1): FakeDb {
   return {
