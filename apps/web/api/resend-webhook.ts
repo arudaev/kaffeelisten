@@ -10,6 +10,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient } from './_lib/adminAuth'
 import { verifyWebhook } from './_lib/webhookSignature'
 import type { DeliveryEvent } from '../shared/reportProgress'
+import { isDemoDeployment } from '../shared/environment'
 
 // The signature covers the exact bytes, so the body must not be parsed first.
 export const config = { api: { bodyParser: false } }
@@ -34,6 +35,10 @@ const header = (req: VercelRequest, name: string) => {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // The demo must not run this: it sends mail, mutates a real month, or both.
+  if (isDemoDeployment(process.env.DEMO_MODE)) {
+    return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const secret = process.env.RESEND_WEBHOOK_SECRET

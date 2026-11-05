@@ -10,8 +10,13 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient, clientKey, consumeRateLimit } from './_lib/adminAuth'
+import { isDemoDeployment } from '../shared/environment'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // The demo must not run this: it sends mail, mutates a real month, or both.
+  if (isDemoDeployment(process.env.DEMO_MODE)) {
+    return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
+  }
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   const mid = String((Array.isArray(req.query.mid) ? req.query.mid[0] : req.query.mid) ?? '').trim()

@@ -1,12 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runMonthlyReport } from './_lib/report'
 import { requireAdmin } from './_lib/adminAuth'
+import { isDemoDeployment } from '../shared/environment'
 
 // 300 s: per-recipient PDF + Excel for every person and company does not fit 60 s.
 // Keep in step with REPORT_MAX_DURATION_MS in _lib/report.ts (Vercel needs a literal).
 export const config = { maxDuration: 300 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // The demo must not run this: it sends mail, mutates a real month, or both.
+  if (isDemoDeployment(process.env.DEMO_MODE)) {
+    return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
