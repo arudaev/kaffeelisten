@@ -1,0 +1,23 @@
+# Path-based area labels for pull requests (actions/labeler v5 syntax), used by the shared
+# conventions workflow from kaffeelisten/.github.
+area:web:
+  - changed-files:
+      - any-glob-to-any-file: ['apps/web/src/**', 'apps/web/public/**', 'apps/web/index.html', 'apps/web/*.config.*']
+area:api:
+  - changed-files:
+      - any-glob-to-any-file: ['apps/web/api/**', 'apps/web/shared/**']
+area:report:
+  - changed-files:
+      - any-glob-to-any-file: ['apps/web/api/_lib/report*.ts', 'apps/web/api/_lib/pdf.ts', 'apps/web/api/_lib/excel.ts', 'apps/web/api/_lib/export.ts', 'apps/web/api/_lib/archive.ts', 'apps/web/api/send-report.ts', 'apps/web/api/cron/**']
+area:database:
+  - changed-files:
+      - any-glob-to-any-file: ['supabase/**', 'scripts/db/**', 'scripts/*migration*', 'scripts/test-migrations.sh']
+area:brand:
+  - changed-files:
+      - any-glob-to-any-file: ['apps/web/public/brand/**', 'apps/web/src/components/*Mark.tsx', 'apps/web/src/components/Logo.tsx', 'scripts/art/**']
+area:delivery:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**', 'apps/web/vercel.json', 'tools/**']
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', '*.md']
