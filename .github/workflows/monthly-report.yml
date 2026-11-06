@@ -16,6 +16,23 @@ jobs:
     if: github.event.inputs.confirm == 'send'
 
     steps:
+      # Without this the curl below is built from empty strings and fails with an
+      # opaque "URL rejected", which is a bad thing to debug at a month end.
+      - name: Check the trigger is configured
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          missing=()
+          [ -n "$VERCEL_APP_URL" ] || missing+=(VERCEL_APP_URL)
+          [ -n "$CRON_SECRET" ] || missing+=(CRON_SECRET)
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}."
+            echo "::error::These are set when production goes live, and must match the values"
+            echo "::error::deployed to the Vercel project — a mismatch is rejected by the API."
+            exit 1
+          fi
+
       - name: Trigger report API
         run: |
           curl -X POST "${{ secrets.VERCEL_APP_URL }}/api/cron/monthly-report" \
