@@ -110,33 +110,47 @@ declare
     'Wagner','Walter','Weber','Wolf','Zimmermann'
   ];
   v_c int; v_i int; v_fn text; v_ln text; v_cid uuid; v_n int; v_make int;
+  -- Index of the company the member flow shows first, i.e. the one whose name
+  -- sorts first -- Auwiesen Elektronik, second in the list above.
+  v_show constant int := 2;
+  -- Where to start drawing given names for that company. Its roster has to read
+  -- Alex R., Fares M., then everyone else, so nobody generated there may sort
+  -- between the two: no Andrea, and no Alexander either, which sorts *after*
+  -- "Alex R." because a space beats a letter. These offsets skip both arrays
+  -- past F; every other company draws from the whole alphabet.
+  v_lo_f int; v_lo_m int;
 begin
   perform setseed(0.161803);
 
-  -- The two of us, at the top of the first company. A signature on the demo, and
-  -- the only two names here that belong to anyone: abbreviated, on .example
-  -- addresses like everybody else, and never written anywhere a real roster goes.
+  -- The two of us, on the first screen a visitor actually reaches. A signature on
+  -- the demo, and the only two names here that belong to anyone: abbreviated, on
+  -- .example addresses like everybody else, never written where a real roster goes.
+  --
+  -- Auwiesen, not Nordwald, because the member flow lists companies by name: the
+  -- company that comes first in this file is not the company anyone sees first.
   insert into members (id, company_id, name, work_email, active, email_verified_at, kind)
   values
     ('00000000-0000-0000-0004-000000000001',
-     '00000000-0000-0000-0003-000000000001',
-     'Alex R.', 'alex.r@nordwald-systeme.example', true, now() - interval '31 days', 'person'),
+     '00000000-0000-0000-0003-000000000002',
+     'Alex R.', 'alex.r@auwiesen-elektronik.example', true, now() - interval '31 days', 'person'),
     ('00000000-0000-0000-0004-000000000002',
-     '00000000-0000-0000-0003-000000000001',
-     'Fares M.', 'fares.m@nordwald-systeme.example', true, now() - interval '29 days', 'person');
+     '00000000-0000-0000-0003-000000000002',
+     'Fares M.', 'fares.m@auwiesen-elektronik.example', true, now() - interval '29 days', 'person');
 
   for v_c in 1..12 loop
     v_cid := ('00000000-0000-0000-0003-' || lpad(v_c::text, 12, '0'))::uuid;
-    -- The first company already has the two above, so its generated names start
-    -- counting after them and it ends up the same size as planned.
-    v_n := case when v_c = 1 then 2 else 0 end;
+    -- The showcase company already has the two above, so its generated names
+    -- start counting after them and it ends up the same size as planned.
+    v_n := case when v_c = v_show then 2 else 0 end;
     v_make := v_sizes[v_c] - v_n;
 
     for v_i in 1..v_make loop
+      v_lo_f := case when v_c = v_show then 6 else 1 end;  -- Hannah onwards
+      v_lo_m := case when v_c = v_show then 5 else 1 end;  -- Felix onwards
       if random() < 0.46 then
-        v_fn := v_f[1 + floor(random() * array_length(v_f, 1))::int];
+        v_fn := v_f[v_lo_f + floor(random() * (array_length(v_f, 1) - v_lo_f + 1))::int];
       else
-        v_fn := v_m[1 + floor(random() * array_length(v_m, 1))::int];
+        v_fn := v_m[v_lo_m + floor(random() * (array_length(v_m, 1) - v_lo_m + 1))::int];
       end if;
       v_ln := v_s[1 + floor(random() * array_length(v_s, 1))::int];
       v_n := v_n + 1;
