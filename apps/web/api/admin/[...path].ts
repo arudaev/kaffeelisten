@@ -15,7 +15,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-import { DEMO_DISABLED_ADMIN_ROUTES, isDemoDeployment } from '../../shared/environment'
+import { DEMO_DISABLED_ADMIN_ROUTES, demoWriteBlocked, isDemoDeployment } from '../../shared/environment'
 
 import auth from '../_lib/admin/auth'
 import billing from '../_lib/admin/billing'
@@ -73,6 +73,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // the endpoint exists in the product, it is gone from this deployment.
   if (isDemoDeployment(process.env.DEMO_MODE) && (DEMO_DISABLED_ADMIN_ROUTES as readonly string[]).includes(key!)) {
     return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
+  }
+
+  // Everything else the demo serves read-only. A visitor explores the whole
+  // product; their edits live in their own browser and never reach the shared
+  // database, which one public deployment and many visitors makes necessary.
+  if (demoWriteBlocked(process.env.DEMO_MODE, key!, req.method)) {
+    return res.status(410).json({ error: 'In der Demo werden Änderungen nicht gespeichert.' })
   }
 
   return route(req, res)

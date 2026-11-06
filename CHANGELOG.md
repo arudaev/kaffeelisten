@@ -9,6 +9,41 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### feat/demo-client
+
+#### Added
+- **The demo lets you in, and keeps letting the next person in.** `DEMO_MODE` deployments authenticate the admin area against the `DEMO_ADMIN_PIN` that the login screen publishes, instead of the PIN hash in the database — so the PIN shown is the PIN that works, and it survives the data resets that wipe settings. Changing or resetting it is refused by the server (`410`), because one visitor rotating the PIN would lock out everyone after them. Settings says so in place of the *PIN ändern* button.
+- **An invented demo campus** (`supabase/seeds/003_demo_campus.sql`): 18 made-up companies, ~130 made-up people on `.example` addresses, a live current month and two closed months behind it, with payment state already filled in. No real company and no real person appears, and the months are derived from the current date, so the demo never goes stale.
+
+#### Added
+- **Hand-drawn hints on the demo.** A pencil arrow with a handwritten caption points at the one thing a first-time visitor cannot guess on each screen: that the admin area is behind a small word in the start screen's footer, and that the wordmark above the keypad is the way back out. Each one appears a beat after the screen and retires for good once the visitor uses the control it points at. The footer slot that used to read *ITC1 Deggendorf* is now the switch that hides them — switching them back on brings the retired ones with it — and the choice is remembered per browser. Captions are real text, so the browser's own translate reaches them and they invert in dark mode. Drawn from the arrow in `PROJECTS/15-Flipper` by `scripts/art/coach-marks.py`.
+
+#### Changed
+- **The demo campus is smaller**: 12 companies and 71 people rather than 18 and 132, with thinner closed months (1,154 archived rows, down from 3,926). A demo is read at a glance, not scrolled.
+
+#### Fixed
+- **The demo no longer offers *Bericht senden*** on the Übersicht. The sidebar already hid its copy; this one would have hit an endpoint that answers 410.
+
+#### Fixed
+- **Mitarbeitende loaded nothing while the database was full of people.** The page fetched the roster and the paid grid in one `Promise.all`, so when `/api/admin/payments` failed the rejection took members, companies and items down with it and the screen said *Noch keine Mitarbeitenden*. The grid is now settled on its own and degrades to empty — the roster is the page, the ticks are an extra on it.
+- **Kaffee is the first tab again.** Category order followed whatever order the database happened to return rows in, so the item step could open on *Getränke*. It is now an explicit order, coffee first.
+
+#### Changed
+- **The demo is explorable but not editable.** Every page, list and export is open; every write is refused by the server and kept in the visitor's own browser instead, so they can rename a company, change the report recipients, re-tick a paid month or switch theme and watch the product react — and the next visitor still arrives at a clean demo. Settings says so plainly and offers *Demo zurücksetzen*. Billing, payments and report progress are readable again as a result; only Dokumente stays out.
+- **The demo carries no client's branding.** No ITC1 logo in the sidebar, no *ITC1 Deggendorf* or *B4Y3RW4LD* on the start screen, and its own privacy notice describing what the demo actually does — invented data, nothing sent, edits local — instead of the campus notice naming ITC1 as controller.
+- **The demo campus opens with Alex R. and Fares M.** at the first company.
+
+#### Changed
+- **Staging shares a Supabase project with another application**, because the free plan allows two active projects per account and both Kaffeelisten projects had been paused — which is what left the preview with no data and no way in. `Database - staging` now restores the co-tenant's API grants after every migration run (`scripts/db/restore-cotenant-grants.mjs`), since migration 038's blanket revoke strips them and the breakage is silent. A no-op once staging has a project to itself.
+
+#### Fixed
+- **The demo no longer asks a visitor to reset an admin e-mail they do not have.** Five wrong entries used to push the login screen into the e-mail recovery flow — on the demo that flow leads nowhere, so it is gone and the screen points back at the published PIN instead. *PIN vergessen?* is hidden there too.
+- **The demo PIN appears with the login screen** rather than dropping in a moment later. The runtime config fetch now starts before React mounts, and the panel's space is held while it is in flight, so nothing shifts under the cursor.
+
+#### Added
+- **The demo looks like the demo.** On a deployment with `DEMO_MODE`, the admin area leaves out the pages it does not have (Dokumente) and the action it cannot perform (*Bericht senden*), and the login screen shows its own PIN with a single button to go straight in — a demo that hides its credential is a demo nobody gets into. A campus instance is completely unchanged: the PIN is never served, and every page is present.
+
+
 ### feat/demo-mode
 
 #### Added

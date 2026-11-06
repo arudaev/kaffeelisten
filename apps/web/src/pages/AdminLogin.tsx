@@ -10,8 +10,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PinKeypad from '../components/admin/PinKeypad'
 import PinInput from '../components/admin/PinInput'
+import { useAppConfig } from '../lib/appConfig'
 import AdminField from '../components/admin/AdminField'
 import AdminButton from '../components/admin/AdminButton'
+import CoachMarks, { type CoachMark } from '../components/CoachMarks'
+import { retireHint } from '../lib/coachHints'
 
 type View = 'pin' | 'email' | 'code'
 
@@ -27,6 +30,8 @@ export default function AdminLogin() {
   const [notice, setNotice] = useState('')
   const attemptsRef = useRef(0)
   const [lockedOut, setLockedOut] = useState(false)
+
+  const { demo, demoPin, loading: configLoading } = useAppConfig()
 
   // Recovery flow
   const [email, setEmail] = useState('')
@@ -53,6 +58,10 @@ export default function AdminLogin() {
   // used only for client-side route guarding (the cookie is the real auth).
   const enter = () => {
     sessionStorage.setItem('adminSession', 'true')
+    // Getting in is the proof that the footer hint landed — not the click on
+    // the link, which is also the only way to reach this screen at all and so
+    // would retire that hint for anyone who merely looked.
+    retireHint('start-admin')
     navigate('/admin/dashboard')
   }
 
@@ -87,6 +96,13 @@ export default function AdminLogin() {
     setNotice('')
     attemptsRef.current += 1
     if (attemptsRef.current >= MAX_ATTEMPTS) {
+      // The demo has no recovery flow: its PIN is printed on this very screen,
+      // the endpoints behind the flow answer 410, and walking a visitor through
+      // "enter your admin email" for an account they do not own is nonsense.
+      if (demo) {
+        setNotice('Zu viele Fehlversuche. Die Demo-PIN steht oben — einfach erneut versuchen.')
+        return
+      }
       setLockedOut(true)
       setView('email')
     }
@@ -149,16 +165,44 @@ export default function AdminLogin() {
   }
 
   if (view === 'pin') {
+    // One mark, and it is not the PIN. The PIN is already printed in bold on
+    // this screen with its own button underneath it — an arrow saying "the PIN
+    // is here" repeats the screen back to the visitor, and two marks on a page
+    // this bare is what made the overlay feel busy. What nobody guesses is that
+    // the small wordmark above the heading is the way back to the app.
+    const loginMarks: CoachMark[] = [
+      {
+        id: 'login-back',
+        // hook is drawn head-down-left, so unrotated it curls in from the right
+        // and points back at the wordmark. Sitting on that side keeps the
+        // caption in open space instead of running off the left edge.
+        shape: 'hook',
+        text: 'Zurück zur App',
+        // Anchored to the centre, not to the top of the window: the keypad
+        // panel is vertically centred, so a top offset slides off the wordmark
+        // the moment the window is shorter than the one it was placed in.
+        at: { top: 'calc(50% - 354px)', left: 'calc(50% + 44px)' },
+        width: 54,
+        caption: 'right',
+        minWidth: 680,
+      },
+    ]
+
     return (
+      <>
+        {demo && <CoachMarks marks={loginMarks} />}
       <PinKeypad
         onSubmit={handleSubmit}
         error={error}
         notice={notice}
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
-        onForgot={openRecovery}
-        onHome={() => navigate('/')}
+        onForgot={demo ? undefined : openRecovery}
+        onHome={() => { retireHint('login-back'); navigate('/') }}
+        demoPin={demo && demoPin ? demoPin : undefined}
+        demoPending={configLoading}
       />
+      </>
     )
   }
 

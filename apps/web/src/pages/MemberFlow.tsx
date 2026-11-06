@@ -16,6 +16,9 @@ import Icon from '../components/Icon'
 import CappuccinoMark from '../components/CappuccinoMark'
 import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
+import { useAppConfig } from '../lib/appConfig'
+import CoachMarks, { type CoachMark } from '../components/CoachMarks'
+import { setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
 
 // Only the columns anon may read. Billing contact details are admin-only; keep this
 // shape in sync with the column grant (migrations 038 and its follow-up).
@@ -40,6 +43,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   snack: 'Snacks',
   food: 'Speisen',
   other: 'Sonstiges',
+}
+
+/**
+ * The order the tabs appear in, and so which one is open when the item step
+ * loads. Coffee first: it is the overwhelming majority of what gets logged, and
+ * the app is called Kaffeelisten.
+ *
+ * Until now the order was whatever Supabase happened to return, so the first tab
+ * could be Getränke on one deployment and Kaffee on another. An unknown category
+ * sorts last rather than disappearing.
+ */
+const CATEGORY_ORDER = ['coffee', 'drink', 'snack', 'food', 'other']
+
+function orderCategories(categories: string[]): string[] {
+  const rank = (c: string) => {
+    const i = CATEGORY_ORDER.indexOf(c)
+    return i === -1 ? CATEGORY_ORDER.length : i
+  }
+  return categories.slice().sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, 'de'))
 }
 
 function formatPrice(priceCents: number): string {
@@ -132,6 +154,8 @@ function getDisplayName(fullName: string, otherNames: string[]): string {
 }
 
 export default function MemberFlow() {
+  const { demo } = useAppConfig()
+  const hints = useHintsEnabled()
   const { palette } = useTheme()
   const [step, setStep] = useState<Step>('start')
   const [companies, setCompanies] = useState<Company[]>([])
@@ -190,7 +214,7 @@ export default function MemberFlow() {
       }
       setCompanies((cosResult.data ?? []).slice().sort((a, b) => a.name.localeCompare(b.name, 'de')))
       setItems(itsResult.data ?? [])
-      const cats = [...new Set((itsResult.data ?? []).map(i => i.category))]
+      const cats = orderCategories([...new Set((itsResult.data ?? []).map(i => i.category))])
       if (cats.length > 0) setActiveCategory(cats[0])
     }
     fetchInitial()
@@ -239,7 +263,7 @@ export default function MemberFlow() {
     setCart(new Map())
     setError(null)
     setLimitReached(false)
-    const cats = [...new Set(items.map(i => i.category))]
+    const cats = orderCategories([...new Set(items.map(i => i.category))])
     if (cats.length > 0) setActiveCategory(cats[0])
   }, [items])
 
@@ -349,7 +373,7 @@ export default function MemberFlow() {
     setStep('item')
   }
 
-  const availableCategories = [...new Set(items.map(i => i.category))]
+  const availableCategories = orderCategories([...new Set(items.map(i => i.category))])
   const filteredItems = items.filter(i => i.category === activeCategory)
   const totalSteps = skipsPersonStep ? 3 : 4
   const stepIndex = skipsPersonStep
@@ -379,8 +403,36 @@ export default function MemberFlow() {
   }
 
   if (step === 'start') {
+    // One mark, not two. The start screen holds a single large button labelled
+    // "Eintrag starten" and nothing else — an arrow explaining it told the
+    // visitor what they already knew, and two hints at once on a screen this
+    // sparse is the reason the overlay read as clutter. What is genuinely
+    // unguessable here is that the small word in the footer leads to a working
+    // admin area whose PIN is printed on the next screen.
+    const startMarks: CoachMark[] = [
+      {
+        id: 'start-admin',
+        // The reference doodle itself, head down to the left, turned rather
+        // than drawn long: at its own steep angle it needs a tall sweep to
+        // reach down to the footer, which is a lot of ink for a hint.
+        //
+        // Turned a little, not flat. Flat puts the whole stroke at the
+        // footer's own height, where it runs straight through GitHub and
+        // Datenschutz; this angle keeps the tail up in the empty space and
+        // brings only the head down, to stop just above the word.
+        shape: 'loop',
+        text: 'Admin-Bereich — die PIN steht dort',
+        at: { bottom: '28px', left: 'calc(50% + 54px)' },
+        width: 118,
+        rotate: 16,
+        caption: 'right',
+        minWidth: 680,
+      },
+    ]
+
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-7 p-6 sm:p-10 font-sans relative">
+        {demo && <CoachMarks marks={startMarks} />}
         {palette.mark === 'deathstar' ? (
           <DeathStarMark className="w-28 sm:w-40 h-auto text-fg-muted" />
         ) : (
@@ -402,12 +454,40 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
+        {/* The campus name and the hackathon it was built at belong to a campus
+            instance. On the demo that slot becomes the switch for the hints —
+            whoever has read them wants them gone, and this is where their eye
+            already is when they look away from the button. */}
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
-          ITC1 Deggendorf ·{' '}
+          {demo ? (
+            <button
+              type="button"
+              onClick={() => setHintsEnabled(!hints)}
+              className="uppercase tracking-[0.06em] hover:text-fg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
+            >
+              {hints ? 'Hinweise ausblenden' : 'Hinweise einblenden'}
+            </button>
+          ) : (
+            'ITC1 Deggendorf'
+          )}{' '}
+          ·{' '}
           <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
-            B4Y3RW4LD
+            {demo ? 'Administration' : 'B4Y3RW4LD'}
           </Link>{' '}
           ·{' '}
+          {demo && (
+            <>
+              <a
+                href="https://github.com/kaffeelisten"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-fg-muted transition-colors"
+              >
+                GitHub
+              </a>{' '}
+              ·{' '}
+            </>
+          )}
           <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
             Datenschutz
           </Link>

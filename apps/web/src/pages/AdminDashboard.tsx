@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { adminApi, type AdminCompany, type AdminItem } from '../lib/adminApi'
 import { toEntryRows, type EntryRow } from '../lib/entries'
 import { todayBerlin } from '../lib/dates'
+import { useAppConfig } from '../lib/appConfig'
 import Sidebar, { type PageId } from '../components/admin/Sidebar'
 import ReportSendDialog from '../components/admin/ReportSendDialog'
 import Toast from '../components/admin/Toast'
@@ -20,6 +21,7 @@ import SettingsPage from './admin/SettingsPage'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
+  const { demo } = useAppConfig()
   const [activePage, setActivePage] = useState<PageId>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [rows, setRows] = useState<EntryRow[]>([])
@@ -98,6 +100,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen overflow-hidden font-sans">
       <Sidebar
+        demo={demo}
         active={activePage}
         onNavigate={navigateTo}
         onSendReport={() => setReportOpen(true)}

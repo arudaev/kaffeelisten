@@ -3,6 +3,7 @@
 
 import { useNavigate } from 'react-router-dom'
 import FlowShell from '../components/FlowShell'
+import { useAppConfig } from '../lib/appConfig'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -17,6 +18,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function Datenschutz() {
   const navigate = useNavigate()
+  const { demo } = useAppConfig()
+
+  // The campus notice below names ITC1 as controller and describes real people's
+  // consumption being processed and e-mailed. None of that is true of the demo:
+  // its roster is invented, it cannot send mail, and it has no controller to
+  // name. Serving the campus notice there would be a false privacy statement, so
+  // the demo gets one that describes what actually happens on it.
+  if (demo) return <DemoNotice onBack={() => navigate('/')} />
 
   return (
     <FlowShell step={-1} totalSteps={0} onBack={() => navigate('/')}>
@@ -197,6 +206,100 @@ export default function Datenschutz() {
         <p className="text-[12px] text-fg-subtle text-center pb-4">
           ITC1 Innovations- und Technologiecampus Deggendorf GmbH ·{' '}
           Fragen zum Datenschutz bitte direkt an die Campus-Verwaltung richten.
+        </p>
+      </div>
+    </FlowShell>
+  )
+}
+
+function DemoNotice({ onBack }: { onBack: () => void }) {
+  return (
+    <FlowShell step={-1} totalSteps={0} onBack={onBack}>
+      <div className="max-w-xl mx-auto flex flex-col gap-8 py-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="inline-flex items-center gap-2 mb-1">
+            <span className="h-1 w-6 rounded-full bg-accent-subtle0" />
+            <span className="text-[11px] font-semibold text-accent uppercase tracking-widest">
+              Datenschutz
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold text-fg tracking-tight">Datenschutz in der Demo</h1>
+          <p className="text-fg-muted text-sm">Kaffeelisten · Produktdemo</p>
+        </div>
+
+        <div className="h-px bg-border" />
+
+        <Section title="Was diese Seite ist">
+          Dies ist eine <strong className="text-fg font-medium">Demo</strong> der Kaffeelisten-App.
+          Sie zeigt das Produkt mit erfundenen Daten. Es gibt hier keinen Campus, keine echten
+          Unternehmen und keine echten Personen.
+        </Section>
+
+        <Section title="Welche Daten hier liegen">
+          <ul className="flex flex-col gap-1.5 list-none">
+            <li className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent-subtle0 shrink-0" />
+              <span>
+                Alle Unternehmen, Namen und Buchungen sind frei erfunden. Die E-Mail-Adressen
+                enden auf <code className="font-mono text-[13px]">.example</code> – eine Domain,
+                die es im Internet nicht gibt.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent-subtle0 shrink-0" />
+              <span>Ähnlichkeiten mit lebenden Personen sind nicht beabsichtigt.</span>
+            </li>
+          </ul>
+        </Section>
+
+        <Section title="Was mit deinen Eingaben passiert">
+          <ul className="flex flex-col gap-1.5 list-none">
+            <li className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent-subtle0 shrink-0" />
+              <span>
+                Änderungen im Administrationsbereich werden <strong className="text-fg font-medium">nicht
+                gespeichert</strong>. Sie bleiben in deinem Browser und sind für niemanden sonst sichtbar.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent-subtle0 shrink-0" />
+              <span>
+                Die Demo <strong className="text-fg font-medium">versendet keine E-Mails</strong>.
+                Monatsberichte und Rechnungen lassen sich ansehen, aber nicht verschicken.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent-subtle0 shrink-0" />
+              <span>
+                Bitte gib hier <strong className="text-fg font-medium">keine echten personenbezogenen
+                Daten</strong> ein. Du brauchst keine, um die Demo zu nutzen.
+              </span>
+            </li>
+          </ul>
+        </Section>
+
+        <Section title="Cookies und Tracking">
+          Keine Werbe- oder Analyse-Cookies und kein Cookie-Banner. Die Demo speichert lediglich
+          deine eigenen Einstellungen lokal im Browser (<code className="font-mono text-[13px]">localStorage</code>)
+          und setzt nach der Anmeldung im Administrationsbereich ein technisch notwendiges
+          Sitzungs-Cookie. Beides verlässt dein Gerät nicht als Profil und wird nicht ausgewertet.
+        </Section>
+
+        <Section title="Hosting">
+          Die Demo läuft bei Vercel; die Datenbank liegt bei Supabase in der EU. Serverprotokolle
+          dieser Anbieter können technische Verbindungsdaten wie die IP-Adresse enthalten.
+        </Section>
+
+        <Section title="Für den echten Einsatz">
+          In einer produktiven Installation ist der Betreiber des jeweiligen Campus die
+          verantwortliche Stelle und stellt eine eigene Datenschutzerklärung bereit. Die Demo
+          ersetzt sie nicht.
+        </Section>
+
+        <div className="h-px bg-border" />
+
+        <p className="text-[13px] text-fg-subtle leading-relaxed">
+          Fragen zur Demo: <a className="underline hover:text-fg-muted" href="mailto:alex.rudaev@outlook.com">alex.rudaev@outlook.com</a>
         </p>
       </div>
     </FlowShell>

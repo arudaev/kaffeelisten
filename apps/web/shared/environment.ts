@@ -35,7 +35,61 @@ export function isDemoDeployment(demoMode: string | undefined): boolean {
  * never performs. Off here means 410 from the server, not merely hidden in the
  * interface - a public deployment should not rely on its own UI for that.
  */
-export const DEMO_DISABLED_ADMIN_ROUTES = ['billing', 'documents', 'payments', 'report-progress'] as const
+export const DEMO_DISABLED_ADMIN_ROUTES = ['documents'] as const
+
+/**
+ * Admin routes the demo may still receive a non-GET on.
+ *
+ * `auth` needs POST to log anyone in at all; `preview-report` renders the report
+ * on POST and writes nothing. Everything else is read-only — see demoWriteBlocked.
+ */
+const DEMO_WRITABLE_ADMIN_ROUTES = ['auth', 'preview-report']
+
+/**
+ * Should this admin request be refused because the demo is read-only?
+ *
+ * **The demo is explorable, not editable.** Every mutation in the admin API is a
+ * non-GET method, so one rule covers all of them: a visitor may open every page,
+ * read every list and export anything, and nothing they do reaches the database.
+ * That matters because the demo is public and single-tenant — a visitor renaming
+ * a company or ticking a month as paid would change it for everyone after them.
+ *
+ * The interface still lets them make the change; the client keeps it in their own
+ * browser (src/lib/demoStore.ts) so the product behaves exactly as it would on a
+ * campus instance. This is the backstop that makes that safe rather than trusted.
+ */
+export function demoWriteBlocked(demoMode: string | undefined, route: string, method: string | undefined): boolean {
+  if (!isDemoDeployment(demoMode)) return false
+  if (DEMO_WRITABLE_ADMIN_ROUTES.includes(route)) return false
+  const m = (method ?? 'GET').toUpperCase()
+  return m !== 'GET' && m !== 'HEAD'
+}
+
+/**
+ * Admin auth actions the demo refuses, by their `action` query value.
+ *
+ * All three change or recover the admin credential, and the demo's credential is
+ * published on its own login screen. `request-reset` would mail a code to a real
+ * address; `reset` and `change` would let one visitor rotate the PIN and lock out
+ * everyone who comes next, including the person being shown the product.
+ *
+ * Off here means 410 from the server, not merely hidden in the interface.
+ */
+export const DEMO_DISABLED_AUTH_ACTIONS = ['request-reset', 'reset', 'change'] as const
+
+/**
+ * The demo's admin PIN, or null when this is not the demo.
+ *
+ * On the demo the PIN is NOT read from the database: a visitor must not be able
+ * to lock out the next one, and the demo has to stay reachable across the data
+ * resets that wipe `app_settings`. Takes raw values because this module is also
+ * compiled into the browser bundle.
+ */
+export function demoAdminPin(demoMode: string | undefined, demoPin: string | undefined): string | null {
+  if (!isDemoDeployment(demoMode)) return null
+  const pin = demoPin?.trim()
+  return pin ? pin : null
+}
 
 /** Vercel's VERCEL_ENV: 'production' | 'preview' | 'development'; undefined off Vercel. */
 export function isProductionDeployment(vercelEnv: string | undefined): boolean {
