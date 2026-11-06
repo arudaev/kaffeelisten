@@ -58,6 +58,10 @@ export default function AdminLogin() {
   // used only for client-side route guarding (the cookie is the real auth).
   const enter = () => {
     sessionStorage.setItem('adminSession', 'true')
+    // Getting in is the proof that the footer hint landed — not the click on
+    // the link, which is also the only way to reach this screen at all and so
+    // would retire that hint for anyone who merely looked.
+    retireHint('start-admin')
     navigate('/admin/dashboard')
   }
 
@@ -174,10 +178,13 @@ export default function AdminLogin() {
         // caption in open space instead of running off the left edge.
         shape: 'hook',
         text: 'Zurück zur App',
-        at: { top: '56px', left: 'calc(50% + 44px)' },
+        // Anchored to the centre, not to the top of the window: the keypad
+        // panel is vertically centred, so a top offset slides off the wordmark
+        // the moment the window is shorter than the one it was placed in.
+        at: { top: 'calc(50% - 354px)', left: 'calc(50% + 44px)' },
         width: 54,
         caption: 'right',
-        minWidth: 980,
+        minWidth: 680,
       },
     ]
 

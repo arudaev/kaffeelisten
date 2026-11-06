@@ -11,7 +11,12 @@
 import { useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'kaffeelisten.demo.hints'
-const DONE_KEY = 'kaffeelisten.demo.hints.done'
+// Versioned: when the rule for retiring a hint changes, everyone who already
+// carries the old record would otherwise keep a hint hidden under a rule that
+// no longer exists. v1 retired the start-screen hint on the mere click of the
+// admin link, which is also the only way to reach the login — so one look cost
+// you the hint for good.
+const DONE_KEY = 'kaffeelisten.demo.hints.done.v2'
 const EVENT = 'kaffeelisten:hints'
 
 /** Are the hints on? Default on: on the demo every visit is a first visit. */

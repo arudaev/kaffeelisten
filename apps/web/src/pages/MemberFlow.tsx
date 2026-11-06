@@ -18,7 +18,7 @@ import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 import { useAppConfig } from '../lib/appConfig'
 import CoachMarks, { type CoachMark } from '../components/CoachMarks'
-import { retireHint, setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
+import { setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
 
 // Only the columns anon may read. Billing contact details are admin-only; keep this
 // shape in sync with the column grant (migrations 038 and its follow-up).
@@ -421,7 +421,7 @@ export default function MemberFlow() {
         at: { bottom: '44px', left: 'calc(50% + 14px)' },
         width: 64,
         caption: 'right',
-        minWidth: 940,
+        minWidth: 680,
       },
     ]
 
@@ -466,12 +466,7 @@ export default function MemberFlow() {
             'ITC1 Deggendorf'
           )}{' '}
           ·{' '}
-          <Link
-            to="/admin"
-            onClick={() => retireHint('start-admin')}
-            className="hover:text-fg-muted transition-colors"
-            title="Administration"
-          >
+          <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
             {demo ? 'Administration' : 'B4Y3RW4LD'}
           </Link>{' '}
           ·{' '}

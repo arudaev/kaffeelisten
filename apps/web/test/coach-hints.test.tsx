@@ -67,7 +67,7 @@ describe('remembering which hints are done', () => {
   it('retires the same hint twice without growing the record', () => {
     retireHint('login-pin')
     retireHint('login-pin')
-    expect(localStorage.getItem('kaffeelisten.demo.hints.done')).toBe('login-pin')
+    expect(localStorage.getItem('kaffeelisten.demo.hints.done.v2')).toBe('login-pin')
   })
 
   it('treats a mark with no id as never retired', () => {
