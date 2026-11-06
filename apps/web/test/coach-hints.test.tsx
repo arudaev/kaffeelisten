@@ -133,6 +133,30 @@ describe('what the overlay puts on screen', () => {
     expect(overlay.getAttribute('aria-hidden')).toBe('true')
   })
 
+  it('moves a caption that would run off the edge to the other side', () => {
+    // jsdom lays nothing out, so the measurement has to be supplied: a real
+    // box, 200 wide, whose right edge is far past the window.
+    const original = Element.prototype.getBoundingClientRect
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...original.call(this), width: 200, right: 99_999, left: 400 } as DOMRect
+    }
+    try {
+      render([{ ...PIN, caption: 'right' }])
+      const span = host.querySelector('span') as HTMLElement
+      // 'right' is left-full/ml-2; flipped it becomes right-full/mr-2.
+      expect(span.className).toContain('right-full')
+      expect(span.className).not.toContain('left-full')
+    } finally {
+      Element.prototype.getBoundingClientRect = original
+    }
+  })
+
+  it('leaves a caption that fits exactly where it was put', () => {
+    render([{ ...PIN, caption: 'right' }])
+    const span = host.querySelector('span') as HTMLElement
+    expect(span.className).toContain('left-full')
+  })
+
   it('starts transparent, so the screen is read before it is drawn on', () => {
     render([PIN])
     const overlay = host.firstElementChild as HTMLElement

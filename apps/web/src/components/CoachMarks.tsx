@@ -23,7 +23,7 @@
 //   * the ink arrives a beat after the screen, and faint, so it reads as
 //     somebody leaning in rather than as part of the interface.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveHints } from '../lib/coachHints'
 
 export type MarkShape = 'loop' | 'curve' | 'hook' | 'rise' | 'ring'
@@ -123,9 +123,57 @@ export default function CoachMarks({ marks }: { marks: CoachMark[] }) {
       aria-hidden="true"
     >
       {visible.map((m, i) => (
-        <div key={m.id ?? i} className="absolute" style={m.at}>
-          <div className="relative" style={{ width: m.width }}>
-            <img
+        <Mark key={m.id ?? i} mark={m} width={width} />
+      ))}
+    </div>
+  )
+}
+
+/** The opposite side, for a caption that would otherwise run off the screen. */
+const OPPOSITE: Record<NonNullable<CoachMark['caption']>, NonNullable<CoachMark['caption']>> = {
+  left: 'right',
+  right: 'left',
+  above: 'below',
+  below: 'above',
+}
+
+function Mark({ mark: m, width }: { mark: CoachMark; width: number }) {
+  const caption = useRef<HTMLSpanElement>(null)
+  const [side, setSide] = useState<NonNullable<CoachMark['caption']>>(m.caption ?? 'below')
+
+  // A caption is placed relative to its drawing, and the drawing is placed
+  // relative to the control it points at — so on a narrower window the text can
+  // walk off the edge while the arrow itself is still perfectly aimed. The
+  // overlay clips (it must, or a mark would add a scrollbar to the page), which
+  // means the sentence simply loses its end. Measure once the text is laid out
+  // and put it on the side that has room.
+  const measuredAt = useRef(width)
+  useEffect(() => {
+    const el = caption.current
+    if (!el) return
+    const preferred = m.caption ?? 'below'
+    // On a resize, put it back where it was asked to go and judge again from
+    // there — otherwise a window that grows keeps a caption flipped for a
+    // shortage of room that no longer exists.
+    if (measuredAt.current !== width) {
+      measuredAt.current = width
+      if (side !== preferred) {
+        setSide(preferred)
+        return
+      }
+    }
+    const box = el.getBoundingClientRect()
+    // A box with no width has not been laid out (or the font has not landed
+    // yet). Judging it would move a caption that is nowhere near an edge.
+    if (box.width === 0) return
+    const EDGE = 8
+    if (box.right > width - EDGE || box.left < EDGE) setSide(OPPOSITE[preferred])
+  }, [width, side, m.caption, m.text])
+
+  return (
+    <div className="absolute" style={m.at}>
+      <div className="relative" style={{ width: m.width }}>
+        <img
               src={`/assets/coach/${m.shape}.png`}
               alt=""
               // Deliberately faint: a hint competing with the control it points
@@ -137,20 +185,19 @@ export default function CoachMarks({ marks }: { marks: CoachMark[] }) {
                 transform: `${m.flip ? 'scaleX(-1) ' : ''}rotate(${m.flip ? -(m.rotate ?? 0) : m.rotate ?? 0}deg)`,
               }}
             />
-            <span
-              className={[
-                // The drawing gets quieter; the caption does not. A hint you
-                // have to squint at is worse than one you can ignore.
-                'absolute whitespace-nowrap text-fg-muted',
-                'font-hand text-[18px] leading-tight',
-                CAPTION_POSITION[m.caption ?? 'below'],
-              ].join(' ')}
-            >
-              {m.text}
-            </span>
-          </div>
-        </div>
-      ))}
+        <span
+          ref={caption}
+          className={[
+            // The drawing gets quieter; the caption does not. A hint you
+            // have to squint at is worse than one you can ignore.
+            'absolute whitespace-nowrap text-fg-muted',
+            'font-hand text-[18px] leading-tight',
+            CAPTION_POSITION[side],
+          ].join(' ')}
+        >
+          {m.text}
+        </span>
+      </div>
     </div>
   )
 }

@@ -403,8 +403,6 @@ export default function MemberFlow() {
   }
 
   if (step === 'start') {
-    // Two things a first-time visitor cannot guess: that the big button is the
-    // whole flow, and that the admin area is behind a word in the footer.
     // One mark, not two. The start screen holds a single large button labelled
     // "Eintrag starten" and nothing else — an arrow explaining it told the
     // visitor what they already knew, and two hints at once on a screen this
@@ -414,12 +412,14 @@ export default function MemberFlow() {
     const startMarks: CoachMark[] = [
       {
         id: 'start-admin',
-        // hook is drawn head-down-left already, so it needs no rotation: it
-        // comes in over the footer and points at the word below it.
-        shape: 'hook',
+        // The long looping diagonal — the reference doodle itself, head down to
+        // the left. It has room to run here: the space above the footer and
+        // right of centre is empty, so the stroke reads as one gesture ending
+        // on the word, which the short hook never did.
+        shape: 'loop',
         text: 'Admin-Bereich — die PIN steht dort',
-        at: { bottom: '44px', left: 'calc(50% + 14px)' },
-        width: 64,
+        at: { bottom: '54px', left: 'calc(50% + 6px)' },
+        width: 150,
         caption: 'right',
         minWidth: 680,
       },
