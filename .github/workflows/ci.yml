@@ -78,8 +78,13 @@ jobs:
     needs: lint-and-typecheck
 
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # Repository variables, not secrets: both ship inside the browser bundle,
+      # so anyone can read them out of the deployed JavaScript. The anon key is
+      # the publishable key — it is guarded by RLS, not by being hidden. As
+      # variables their values are visible in Settings, which is what makes a
+      # wrong one findable instead of silently wrong.
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -92,26 +97,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The job declares these as its environment, but they did not exist as
-      # secrets, so it was building with empty strings. `vite build` never
-      # evaluates the runtime guard in supabase.ts, so the job went green on a
-      # bundle that would throw on first load if it were served. CI does not
-      # deploy — Vercel does — so nothing broken shipped from here; what was
-      # broken is that the check was not building what production builds.
+      # The job declares these as its environment, but they did not exist, so it
+      # was building with empty strings. `vite build` never evaluates the runtime
+      # guard in supabase.ts, so the job went green on a bundle that would throw
+      # on first load if it were served. CI does not deploy — Vercel does — so
+      # nothing broken shipped from here; what was broken is that the check was
+      # not building what production builds.
       - name: Check the Supabase build config is present
         run: |
           missing=()
           [ -n "$VITE_SUPABASE_URL" ] || missing+=(VITE_SUPABASE_URL)
           [ -n "$VITE_SUPABASE_ANON_KEY" ] || missing+=(VITE_SUPABASE_ANON_KEY)
           if [ ${#missing[@]} -ne 0 ]; then
-            echo "::error::Missing repository secrets: ${missing[*]}."
+            echo "::error::Missing repository variables: ${missing[*]}."
             echo "::error::This job declares them as its environment; without them it builds"
             echo "::error::with empty strings and does not exercise the real configuration."
             echo "::error::Set them to the STAGING project's values: Settings, Secrets and"
-            echo "::error::variables, Actions. Never the production project - previews and CI"
-            echo "::error::must not point at production (docs/environments.md)."
+            echo "::error::variables, Actions, Variables tab. Never the production project -"
+            echo "::error::previews and CI must not point at production (docs/environments.md)."
             exit 1
           fi
+          case "$VITE_SUPABASE_URL" in
+            *fdnfdscpefxqvtggbbbr*)
+              echo "::error::VITE_SUPABASE_URL points at the production project."
+              echo "::error::CI and previews build against staging only (docs/environments.md)."
+              exit 1
+              ;;
+          esac
 
       - name: Build
         run: npm run build
