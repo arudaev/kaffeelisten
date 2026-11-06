@@ -14,6 +14,7 @@ import { useAppConfig } from '../lib/appConfig'
 import AdminField from '../components/admin/AdminField'
 import AdminButton from '../components/admin/AdminButton'
 import CoachMarks, { type CoachMark } from '../components/CoachMarks'
+import { retireHint } from '../lib/coachHints'
 
 type View = 'pin' | 'email' | 'code'
 
@@ -160,29 +161,22 @@ export default function AdminLogin() {
   }
 
   if (view === 'pin') {
-    // The login screen is where a visitor is most likely to stall: they have a
-    // keypad and no reason to believe they are allowed through it. One mark
-    // points at the published PIN, one at the way back out.
+    // One mark, and it is not the PIN. The PIN is already printed in bold on
+    // this screen with its own button underneath it — an arrow saying "the PIN
+    // is here" repeats the screen back to the visitor, and two marks on a page
+    // this bare is what made the overlay feel busy. What nobody guesses is that
+    // the small wordmark above the heading is the way back to the app.
     const loginMarks: CoachMark[] = [
       {
-        // curve is drawn head-down-right; mirrored it comes in from the right
-        // and points back at the published PIN.
-        shape: 'curve',
-        text: 'PIN steht hier — ein Klick genügt',
-        at: { top: '214px', left: 'calc(50% + 78px)' },
-        width: 110,
-        flip: true,
-        caption: 'right',
-        minWidth: 980,
-      },
-      {
-        // hook head-up-right (180°), tucked under the wordmark it points at.
+        id: 'login-back',
+        // hook is drawn head-down-left, so unrotated it curls in from the right
+        // and points back at the wordmark. Sitting on that side keeps the
+        // caption in open space instead of running off the left edge.
         shape: 'hook',
         text: 'Zurück zur App',
-        at: { top: '88px', left: 'calc(50% - 146px)' },
-        width: 60,
-        rotate: 180,
-        caption: 'left',
+        at: { top: '56px', left: 'calc(50% + 44px)' },
+        width: 54,
+        caption: 'right',
         minWidth: 980,
       },
     ]
@@ -197,7 +191,7 @@ export default function AdminLogin() {
         onErrorAnimEnd={() => setError(false)}
         length={pinLength}
         onForgot={demo ? undefined : openRecovery}
-        onHome={() => navigate('/')}
+        onHome={() => { retireHint('login-back'); navigate('/') }}
         demoPin={demo && demoPin ? demoPin : undefined}
         demoPending={configLoading}
       />

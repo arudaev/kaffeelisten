@@ -18,7 +18,7 @@ import DeathStarMark from '../components/DeathStarMark'
 import { useTheme } from '../lib/theme-context'
 import { useAppConfig } from '../lib/appConfig'
 import CoachMarks, { type CoachMark } from '../components/CoachMarks'
-import { setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
+import { retireHint, setHintsEnabled, useHintsEnabled } from '../lib/coachHints'
 
 // Only the columns anon may read. Billing contact details are admin-only; keep this
 // shape in sync with the column grant (migrations 038 and its follow-up).
@@ -405,17 +405,15 @@ export default function MemberFlow() {
   if (step === 'start') {
     // Two things a first-time visitor cannot guess: that the big button is the
     // whole flow, and that the admin area is behind a word in the footer.
+    // One mark, not two. The start screen holds a single large button labelled
+    // "Eintrag starten" and nothing else — an arrow explaining it told the
+    // visitor what they already knew, and two hints at once on a screen this
+    // sparse is the reason the overlay read as clutter. What is genuinely
+    // unguessable here is that the small word in the footer leads to a working
+    // admin area whose PIN is printed on the next screen.
     const startMarks: CoachMark[] = [
       {
-        shape: 'curve',
-        text: 'Hier beginnt die Bestellung',
-        at: { top: '46%', left: 'calc(50% - 260px)' },
-        width: 150,
-        rotate: 8,
-        caption: 'left',
-        minWidth: 940,
-      },
-      {
+        id: 'start-admin',
         // hook is drawn head-down-left already, so it needs no rotation: it
         // comes in over the footer and points at the word below it.
         shape: 'hook',
@@ -468,7 +466,12 @@ export default function MemberFlow() {
             'ITC1 Deggendorf'
           )}{' '}
           ·{' '}
-          <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
+          <Link
+            to="/admin"
+            onClick={() => retireHint('start-admin')}
+            className="hover:text-fg-muted transition-colors"
+            title="Administration"
+          >
             {demo ? 'Administration' : 'B4Y3RW4LD'}
           </Link>{' '}
           ·{' '}
