@@ -8,7 +8,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
-import { databaseConfigError } from '../../shared/environment'
+import { databaseConfigError, demoAdminPin } from '../../shared/environment'
 
 export function makeAdminClient(): SupabaseClient<Database> {
   const url = process.env.VITE_SUPABASE_URL
@@ -40,6 +40,15 @@ export async function isDbPinSet(supabase: SupabaseClient<Database>): Promise<bo
  */
 export async function verifyAdminPin(pin: unknown): Promise<boolean> {
   if (typeof pin !== 'string' || pin.length === 0) return false
+
+  // The demo authenticates against DEMO_ADMIN_PIN and never touches the stored
+  // hash. Two reasons, both load-bearing: the PIN the demo publishes on its own
+  // login screen has to be the PIN that works, and the demo's data is wiped and
+  // reseeded (app_settings included), which would otherwise leave the only way
+  // in behind a hash nobody knows. Rotating it is refused as well — see
+  // DEMO_DISABLED_AUTH_ACTIONS.
+  const demoPin = demoAdminPin(process.env.DEMO_MODE, process.env.DEMO_ADMIN_PIN)
+  if (demoPin) return pin === demoPin
 
   const supabase = makeAdminClient()
 

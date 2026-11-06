@@ -6,9 +6,9 @@
 // docs/phase-2-production.md §F.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { makeAdminClient, requireAdmin, isDbPinSet } from '../_lib/adminAuth'
-import type { Database } from '../../src/lib/database.types'
-import { classifyServerError } from '../_lib/errors'
+import { makeAdminClient, requireAdmin, isDbPinSet } from '../adminAuth'
+import type { Database } from '../../../src/lib/database.types'
+import { classifyServerError } from '../errors'
 
 type SettingsUpdate = Database['public']['Tables']['app_settings']['Update']
 

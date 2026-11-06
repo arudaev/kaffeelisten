@@ -12,15 +12,20 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { resolveMx, resolve } from 'node:dns/promises'
-import { makeAdminClient, requireAdmin } from '../_lib/adminAuth'
-import { sendMemberConfirmation } from '../_lib/confirmationEmail'
-import { companyBillingTouched, companyConfigError, hasHouseAccount, type BillingMode, type CheckoutMode } from '../_lib/documentMatrix'
-import { classifyServerError } from '../_lib/errors'
+import { makeAdminClient, requireAdmin } from '../adminAuth'
+import { sendMemberConfirmation } from '../confirmationEmail'
+import { publicBaseUrl } from '../publicUrl'
+import { companyBillingTouched, companyConfigError, hasHouseAccount, type BillingMode, type CheckoutMode } from '../documentMatrix'
+import { classifyServerError } from '../errors'
 
-// Request origin (e.g. https://kaffeelisten.de) for building confirmation links.
+// Request origin (e.g. https://itc1.kaffeelisten.de) for building confirmation
+// links. The request's own host is authoritative; publicBaseUrl() is the
+// fallback for when the headers carry no host, so the link still points at this
+// deployment rather than at a hardcoded apex.
 function baseUrl(req: VercelRequest): string {
+  const host = (req.headers['x-forwarded-host'] as string | undefined) ?? req.headers.host
+  if (!host) return publicBaseUrl()
   const proto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0] ?? 'https'
-  const host = (req.headers['x-forwarded-host'] as string | undefined) ?? req.headers.host ?? 'kaffeelisten.de'
   return `${proto}://${host}`
 }
 

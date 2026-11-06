@@ -27,14 +27,25 @@ import {
   requireAdmin,
   issueSessionCookie,
   clearSessionCookie,
-} from '../_lib/adminAuth'
-import { makeMailer, replyTo } from '../_lib/mail'
-import { classifyServerError } from '../_lib/errors'
+} from '../adminAuth'
+import { makeMailer, replyTo } from '../mail'
+import { classifyServerError } from '../errors'
+import { DEMO_DISABLED_AUTH_ACTIONS, isDemoDeployment } from '../../../shared/environment'
 
 const RESET_TTL_MINUTES = 15
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = typeof req.query.action === 'string' ? req.query.action : ''
+
+  // The demo's PIN is fixed and published; changing or recovering it is refused
+  // here, ahead of every handler, so no amount of interface poking reaches the
+  // mailer or set_admin_pin.
+  if (
+    isDemoDeployment(process.env.DEMO_MODE) &&
+    (DEMO_DISABLED_AUTH_ACTIONS as readonly string[]).includes(action)
+  ) {
+    return res.status(410).json({ error: 'Diese Funktion ist in der Demo nicht verfügbar.' })
+  }
 
   switch (action) {
     case 'verify':

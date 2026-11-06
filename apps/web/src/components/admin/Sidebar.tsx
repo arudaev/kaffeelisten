@@ -1,37 +1,23 @@
 import { Link } from 'react-router-dom'
 import AdminIcon from './AdminIcon'
 import Logo from '../Logo'
+import { visibleNavItems, type PageId } from '../../lib/adminNav'
 
-type AdminIconName = Parameters<typeof AdminIcon>[0]['name']
-
-export type PageId = 'dashboard' | 'log' | 'documents' | 'companies' | 'members' | 'items' | 'settings'
-
-interface NavItem {
-  id: PageId
-  label: string
-  icon: AdminIconName
-}
-
-const navItems: NavItem[] = [
-  { id: 'dashboard',  label: 'Übersicht',      icon: 'home' },
-  { id: 'log',        label: 'Einträge',        icon: 'log' },
-  { id: 'documents',  label: 'Dokumente',       icon: 'document' },
-  { id: 'companies',  label: 'Unternehmen',     icon: 'building' },
-  { id: 'members',    label: 'Mitarbeitende',   icon: 'users' },
-  { id: 'items',      label: 'Artikel',         icon: 'coffee' },
-  { id: 'settings',   label: 'Einstellungen',   icon: 'settings' },
-]
+export type { PageId } from '../../lib/adminNav'
 
 interface SidebarProps {
   active: PageId
   onNavigate: (page: PageId) => void
   onSendReport: () => void
   onLogout: () => void
+  /** The public demo: fewer pages, and no way to send a report. */
+  demo?: boolean
   open: boolean
   onClose: () => void
 }
 
-export default function Sidebar({ active, onNavigate, onSendReport, onLogout, open, onClose }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, onSendReport, onLogout, demo = false, open, onClose }: SidebarProps) {
+  const items = visibleNavItems(demo)
   return (
     <>
       {/* Mobile backdrop */}
@@ -68,7 +54,7 @@ export default function Sidebar({ active, onNavigate, onSendReport, onLogout, op
 
         {/* Nav */}
         <nav className="flex-1 p-3 flex flex-col gap-0.5">
-          {navItems.map(item => {
+          {items.map(item => {
             const isActive = item.id === active
             return (
               <button
@@ -92,14 +78,16 @@ export default function Sidebar({ active, onNavigate, onSendReport, onLogout, op
 
         {/* Footer */}
         <div className="p-4 border-t border-border flex flex-col gap-3">
-          <button
+          {/* The demo never sends: the endpoint answers 410, so offering it would
+              only produce an error a visitor cannot act on. */}
+          {!demo && <button
             type="button"
             onClick={onSendReport}
             className="flex items-center justify-center gap-2 h-10 rounded-md bg-accent text-white text-sm font-semibold hover:bg-accent-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             <AdminIcon name="send" size={16} strokeWidth={2} />
             Bericht senden
-          </button>
+          </button>}
           <button
             type="button"
             onClick={onLogout}
@@ -107,10 +95,17 @@ export default function Sidebar({ active, onNavigate, onSendReport, onLogout, op
           >
             Abmelden
           </button>
-          <div className="flex items-center gap-2">
-            <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
-            <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
-          </div>
+          {/* A campus instance carries its campus's mark. The public demo is
+              nobody's campus, and showing ITC1's logo there would present a real
+              client as the subject of a sales demo. */}
+          {demo ? (
+            <span className="text-[11px] text-fg-muted">Kaffeelisten · Demo</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <img src="/assets/itc1-logo.svg" alt="ITC1" className="h-6 w-auto opacity-80 dark:invert dark:opacity-70" />
+              <span className="text-[11px] text-fg-muted">ITC1 · Part of GZDN</span>
+            </div>
+          )}
         </div>
       </aside>
     </>

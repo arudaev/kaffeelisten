@@ -18,7 +18,7 @@
 // Only 'pdf' starts Chromium, so browsing previews stays cheap.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireAdmin } from '../_lib/adminAuth'
+import { requireAdmin } from '../adminAuth'
 import {
   fetchAndEnrich,
   computeSummary,
@@ -27,7 +27,7 @@ import {
   EMAIL_LOGO_PNG_BASE64,
   type EnrichedTransaction,
   type ReportFormat,
-} from '../_lib/report'
+} from '../report'
 import {
   buildCompanyEmailHtml,
   buildCompanyDocumentHtml,
@@ -36,23 +36,23 @@ import {
   renderTemplate,
   formatEuro,
   type MemberSummary,
-} from '../_lib/reportHtml'
+} from '../reportHtml'
 import {
   splitVat,
   formatDocumentNumber,
   toInvoiceRender,
   PLACEHOLDER_ISSUER,
   type IssuerConfig,
-} from '../_lib/billing'
-import { classifyServerError } from '../_lib/errors'
+} from '../billing'
+import { classifyServerError } from '../errors'
 import ExcelJS from 'exceljs'
-import { launchBrowser, pageToPdf } from '../_lib/pdf'
-import { generateExcel } from '../_lib/report'
-import { buildReportHtml } from '../_lib/reportHtml'
-import { generateCompanyItemsExcel, generateEmployeeListExcel, generateMemberExcel } from '../_lib/excel'
-import { computeAdminInsights } from '../_lib/adminInsights'
-import { computeCampusRollup } from '../_lib/excel'
-import { previousMonth } from '../_lib/schedule'
+import { launchBrowser, pageToPdf } from '../pdf'
+import { generateExcel } from '../report'
+import { buildReportHtml } from '../reportHtml'
+import { generateCompanyItemsExcel, generateEmployeeListExcel, generateMemberExcel } from '../excel'
+import { computeAdminInsights } from '../adminInsights'
+import { computeCampusRollup } from '../excel'
+import { previousMonth } from '../schedule'
 
 // A tiny stand-in dataset so the preview is meaningful even before any real
 // transactions exist for the current month.

@@ -10,6 +10,9 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        // Only the demo's coach marks. The face is fetched on demand by
+        // CoachMarks.tsx, so a campus instance never downloads it.
+        hand: ['Caveat', 'Segoe Script', 'Bradley Hand', 'cursive'],
       },
       colors: {
         // Semantic, theme-driven tokens (see src/index.css).

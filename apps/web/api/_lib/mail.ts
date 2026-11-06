@@ -1,7 +1,7 @@
 // Shared mail helpers.
 
 import { Resend } from 'resend'
-import { filterRecipients, isExactlyAllowed, isProductionDeployment, subjectFor } from '../../shared/environment'
+import { filterRecipients, isDemoDeployment, isExactlyAllowed, isProductionDeployment, subjectFor } from '../../shared/environment'
 import { BLOCKED_MESSAGE_ID } from '../../shared/reportProgress'
 
 /**
@@ -57,6 +57,14 @@ export function makeMailer(apiKey: string, env: NodeJS.ProcessEnv = process.env)
   const send = resend.emails.send.bind(resend.emails)
   resend.emails.send = async (...args: SendArgs): Promise<SendResult> => {
     const [payload, options] = args
+    // The demo is public and must not be able to reach anyone, so it never
+    // sends at all. This is deliberately ahead of the allowlist: the allowlist
+    // narrows recipients, while the demo has no legitimate recipient of any
+    // kind. Reported as delivered with the blocked id so callers still complete.
+    if (isDemoDeployment(env.DEMO_MODE)) {
+      console.warn('[mail-guard] demo deployment: send suppressed')
+      return { data: { id: BLOCKED_MESSAGE_ID }, error: null, headers: null } as SendResult
+    }
     const r = filterRecipients(payload, env.VERCEL_ENV, env.MAIL_ALLOWLIST)
     if (r.blocked.length) console.warn('[mail-guard] blocked outside production:', r.blocked.join(', '))
     if (r.to.length === 0) {

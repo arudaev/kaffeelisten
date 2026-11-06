@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import Icon from './Icon'
+import { useAppConfig } from '../lib/appConfig'
 
 interface FlowShellProps {
   step: number
@@ -11,6 +12,7 @@ interface FlowShellProps {
 }
 
 export default function FlowShell({ step, totalSteps, onBack, header, children, footer }: FlowShellProps) {
+  const { demo } = useAppConfig()
   return (
     <div className="min-h-screen bg-bg flex flex-col font-sans">
       {/* Top bar */}
@@ -46,7 +48,7 @@ export default function FlowShell({ step, totalSteps, onBack, header, children, 
         </div>
 
         <span className="w-24 text-right text-[13px] text-fg-muted tabular-nums">
-          ITC1 · Kaffeelisten
+          {demo ? 'Kaffeelisten' : 'ITC1 · Kaffeelisten'}
         </span>
       </div>
 

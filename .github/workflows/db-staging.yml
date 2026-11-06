@@ -43,3 +43,12 @@ jobs:
       - name: Apply
         if: steps.config.outputs.ready == 'true'
         run: node scripts/db/migrate.mjs --project-ref "$STAGING_PROJECT_REF"
+
+      # Migration 038 revokes every API-role privilege in `public`, which also
+      # strips the grants of whatever else shares the project (see
+      # docs/environments.md). The breakage is silent — an empty list, not an
+      # error — so repair it here rather than trusting anyone to remember.
+      # A no-op when staging has the project to itself.
+      - name: Restore co-tenant grants
+        if: steps.config.outputs.ready == 'true'
+        run: node scripts/db/restore-cotenant-grants.mjs --project-ref "$STAGING_PROJECT_REF"

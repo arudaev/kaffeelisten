@@ -140,12 +140,17 @@ export default function MembersPage({ onToast, onMenuClick }: Props) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [memberList, companyList, grid, itemList] = await Promise.all([
+      // The paid grid is settled separately on purpose. It used to sit in the
+      // same Promise.all as the roster, so when /api/admin/payments failed the
+      // rejection took members, companies and items down with it and the page
+      // showed "Noch keine Mitarbeitenden" over a database full of them. The
+      // roster is the page; the grid is an extra row of ticks on it.
+      const [memberList, companyList, itemList] = await Promise.all([
         adminApi.getMembers(),
         adminApi.getCompanies(),
-        adminApi.getPaidGrid(),
         adminApi.getItems(),
       ])
+      const grid = await adminApi.getPaidGrid().catch(() => EMPTY_GRID)
       const companyById = new Map(companyList.map(c => [c.id, c]))
       setCompanies(companyList)
       setItems(itemList)
