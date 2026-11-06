@@ -412,14 +412,19 @@ export default function MemberFlow() {
     const startMarks: CoachMark[] = [
       {
         id: 'start-admin',
-        // The long looping diagonal — the reference doodle itself, head down to
-        // the left. It has room to run here: the space above the footer and
-        // right of centre is empty, so the stroke reads as one gesture ending
-        // on the word, which the short hook never did.
+        // The reference doodle itself, head down to the left, turned rather
+        // than drawn long: at its own steep angle it needs a tall sweep to
+        // reach down to the footer, which is a lot of ink for a hint.
+        //
+        // Turned a little, not flat. Flat puts the whole stroke at the
+        // footer's own height, where it runs straight through GitHub and
+        // Datenschutz; this angle keeps the tail up in the empty space and
+        // brings only the head down, to stop just above the word.
         shape: 'loop',
         text: 'Admin-Bereich — die PIN steht dort',
-        at: { bottom: '54px', left: 'calc(50% + 6px)' },
-        width: 150,
+        at: { bottom: '28px', left: 'calc(50% + 54px)' },
+        width: 118,
+        rotate: 16,
         caption: 'right',
         minWidth: 680,
       },

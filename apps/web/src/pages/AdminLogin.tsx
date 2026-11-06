@@ -173,21 +173,16 @@ export default function AdminLogin() {
     const loginMarks: CoachMark[] = [
       {
         id: 'login-back',
-        // The same arrow the start screen uses, drawn smaller. It is head-down-
-        // left as it comes, so it needs no rotation here either: it arrives from
-        // the upper right and lands on the wordmark. One hand across the demo.
-        shape: 'loop',
+        // hook is drawn head-down-left, so unrotated it curls in from the right
+        // and points back at the wordmark. Sitting on that side keeps the
+        // caption in open space instead of running off the left edge.
+        shape: 'hook',
         text: 'Zurück zur App',
         // Anchored to the centre, not to the top of the window: the keypad
         // panel is vertically centred, so a top offset slides off the wordmark
         // the moment the window is shorter than the one it was placed in.
-        // Rotated to run almost flat. Unturned it descends steeply, and on a
-        // short window the wordmark sits barely 50px from the top edge, so the
-        // tail ran off the screen and left a stub. Coming in from the side it
-        // uses the empty space beside the heading, which every window has.
-        at: { top: 'calc(50% - 350px)', left: 'calc(50% + 64px)' },
-        width: 104,
-        rotate: 42,
+        at: { top: 'calc(50% - 354px)', left: 'calc(50% + 44px)' },
+        width: 54,
         caption: 'right',
         minWidth: 680,
       },
