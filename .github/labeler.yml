@@ -14,7 +14,7 @@ area:database:
       - any-glob-to-any-file: ['supabase/**', 'scripts/db/**', 'scripts/*migration*', 'scripts/test-migrations.sh']
 area:brand:
   - changed-files:
-      - any-glob-to-any-file: ['apps/web/public/brand/**', 'apps/web/src/components/*Mark.tsx', 'apps/web/src/components/Logo.tsx', 'scripts/art/**']
+      - any-glob-to-any-file: ['apps/web/src/components/*Mark.tsx', 'apps/web/src/components/Logo.tsx', 'scripts/art/**']
 area:delivery:
   - changed-files:
       - any-glob-to-any-file: ['.github/**', 'apps/web/vercel.json', 'tools/**']
