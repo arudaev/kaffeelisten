@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/demo-first-roster
+
+#### Fixed
+- **Alex R. and Fares M. are on the first screen a visitor actually reaches.** They were the first two people at the first company *in the seed file*, but the member flow lists companies by name, so the first roster anyone opened belonged to a different tenant and neither name was on it. They now sit at Auwiesen Elektronik, which sorts first, and that company's other names are drawn from past F so nobody lands between the two.
+
 ### feat/demo-client
 
 #### Added
