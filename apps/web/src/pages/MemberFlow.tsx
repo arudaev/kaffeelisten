@@ -454,10 +454,13 @@ export default function MemberFlow() {
         >
           {loadingCompanies || loadingItems ? 'Laden…' : 'Eintrag starten'}
         </BigButton>
-        {/* The campus name and the hackathon it was built at belong to a campus
-            instance. On the demo that slot becomes the switch for the hints —
-            whoever has read them wants them gone, and this is where their eye
-            already is when they look away from the button. */}
+        {/* Three slots, the same three everywhere: who this instance belongs to,
+            the way into the admin area, and the privacy notice.
+            On a campus the first is the client's name; on the demo it is the
+            hints switch, because a client's name has no business on a public
+            demo and the switch had nowhere better to live. The admin link is
+            called what it is — it used to read B4Y3RW4LD on a campus, the
+            hackathon this was built at, which tells a member nothing. */}
         <p className="absolute bottom-6 left-0 right-0 text-center text-[12px] text-fg-subtle uppercase tracking-[0.06em]">
           {demo ? (
             <button
@@ -465,29 +468,16 @@ export default function MemberFlow() {
               onClick={() => setHintsEnabled(!hints)}
               className="uppercase tracking-[0.06em] hover:text-fg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded px-1"
             >
-              {hints ? 'Hinweise ausblenden' : 'Hinweise einblenden'}
+              {hints ? 'Hinweise aus' : 'Hinweise ein'}
             </button>
           ) : (
             'ITC1 Deggendorf'
           )}{' '}
           ·{' '}
           <Link to="/admin" className="hover:text-fg-muted transition-colors" title="Administration">
-            {demo ? 'Administration' : 'B4Y3RW4LD'}
+            Administration
           </Link>{' '}
           ·{' '}
-          {demo && (
-            <>
-              <a
-                href="https://github.com/kaffeelisten"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-fg-muted transition-colors"
-              >
-                GitHub
-              </a>{' '}
-              ·{' '}
-            </>
-          )}
           <Link to="/datenschutz" className="hover:text-fg-muted transition-colors">
             Datenschutz
           </Link>

@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### fix/demo-footer-slots
+
+#### Changed
+- **The start screen's footer carries three things, not four.** *GitHub* is gone from the demo's footer, and the admin link is called **Administration** on a campus instance too — it used to read *B4Y3RW4LD*, the hackathon this was built at, which tells a member standing at the coffee machine nothing. The hints switch shortens to **Hinweise aus** / **Hinweise ein**. Every instance now shows the same three slots: who it belongs to, the way into the admin area, and the privacy notice.
+
 ### fix/demo-first-roster
 
 #### Fixed
