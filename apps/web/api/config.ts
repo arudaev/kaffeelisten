@@ -9,6 +9,20 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { makeAdminClient } from './_lib/adminAuth'
 import { isDemoDeployment } from '../shared/environment'
 
+/**
+ * The demo's flag and, only on the demo, its admin PIN.
+ *
+ * A demo that hides its own credential is a demo nobody gets into, so the PIN is
+ * shown on the login screen. It is published deliberately and only here: when
+ * DEMO_MODE is off both fields are omitted entirely, so a campus instance can
+ * never leak its PIN through this endpoint however it is configured.
+ */
+function demoFields(): { demo: boolean; demoPin?: string } {
+  if (!isDemoDeployment(process.env.DEMO_MODE)) return { demo: false }
+  const pin = process.env.DEMO_ADMIN_PIN?.trim()
+  return pin ? { demo: true, demoPin: pin } : { demo: true }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -27,12 +41,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       maxItemsPerOrder: data?.max_items_per_order ?? null,
       // The client hides what the demo switches off, rather than rendering
       // controls whose endpoints answer 410.
-      demo: isDemoDeployment(process.env.DEMO_MODE),
+      ...demoFields(),
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[config]', message)
     // Fail open: an unavailable config must not break logging. Null = unlimited.
-    return res.status(200).json({ maxItemsPerOrder: null, demo: isDemoDeployment(process.env.DEMO_MODE) })
+    return res.status(200).json({ maxItemsPerOrder: null, ...demoFields() })
   }
 }

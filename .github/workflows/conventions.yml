@@ -1,0 +1,25 @@
+name: Conventions
+
+# Calls the organisation's shared conventions in kaffeelisten/.github. Pair it with a
+# `.github/labeler.yml` that maps this repository's folders to its `area:*` labels.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review, converted_to_draft, labeled, unlabeled, closed]
+  issues:
+    types: [opened, reopened, closed, assigned, labeled]
+  issue_comment:
+    types: [created]
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  conventions:
+    uses: kaffeelisten/.github/.github/workflows/org-conventions.yml@main
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    secrets: inherit

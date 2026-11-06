@@ -5,7 +5,13 @@ import { Analytics } from '@vercel/analytics/react'
 import App from './App'
 import { ThemeProvider } from './lib/theme'
 import { databaseConfigError } from './lib/environment'
+import { loadAppConfig } from './lib/appConfig'
 import './index.css'
+
+// Start the runtime-config fetch before React mounts, so screens that lay out
+// around it — the admin login's demo panel above all — have it on their first
+// frame instead of shifting once it lands.
+void loadAppConfig()
 
 // A preview or local build wired to the production database must not start.
 const environmentError = databaseConfigError(import.meta.env.VITE_SUPABASE_URL, __VERCEL_ENV__)
