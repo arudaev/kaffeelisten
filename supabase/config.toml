@@ -13,14 +13,14 @@ project_id = "kaffeelisten"
 
 [api]
 enabled = true
-port = 54321
+port = 54421
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 54422
+shadow_port = 54420
 # The linked remote is Postgres 17, but the pinned CLI (v2.19.5) only validates
 # major versions up to 15 and rejects 17 at config-parse time ("Invalid
 # db.major_version: 17"), which breaks every command including `db push`. This
@@ -31,7 +31,7 @@ major_version = 15
 
 [db.pooler]
 enabled = false
-port = 54329
+port = 54429
 pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
@@ -41,12 +41,12 @@ enabled = true
 
 [studio]
 enabled = true
-port = 54323
+port = 54423
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 54324
+port = 54424
 
 [storage]
 enabled = true
@@ -97,6 +97,10 @@ policy = "oneshot"
 inspector_port = 8083
 
 [analytics]
-enabled = true
-port = 54327
+# Off locally: the Logflare/vector pair needs the Docker daemon exposed on
+# tcp://localhost:2375, which Docker Desktop does not do by default, and a
+# vector container left behind by a failed start then blocks the next one.
+# Nothing in the app reads local analytics. Hosted projects are unaffected.
+enabled = false
+port = 54427
 backend = "postgres"

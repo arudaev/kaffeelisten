@@ -115,6 +115,41 @@ scripts/, tools/       Utility scripts
 
 Requires Node.js 24 or newer.
 
+### The whole stack, locally
+
+With Docker running, one command brings up Postgres, PostgREST, Auth, Storage and a mail catcher,
+applies every migration and the seed, and then starts the app:
+
+```bash
+npm run dev:local
+```
+
+Useful variants: `-- --no-dev` for the stack without Vite, `-- --reset` to force a database reset
+when the stack is already up.
+
+| | |
+|---|---|
+| App | `http://localhost:5173` |
+| Supabase API | `http://127.0.0.1:54421` |
+| Studio | `http://127.0.0.1:54423` |
+| Inbucket | `http://127.0.0.1:54424` |
+
+**Every email goes to Inbucket and nothing leaves the machine**, so the whole month-end run —
+report, member statements, company documents — can be exercised without sending anything or
+touching the shared Resend quota.
+
+**The ports are deliberately not Supabase's defaults.** The CLI uses 54321–54324 for every
+project, so a second local Supabase project collides with the first and `supabase start` fails
+with *"port is already allocated"*. This project uses the **544xx** block so it can run alongside
+one. If you still hit a collision, either stop the other stack
+(`supabase stop --project-id <id>`) or move the ports in `supabase/config.toml`.
+
+The Supabase CLI owns local migrations: `supabase db reset` applies `supabase/migrations` in order
+and then `supabase/seed.sql`. `scripts/db/migrate.mjs` is for **remote** projects through the
+Management API and has no local mode.
+
+### Against a remote project
+
 ```bash
 npm install
 cp apps/web/.env.example apps/web/.env.local
