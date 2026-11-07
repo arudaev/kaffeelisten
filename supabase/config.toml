@@ -21,13 +21,11 @@ max_rows = 1000
 [db]
 port = 54422
 shadow_port = 54420
-# The linked remote is Postgres 17, but the pinned CLI (v2.19.5) only validates
-# major versions up to 15 and rejects 17 at config-parse time ("Invalid
-# db.major_version: 17"), which breaks every command including `db push`. This
-# value only drives the LOCAL shadow database (`db diff` / `start`); `db push`
-# applies migrations straight to the remote and ignores it. Bump this to 17 once
-# the CLI is upgraded (>= v2.100) — that also clears the `link` drift warning.
-major_version = 15
+# Matches the hosted projects, both Postgres 17. Local was pinned to 15 while
+# the CLI was v2.19.5, which rejected 17 at config-parse time; CLI v3 accepts
+# it. Keep this equal to the remote: a migration proved on 15 has not been
+# proved for 17, and that is the whole value of testing locally first.
+major_version = 17
 
 [db.pooler]
 enabled = false
@@ -44,7 +42,10 @@ enabled = true
 port = 54423
 api_url = "http://127.0.0.1"
 
-[inbucket]
+# Renamed from [inbucket] by CLI v3. Same mail catcher: every outgoing email
+# lands here and nothing leaves the machine, which is what lets the whole
+# month-end run be exercised without sending anything.
+[local_smtp]
 enabled = true
 port = 54424
 
@@ -75,7 +76,7 @@ enroll_enabled = false
 verify_enabled = false
 
 [auth.email]
-enable_signup = true
+enabled = true
 double_confirm_changes = true
 enable_confirmations = true
 secure_password_change = false
@@ -86,7 +87,7 @@ otp_expiry = 3600
 [auth.email.template]
 
 [auth.sms]
-enable_signup = false
+enabled = false
 enable_confirmations = false
 template = "Your code is {{ .Code }}"
 max_frequency = "5s"

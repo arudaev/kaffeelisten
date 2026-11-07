@@ -132,9 +132,9 @@ when the stack is already up.
 | App | `http://localhost:5173` |
 | Supabase API | `http://127.0.0.1:54421` |
 | Studio | `http://127.0.0.1:54423` |
-| Inbucket | `http://127.0.0.1:54424` |
+| Mail catcher | `http://127.0.0.1:54424` |
 
-**Every email goes to Inbucket and nothing leaves the machine**, so the whole month-end run —
+**Every email goes to the local mail catcher and nothing leaves the machine**, so the whole month-end run —
 report, member statements, company documents — can be exercised without sending anything or
 touching the shared Resend quota.
 
