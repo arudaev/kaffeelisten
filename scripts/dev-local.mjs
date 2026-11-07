@@ -113,12 +113,39 @@ if (!alreadyUp || forceReset) {
 
 // --- a shape check, not a smoke test -----------------------------------------
 
-const status = capture('supabase', ['status']) ?? ''
-const apiUrl = status.match(/API URL:\s*(\S+)/)?.[1]
+// CLI v3 prints `status` as a JSON object (preceded by warnings and a
+// "Stopped services" line); v2 printed an aligned "KEY: value" table. Parse
+// whichever we get, so this works either side of the upgrade.
+function readStatus() {
+  const raw = capture('supabase', ['status']) ?? ''
+  const brace = raw.indexOf('{')
+  if (brace !== -1) {
+    try {
+      const j = JSON.parse(raw.slice(brace))
+      return {
+        api: j.API_URL,
+        studio: j.STUDIO_URL,
+        mail: j.MAILPIT_URL ?? j.INBUCKET_URL,
+        anon: j.ANON_KEY ?? j.PUBLISHABLE_KEY,
+        linked: j.linked_project?.project_ref,
+      }
+    } catch { /* fall through to the v2 shape */ }
+  }
+  return {
+    api: raw.match(/API URL:\s*(\S+)/)?.[1],
+    studio: raw.match(/Studio URL:\s*(\S+)/)?.[1],
+    mail: raw.match(/(?:Inbucket|Mailpit) URL:\s*(\S+)/)?.[1],
+    anon: raw.match(/anon key:\s*(\S+)/)?.[1],
+    linked: undefined,
+  }
+}
+
+const status = readStatus()
+const apiUrl = status.api
 if (apiUrl) {
   console.log(`\n  API      ${apiUrl}`)
-  console.log(`  Studio   ${status.match(/Studio URL:\s*(\S+)/)?.[1] ?? '?'}`)
-  console.log(`  Inbucket ${status.match(/(?:Inbucket|Mailpit) URL:\s*(\S+)/)?.[1] ?? '?'}  (every email lands here, nothing is sent)`)
+  console.log(`  Studio   ${status.studio ?? '?'}`)
+  console.log(`  Mail     ${status.mail ?? '?'}  (every email lands here, nothing is sent)`)
 }
 
 if (noDev) {
@@ -126,5 +153,21 @@ if (noDev) {
   process.exit(0)
 }
 
-console.log('\n  Starting vite against the local stack...\n')
-run('npm', ['run', 'dev'])
+// Point the app at the local stack without touching apps/web/.env.local.
+// Vite gives real environment variables precedence over .env files, so these
+// override whatever that file says, for this process only.
+//
+// Without this the UI runs against whatever .env.local points at — which today
+// is a remote project. "Running it locally" while the browser talks to staging
+// is the kind of thing that looks fine and proves nothing.
+const anonKey = status.anon
+if (!apiUrl || !anonKey) {
+  die('Could not read the local API URL and anon key from `supabase status`.',
+      'The stack is up but not reporting itself. Try `supabase stop`, then this again.')
+}
+
+console.log('\n  Starting vite against the LOCAL stack.')
+console.log('  apps/web/.env.local is left alone; these override it for this run only.\n')
+run('npm', ['run', 'dev'], {
+  env: { ...process.env, VITE_SUPABASE_URL: apiUrl, VITE_SUPABASE_ANON_KEY: anonKey },
+})
